@@ -1,0 +1,13 @@
+{
+  "name": "trust-gatebook",
+  "private": true,
+  "description": "Gatebook visitor register: Node backend, React + MUI web app, React Native CLI mobile app",
+  "scripts": {
+    "install:all": "npm --prefix backend install && npm --prefix web install && npm --prefix mobile install",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:web": "npm --prefix web run dev",
+    "dev:mobile": "npm --prefix mobile run start",
+    "build": "npm --prefix backend run build && npm --prefix web run build",
+    "lint": "npm --prefix backend run lint && npm --prefix web run lint"
+  }
+}
