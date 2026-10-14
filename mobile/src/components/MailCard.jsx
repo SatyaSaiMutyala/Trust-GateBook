@@ -106,7 +106,7 @@ function MailCardInner({
         )}
         {canAct && lodged ? (
           <View style={styles.actions}>
-            {m.recipient && onRemind ? (
+            {m.notifiedAt && onRemind ? (
               <Button
                 title="🔔 Remind"
                 variant="ghost"

@@ -1,33 +1,31 @@
-import CloseIcon from "@mui/icons-material/Close";
-import NotificationsActiveOutlinedIcon from "@mui/icons-material/NotificationsActiveOutlined";
-import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Dialog from "@mui/material/Dialog";
-import Drawer from "@mui/material/Drawer";
-import Grid from "@mui/material/Grid";
-import IconButton from "@mui/material/IconButton";
-import Stack from "@mui/material/Stack";
-import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
-import { useState } from "react";
-import { useUser } from "../../auth/context";
-import { canOperate, isGateUser } from "../../auth/roles";
-import { useIsDesktop, useNow } from "../../hooks";
-import { useMailUi } from "../../state/context";
-import { fonts } from "../../theme/tokens";
-import { fmtDateTime, fmtMinutes, fmtTime } from "../../utils/format";
-import { firstWord, hasRecipientUser } from "../../utils/mail";
-import { FieldLabel, FillThumb, TimelineItem } from "../bits";
-import { ImagePreview } from "../ImagePreview";
-import { KindTag, MailStatusChip } from "./MailBits";
+import CloseIcon from '@mui/icons-material/Close';
+import NotificationsActiveOutlinedIcon from '@mui/icons-material/NotificationsActiveOutlined';
+import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import Drawer from '@mui/material/Drawer';
+import Grid from '@mui/material/Grid';
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import { useState } from 'react';
+import { useUser } from '../../auth/context';
+import { canOperate, isGateUser } from '../../auth/roles';
+import { useIsDesktop, useNow } from '../../hooks';
+import { useMailUi } from '../../state/context';
+import { fonts } from '../../theme/tokens';
+import { fmtDateTime, fmtMinutes, fmtTime } from '../../utils/format';
+import { firstWord, hasRecipientUser, offlineReceiverLabel } from '../../utils/mail';
+import { FieldLabel, FillThumb, TimelineItem } from '../bits';
+import { ImagePreview } from '../ImagePreview';
+import { KindTag, MailStatusChip } from './MailBits';
 
 /** Drawer on desktop, full screen on phone. */
 export function MailDetailsDrawer({ item, open, onClose }) {
   const desktop = useIsDesktop();
-  const content = item ? (
-    <Details key={item.id} item={item} onClose={onClose} />
-  ) : null;
+  const content = item ? <Details key={item.id} item={item} onClose={onClose} /> : null;
   if (desktop) {
     return (
       <Drawer
@@ -38,8 +36,8 @@ export function MailDetailsDrawer({ item, open, onClose }) {
           paper: {
             sx: {
               width: 500,
-              maxWidth: "100vw",
-              bgcolor: "background.default",
+              maxWidth: '100vw',
+              bgcolor: 'background.default',
             },
           },
         }}
@@ -54,7 +52,7 @@ export function MailDetailsDrawer({ item, open, onClose }) {
       open={open && !!item}
       onClose={onClose}
       slotProps={{
-        paper: { sx: { bgcolor: "background.default", borderRadius: 0 } },
+        paper: { sx: { bgcolor: 'background.default', borderRadius: 0 } },
       }}
     >
       {content}
@@ -64,7 +62,7 @@ export function MailDetailsDrawer({ item, open, onClose }) {
 
 function Mono({ children }) {
   return (
-    <Box component="span" sx={{ fontFamily: fonts.mono, fontSize: "0.92em" }}>
+    <Box component="span" sx={{ fontFamily: fonts.mono, fontSize: '0.92em' }}>
       {children}
     </Box>
   );
@@ -74,17 +72,17 @@ function PhotoBox({ label, src, alt, contain, aspect, onOpen }) {
   return (
     <>
       <FieldLabel>{label}</FieldLabel>
-      <Box sx={{ mt: 0.75, aspectRatio: aspect, width: "100%" }}>
+      <Box sx={{ mt: 0.75, aspectRatio: aspect, width: '100%' }}>
         {src ? (
           <FillThumb src={src} name={alt} contain={contain} onOpen={onOpen} />
         ) : (
           <Box
             sx={{
-              height: "100%",
+              height: '100%',
               borderRadius: 1,
-              border: "1px dashed",
-              borderColor: "divider",
-              bgcolor: "gb.sunk",
+              border: '1px dashed',
+              borderColor: 'divider',
+              bgcolor: 'gb.sunk',
             }}
           />
         )}
@@ -101,7 +99,7 @@ function Details({ item: m, onClose }) {
   const act = canOperate(user);
   const mine = !!m.recipient && m.recipient.id === user.id;
   const who = firstWord(m.recipientName) || m.recipientName;
-  const [note, setNote] = useState("");
+  const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   // Full-screen photo viewer: index into the photos, or null when closed.
   const [preview, setPreview] = useState(null);
@@ -113,81 +111,66 @@ function Details({ item: m, onClose }) {
   };
 
   const details = [
-    ["From (sender)", m.sender || "—"],
-    ["Brought by", m.carrier || "—"],
-    ["Delivery person", m.broughtBy || "—"],
+    ['From (sender)', m.sender || '—'],
+    ['Brought by', m.carrier || '—'],
+    ['Delivery person', m.broughtBy || '—'],
+    ['Their mobile', m.broughtPhone ? <Mono key="p">{m.broughtPhone}</Mono> : '—'],
+    ['Tracking / ref no.', m.refNo ? <Mono key="r">{m.refNo}</Mono> : '—'],
+    ['Pieces', String(m.pieces ?? 1)],
     [
-      "Their mobile",
-      m.broughtPhone ? <Mono key="p">{m.broughtPhone}</Mono> : "—",
-    ],
-    ["Tracking / ref no.", m.refNo ? <Mono key="r">{m.refNo}</Mono> : "—"],
-    ["Pieces", String(m.pieces ?? 1)],
-    [
-      "For",
+      'For',
       <span key="f">
         {m.recipientName}
         {staff && m.recipient?.phone ? (
           <>
-            {" · "}
+            {' · '}
             <Mono>{m.recipient.phone}</Mono>
           </>
         ) : null}
-        {m.recipient?.location ? ` · ${m.recipient.location}` : ""}
+        {m.recipient?.location ? ` · ${m.recipient.location}` : ''}
       </span>,
     ],
-    ["Department", m.dept || "—"],
-    ["Remarks", m.notes || "—"],
+    ['Department', m.dept || '—'],
+    ['Remarks', m.notes || '—'],
   ];
 
-  const showStaffActions =
-    act && (m.status === "lodged" || m.status === "disputed");
-  const showConfirm = mine && m.status === "handed";
+  const showStaffActions = act && (m.status === 'lodged' || m.status === 'disputed');
+  const showConfirm = mine && m.status === 'handed';
 
   return (
-    <Stack sx={{ minHeight: "100%" }}>
+    <Stack sx={{ minHeight: '100%' }}>
       <Box
         sx={{
           p: { xs: 2, md: 3 },
           pb: 2,
-          bgcolor: "background.paper",
+          bgcolor: 'background.paper',
           borderBottom: 1,
-          borderColor: "divider",
+          borderColor: 'divider',
         }}
       >
         <Stack
           direction="row"
           sx={{
-            alignItems: "flex-start",
-            justifyContent: "space-between",
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
             gap: 1,
           }}
         >
           <Box sx={{ minWidth: 0 }}>
-            <Stack
-              direction="row"
-              spacing={1}
-              sx={{ alignItems: "center", mb: 1 }}
-            >
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1 }}>
               <KindTag kind={m.kind} />
-              <Typography
-                variant="mono"
-                sx={{ color: "text.secondary", fontSize: "0.8rem" }}
-              >
+              <Typography variant="mono" sx={{ color: 'text.secondary', fontSize: '0.8rem' }}>
                 {m.id}
               </Typography>
             </Stack>
-            <Typography variant="h2" sx={{ wordBreak: "break-word" }}>
+            <Typography variant="h2" sx={{ wordBreak: 'break-word' }}>
               For {m.recipientName}
             </Typography>
             <Box sx={{ mt: 1 }}>
               <MailStatusChip status={m.status} size="medium" />
             </Box>
           </Box>
-          <IconButton
-            onClick={onClose}
-            aria-label="Close"
-            sx={{ border: 1, borderColor: "divider" }}
-          >
+          <IconButton onClick={onClose} aria-label="Close" sx={{ border: 1, borderColor: 'divider' }}>
             <CloseIcon />
           </IconButton>
         </Stack>
@@ -219,77 +202,71 @@ function Details({ item: m, onClose }) {
         <Stack sx={{ mb: 3 }}>
           <TimelineItem kind="in">
             <b>Received</b> <Mono>{fmtDateTime(m.receivedAt)}</Mono>
-            {m.receivedBy ? ` · Logged by ${m.receivedBy.name}` : ""}
+            {m.receivedBy ? ` · Logged by ${m.receivedBy.name}` : ''}
           </TimelineItem>
           {hasRecipientUser(m) ? (
             <TimelineItem kind="in">
               <b>{who} notified</b>
               {m.notifiedAt ? (
                 <>
-                  {" "}
+                  {' '}
                   <Mono>{fmtTime(m.notifiedAt)}</Mono>
                 </>
               ) : null}
               {m.remindedAt ? (
                 <>
-                  {" · Reminder sent "}
+                  {' · Reminder sent '}
                   <Mono>{fmtTime(m.remindedAt)}</Mono>
                 </>
               ) : null}
             </TimelineItem>
           ) : (
             <TimelineItem kind="pending">
-              <b>Receiver not on Gatebook</b> · Inform by phone
+              <b>{offlineReceiverLabel(m)}</b> · Inform by phone
             </TimelineItem>
           )}
           {m.handedAt ? (
-            <TimelineItem
-              kind="out"
-              last={!hasRecipientUser(m) && !m.resolvedAt}
-            >
+            <TimelineItem kind="out" last={!hasRecipientUser(m) && !m.resolvedAt}>
               <b>Handed over</b> <Mono>{fmtDateTime(m.handedAt)}</Mono>
-              {m.collectedBy ? ` · To ${m.collectedBy}` : ""}
-              {m.handedBy ? ` · by ${m.handedBy.name}` : ""}
-              {m.handedNote ? ` · ${m.handedNote}` : ""}
+              {m.collectedBy ? ` · To ${m.collectedBy}` : ''}
+              {m.handedBy ? ` · by ${m.handedBy.name}` : ''}
+              {m.handedNote ? ` · ${m.handedNote}` : ''}
             </TimelineItem>
           ) : (
             <TimelineItem kind="pending" last>
-              <b>Waiting to be collected</b> ·{" "}
-              <Mono>
-                {fmtMinutes((now - new Date(m.receivedAt).getTime()) / 60000)}
-              </Mono>{" "}
-              since it arrived
+              <b>Waiting to be collected</b> ·{' '}
+              <Mono>{fmtMinutes((now - new Date(m.receivedAt).getTime()) / 60000)}</Mono> since it arrived
             </TimelineItem>
           )}
           {m.handedAt && hasRecipientUser(m) ? (
-            m.status === "handed" ? (
+            m.status === 'handed' ? (
               <TimelineItem kind="pending" last>
                 <b>Waiting for {who} to confirm</b>
               </TimelineItem>
-            ) : m.status === "confirmed" ? (
+            ) : m.status === 'confirmed' ? (
               <TimelineItem kind="in" last>
                 <b>{who} confirmed collection</b>
                 {m.confirmedAt ? (
                   <>
-                    {" "}
+                    {' '}
                     <Mono>{fmtDateTime(m.confirmedAt)}</Mono>
                   </>
                 ) : null}
               </TimelineItem>
-            ) : m.status === "disputed" || m.status === "resolved" ? (
+            ) : m.status === 'disputed' || m.status === 'resolved' ? (
               <TimelineItem kind="bad" last={!m.resolvedAt}>
-                <Box component="b" sx={{ color: "error.main" }}>
+                <Box component="b" sx={{ color: 'error.main' }}>
                   {who} says they did not get it
                 </Box>
-                {m.disputeNote ? ` · “${m.disputeNote}”` : ""}
+                {m.disputeNote ? ` · “${m.disputeNote}”` : ''}
               </TimelineItem>
             ) : null
           ) : null}
           {m.resolvedAt ? (
             <TimelineItem kind="out" last>
               <b>Resolved</b> <Mono>{fmtDateTime(m.resolvedAt)}</Mono>
-              {m.resolveNote ? ` · ${m.resolveNote}` : ""}
-              {m.resolvedBy ? ` · by ${m.resolvedBy.name}` : ""}
+              {m.resolveNote ? ` · ${m.resolveNote}` : ''}
+              {m.resolvedBy ? ` · by ${m.resolvedBy.name}` : ''}
             </TimelineItem>
           ) : null}
         </Stack>
@@ -298,10 +275,10 @@ function Details({ item: m, onClose }) {
           container
           spacing={2}
           sx={{
-            bgcolor: "background.paper",
+            bgcolor: 'background.paper',
             border: 1,
-            borderColor: "divider",
-            borderRadius: "10px",
+            borderColor: 'divider',
+            borderRadius: '10px',
             p: 2,
             m: 0,
           }}
@@ -312,8 +289,8 @@ function Details({ item: m, onClose }) {
               <Typography
                 sx={{
                   fontWeight: 500,
-                  wordBreak: "break-word",
-                  whiteSpace: "pre-wrap",
+                  wordBreak: 'break-word',
+                  whiteSpace: 'pre-wrap',
                 }}
               >
                 {value}
@@ -328,14 +305,14 @@ function Details({ item: m, onClose }) {
           sx={{
             p: { xs: 2, md: 3 },
             pt: 2,
-            position: "sticky",
+            position: 'sticky',
             bottom: 0,
-            bgcolor: "background.default",
+            bgcolor: 'background.default',
             borderTop: 1,
-            borderColor: "divider",
+            borderColor: 'divider',
           }}
         >
-          {showStaffActions && m.status === "lodged" ? (
+          {showStaffActions && m.status === 'lodged' ? (
             <Grid container spacing={1}>
               {hasRecipientUser(m) ? (
                 <Grid size={{ xs: 6 }}>
@@ -362,26 +339,14 @@ function Details({ item: m, onClose }) {
                 </Grid>
               ) : null}
               <Grid size={12}>
-                <Button
-                  fullWidth
-                  size="large"
-                  variant="contained"
-                  color="success"
-                  onClick={() => openHandover(m)}
-                >
+                <Button fullWidth size="large" variant="contained" color="success" onClick={() => openHandover(m)}>
                   Handed over
                 </Button>
               </Grid>
             </Grid>
           ) : null}
-          {showStaffActions && m.status === "disputed" ? (
-            <Button
-              fullWidth
-              size="large"
-              variant="contained"
-              color="primary"
-              onClick={() => openResolve(m)}
-            >
+          {showStaffActions && m.status === 'disputed' ? (
+            <Button fullWidth size="large" variant="contained" color="primary" onClick={() => openResolve(m)}>
               Resolve
             </Button>
           ) : null}
@@ -401,19 +366,13 @@ function Details({ item: m, onClose }) {
                   variant="outlined"
                   disabled={busy}
                   onClick={() => answer(false)}
-                  sx={{ color: "error.main", borderColor: "error.main" }}
+                  sx={{ color: 'error.main', borderColor: 'error.main' }}
                 >
                   I did not get it
                 </Button>
               </Grid>
               <Grid size={6}>
-                <Button
-                  fullWidth
-                  variant="contained"
-                  color="success"
-                  disabled={busy}
-                  onClick={() => answer(true)}
-                >
+                <Button fullWidth variant="contained" color="success" disabled={busy} onClick={() => answer(true)}>
                   Yes, I collected it
                 </Button>
               </Grid>
@@ -430,7 +389,7 @@ function Details({ item: m, onClose }) {
             { src: m.coverPhotoUrl, label: `Cover · ${m.kind}` },
             {
               src: m.personPhotoUrl,
-              label: `Delivery person${m.broughtBy ? ` · ${m.broughtBy}` : ""}`,
+              label: `Delivery person${m.broughtBy ? ` · ${m.broughtBy}` : ''}`,
             },
           ]}
         />

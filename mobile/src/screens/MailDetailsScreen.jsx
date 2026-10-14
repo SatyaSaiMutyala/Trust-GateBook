@@ -271,7 +271,7 @@ export function MailDetailsScreen({ navigation, route }) {
             </Text>
             {item.receivedBy ? ` · Logged by ${item.receivedBy.name}` : ''}
           </Step>
-          {item.recipient ? (
+          {item.notifiedAt ? (
             <Step dot="ok">
               {who} notified
               {item.notifiedAt ? ` ${fmtTimeOrDate(item.notifiedAt, now)}` : ''}
@@ -281,7 +281,10 @@ export function MailDetailsScreen({ navigation, route }) {
             </Step>
           ) : (
             <Step dot="pending">
-              Receiver not on Gatebook · Inform by phone
+              {item.recipient
+                ? "Receiver can't sign in to Gatebook"
+                : 'Receiver not on Gatebook'}{' '}
+              · Inform by phone
             </Step>
           )}
           {item.handedAt ? (
@@ -352,7 +355,7 @@ export function MailDetailsScreen({ navigation, route }) {
 
         {gate && canAct && item.status === 'lodged' ? (
           <View style={styles.actions}>
-            {item.recipient ? (
+            {item.notifiedAt ? (
               <Button
                 title="🔔 Remind"
                 variant="ghost"

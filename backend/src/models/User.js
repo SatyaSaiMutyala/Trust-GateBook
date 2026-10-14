@@ -7,7 +7,8 @@ const userSchema = new Schema(
   {
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, trim: true, lowercase: true, unique: true },
-    passwordHash: { type: String, required: true },
+    /** Missing for Pace-linked users until an admin sets a password; they can't sign in before that. */
+    passwordHash: { type: String, required: false },
     role: { type: String, enum: ROLES, required: true },
     active: { type: Boolean, required: true, default: true },
     // Added with the post room; older documents simply lack them (defaults below / in serializeUser).
@@ -17,6 +18,8 @@ const userSchema = new Schema(
     location: { type: String, default: '' },
     /** Can receive post although the role is not `host`. */
     isHost: { type: Boolean, default: false },
+    /** Pace HR employee code (e.g. TLE0145) for users created/linked from the Pace directory. Never null: sparse. */
+    paceEmpCode: { type: String, required: false },
   },
   { timestamps: true },
 );
@@ -24,6 +27,7 @@ userSchema.index({ name: 1 });
 userSchema.index({ createdAt: 1 });
 // Recipient directory (GET /api/hosts).
 userSchema.index({ active: 1, role: 1, isHost: 1, name: 1 });
+userSchema.index({ paceEmpCode: 1 }, { unique: true, sparse: true });
 
 export const User = model('User', userSchema);
 
@@ -32,6 +36,9 @@ export const RECIPIENT_FILTER = { active: true, $or: [{ role: 'host' }, { isHost
 
 /** @param {{ role: string, isHost?: boolean | null }} u */
 export const isRecipient = (u) => u.role === 'host' || u.isHost === true;
+
+/** Active and has a password (Pace-linked users get one only when an admin sets it). @param {any} u */
+export const canSignIn = (u) => Boolean(u && u.active && u.passwordHash);
 
 /**
  * @typedef {object} UserDto
@@ -45,6 +52,7 @@ export const isRecipient = (u) => u.role === 'host' || u.isHost === true;
  * @property {string} dept
  * @property {string} location
  * @property {boolean} isHost   always true when role = 'host'
+ * @property {boolean} canSignIn  active and has a password
  */
 
 /** @param {any} u a User document @returns {UserDto} */
@@ -60,6 +68,7 @@ export function serializeUser(u) {
     dept: u.dept ?? '',
     location: u.location ?? '',
     isHost: isRecipient(u),
+    canSignIn: canSignIn(u),
   };
 }
 

@@ -123,8 +123,10 @@ export function HandoverSheet({ item, onClose }) {
         maxLength={300}
       />
       <Text style={[typo.small, { color: c.muted }]}>
-        {item.recipient
+        {item.notifiedAt
           ? `${item.recipientName} will be asked to confirm on their phone that they received it.`
+          : item.recipient
+          ? `${item.recipientName} can't sign in to Gatebook, so there is no confirmation step.`
           : `${item.recipientName} is not on Gatebook, so there is no confirmation step.`}
       </Text>
       {error ? (

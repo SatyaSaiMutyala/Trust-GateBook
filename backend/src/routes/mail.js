@@ -6,11 +6,12 @@ import { config } from '../config.js';
 import { currentUser, requireAuth, requireGate, requireRole } from '../middleware/auth.js';
 import { ApiError, badRequest, conflict, forbidden, notFound } from '../middleware/error.js';
 import { MAIL_STATUSES, MAIL_STATUS_LABELS, MailItem } from '../models/MailItem.js';
-import { RECIPIENT_FILTER, User } from '../models/User.js';
+import { RECIPIENT_FILTER, User, canSignIn } from '../models/User.js';
 import { emitMailCreated, emitMailReminder, emitMailUpdated } from '../realtime.js';
 import { mailToCsv } from '../services/csv.js';
 import { isoDay } from '../services/format.js';
 import { COVER_MAX_EDGE, PERSON_MAX_EDGE, deleteImage, storeImage } from '../services/images.js';
+import { PACE_ID_PREFIX, upsertPaceRecipient } from '../services/pace.js';
 import { paginate, parseListQuery, queryString, searchFilter } from '../services/pagination.js';
 import { generatePassNumber } from '../services/passNumber.js';
 import { serializeMail } from '../services/serializeMail.js';
@@ -218,13 +219,22 @@ mailRouter.post('/', canWrite, upload, async (req, res) => {
   if (!settings.sites.includes(site)) throw badRequest(`"${site}" is not a gate in settings.`, 'site');
 
   let recipient = null;
+  /** Only recipients who can sign in get notified and asked to confirm. */
+  let notify = false;
   if (recipientId) {
-    const user = mongoose.isValidObjectId(recipientId)
-      ? await User.findOne({ _id: recipientId, ...RECIPIENT_FILTER })
-      : null;
-    if (!user) throw badRequest('Choose a receiver from the list (an active employee).', 'recipientId');
+    let user;
+    if (recipientId.startsWith(PACE_ID_PREFIX)) {
+      // Pace employee: resolved against Pace and upserted as a local (password-less) host user.
+      user = await upsertPaceRecipient(recipientId);
+    } else {
+      user = mongoose.isValidObjectId(recipientId)
+        ? await User.findOne({ _id: recipientId, ...RECIPIENT_FILTER })
+        : null;
+      if (!user) throw badRequest('Choose a receiver from the list (an active employee).', 'recipientId');
+    }
     recipient = { id: user._id.toString(), name: user.name, phone: user.phone ?? '', location: user.location ?? '' };
     recipient.dept = user.dept ?? '';
+    notify = canSignIn(user);
   }
 
   const cover = await storeImage(files.cover[0].buffer, COVER_MAX_EDGE, 'cover');
@@ -261,7 +271,7 @@ mailRouter.post('/', canWrite, upload, async (req, res) => {
         cover,
         person,
         status: 'lodged',
-        notifiedAt: recipient ? now : null,
+        notifiedAt: notify ? now : null,
       });
     } catch (e) {
       if (/** @type {any} */ (e)?.code === 11000) continue; // id collision: retry
@@ -280,6 +290,12 @@ mailRouter.post('/', canWrite, upload, async (req, res) => {
 
 // ---------------------------------------------------------------- state machine
 
+/** The recipient's local user, if it can sign in (and so confirm / get reminders). @param {any} item */
+async function recipientCanSignIn(item) {
+  if (!item.recipient?.id || !mongoose.isValidObjectId(item.recipient.id)) return false;
+  return canSignIn(await User.findById(item.recipient.id));
+}
+
 mailRouter.post('/:id/remind', canWrite, async (req, res) => {
   const item = await findItem(String(req.params.id));
   if (item.status !== 'lodged' || !item.recipient?.id) {
@@ -288,6 +304,9 @@ mailRouter.post('/:id/remind', canWrite, async (req, res) => {
         ? 'Already handed over. Nothing to remind about.'
         : `${item.recipientName} is not on Gatebook. Call them instead.`,
     );
+  }
+  if (!(await recipientCanSignIn(item))) {
+    throw conflict("This receiver can't sign in to Gatebook, so they can't get reminders. Call them instead.");
   }
   const updated = await transition(item, 'lodged', { remindedAt: new Date() });
   if (!updated) throw conflict('Already handed over. Nothing to remind about.');
@@ -311,7 +330,8 @@ mailRouter.post('/:id/handover', canWrite, async (req, res) => {
   const item = await findItem(String(req.params.id));
   if (item.status !== 'lodged') throw conflict('Already handed over');
   const updated = await transition(item, 'lodged', {
-    status: item.recipient?.id ? 'handed' : 'closed',
+    // Confirmation step only for receivers who can sign in to Gatebook.
+    status: (await recipientCanSignIn(item)) ? 'handed' : 'closed',
     handedAt: new Date(),
     handedBy: guardRef(user),
     collectedBy: body.collectedBy,

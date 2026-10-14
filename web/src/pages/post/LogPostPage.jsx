@@ -118,7 +118,7 @@ function LogPostForm({ draft, update, reset, onIssued }) {
         draft.person.blob,
       );
       emit('mail:created', { item });
-      toast(item.recipient ? `Logged · ${item.recipientName} notified` : `Logged · call ${item.recipientName}`);
+      toast(item.notifiedAt ? `Logged · ${item.recipientName} notified` : `Logged · call ${item.recipientName}`);
       setInvalid(new Set());
       reset();
       onIssued(item);

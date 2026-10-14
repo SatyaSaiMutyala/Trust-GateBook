@@ -28,7 +28,7 @@ On first start, if there are no users, the backend creates an admin from `ADMIN_
 | POST   | `/api/auth/login`  | none  | `{ email, password }`                  | `{ token, user: User }`     |
 | GET    | `/api/auth/me`     | any   |                                        | `{ user: User }`            |
 | PATCH  | `/api/auth/me`     | any   | any of `{ phone, dept, location }` (own profile) | `{ user: User }`  |
-| GET    | `/api/hosts`       | any   | paginated recipient directory (active users who are `host` or `isHost`); `q` (name, dept), `dept`; sort `name` | `Paginated<Host>` |
+| GET    | `/api/hosts`       | any   | paginated list of **users who can receive post** (active users with role `host`, or `isHost` "Can also receive post"); `q` (name, dept), `dept`, `page`, `limit`; sort `name` | `Paginated<Host>` |
 | GET    | `/api/users`       | admin | paginated; `q` (name, email, phone, dept), `role`, `active` (`true`/`false`), `sort` ∈ `name`,`email`,`createdAt` (default `name`) | `Paginated<User>` |
 | POST   | `/api/users`       | admin | `{ name, email, password, role, phone?, dept?, location?, isHost? }` | `{ user: User }` |
 | PATCH  | `/api/users/:id`   | admin | any of `{ name, role, password, active, phone, dept, location, isHost }` | `{ user: User }` |
@@ -38,15 +38,46 @@ type Role = 'admin' | 'security' | 'viewer' | 'host';
 interface User { id: string; name: string; email: string; role: Role; active: boolean; createdAt: string;
   phone: string; dept: string; location: string;   // location = "where visitors/post should go", e.g. "2nd floor, cabin 3"
   isHost: boolean }                                // always true when role = 'host'
-interface Host { id: string; name: string; dept: string; location: string; phone: string } // phone is '' for host/viewer callers
+interface Host {
+  id: string;          // 'pace:<emp_code>' for Pace employees
+  name: string; dept: string;
+  location: string;    // "<designation> · <branch>" for Pace employees
+  phone: string;       // '' for host/viewer callers
+  empCode?: string; designation?: string; branch?: string;
+}
 ```
+
+## Employee directory (Pace) — optional, OFF
+
+> **Not used.** Post receivers are Gatebook's own users who can receive post (see `GET /api/hosts`). The Pace
+> integration below stays in the backend but is disabled unless `PACE_EMPLOYEES_URL` is set.
+
+The company's employee list lives in the **Pace** HR system: `GET https://pace.mytrustlab.co.in/api/v1/employees`
+(no auth; `q`, `page`, `per_page` ≤ 100, `department`, `status`, `sort`, `dir`; envelope
+`{ success, data: { items, pagination: { current_page, per_page, total, last_page, has_more } } }`).
+Gatebook never exposes Pace to the apps directly — the backend proxies it (env `PACE_EMPLOYEES_URL`;
+empty = fall back to local `host`/`isHost` users):
+
+- `GET /api/hosts` → Pace with `status=active`, `sort=name`, `page`, `per_page=limit`, `q`, `department=dept`;
+  each item maps to `Host` `{ id: 'pace:<emp_code>', name, dept: department, location: 'designation · branch',
+  phone (gate users only), empCode, designation, branch }`; pagination maps to Gatebook's shape. Results are cached
+  for 60 s. Pace down / slow (8 s timeout) → `502 { code: 'upstream', message: "The employee directory (Pace) can't be
+  reached right now. Type the receiver's name instead." }`.
+- A `recipientId` of `pace:<emp_code>` on `POST /api/mail` is resolved by asking Pace for that code (exact
+  `emp_code` match, status active, else `validation` field `recipientId`). The employee is then **upserted as a local
+  user** (role `host`, linked by `paceEmpCode`; matched by email if an account already exists) holding Pace's name,
+  email, phone, department and "designation · branch" as location. The post item's `recipient` points at that local user.
+- Pace-linked users have **no password** until an admin sets one (`PATCH /api/users/:id { password }`); they cannot
+  sign in before that (`401` "This account can't sign in yet. Ask an admin to set a password.").
+- A recipient who **can sign in** (active, has a password) gets the confirmation flow (`handed` → confirm). One who
+  can't is treated like someone not on Gatebook: handover goes straight to `closed`, and `remind` is a `conflict`.
 
 ## Errors
 
 Every non-2xx response is `{ error: { code: string, message: string, field?: string } }`.
 `message` is written for the guard and can be shown as-is. Codes used:
 `unauthorized` (401), `forbidden` (403), `not_found` (404), `validation` (400, `field` set when it points at one input),
-`badge_in_use` (409), `already_inside` (409), `conflict` (409), `internal` (500).
+`badge_in_use` (409), `already_inside` (409), `conflict` (409), `upstream` (502, Pace directory unreachable), `internal` (500).
 
 ## Pagination & query params (applies to EVERY list endpoint)
 

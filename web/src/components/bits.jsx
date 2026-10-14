@@ -1,25 +1,18 @@
-import Box from "@mui/material/Box";
-import Chip from "@mui/material/Chip";
-import Paper from "@mui/material/Paper";
-import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
-import { useState } from "react";
-import { fonts } from "../theme/tokens";
-import { initials } from "../utils/format";
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import Paper from '@mui/material/Paper';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import { useState } from 'react';
+import { fonts } from '../theme/tokens';
+import { initials } from '../utils/format';
 /** Amber pill, mono text: "Pass 12". */
 export function PassBadge({ badge, persons }) {
   return (
-    <Stack
-      direction="row"
-      spacing={0.5}
-      sx={{ alignItems: "center", flexShrink: 0 }}
-    >
-      <Chip variant="pass" label={badge ? `Pass ${badge}` : "No pass"} />
+    <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', flexShrink: 0 }}>
+      <Chip variant="pass" label={badge ? `Pass ${badge}` : 'No pass'} />
       {persons && persons > 1 ? (
-        <Typography
-          variant="mono"
-          sx={{ color: "text.secondary", fontSize: "0.78rem" }}
-        >
+        <Typography variant="mono" sx={{ color: 'text.secondary', fontSize: '0.78rem' }}>
           +{persons - 1}
         </Typography>
       ) : null}
@@ -32,39 +25,27 @@ const Dot = () => (
     sx={{
       width: 7,
       height: 7,
-      borderRadius: "50%",
-      bgcolor: "currentColor",
-      ml: "8px !important",
+      borderRadius: '50%',
+      bgcolor: 'currentColor',
+      ml: '8px !important',
     }}
   />
 );
 /** Green "Inside" (dot), amber "Overstay" (dot), grey "Exited". */
 export function StatusChip({ status, size }) {
-  const label =
-    status === "inside"
-      ? "Inside"
-      : status === "overstay"
-        ? "Overstay"
-        : "Exited";
+  const label = status === 'inside' ? 'Inside' : status === 'overstay' ? 'Overstay' : 'Exited';
   return (
     <Chip
       variant={status}
       size={size}
       label={label}
-      icon={status === "exited" ? undefined : <Dot />}
-      sx={{ "& .MuiChip-icon": { color: "inherit", mr: "-4px" } }}
+      icon={status === 'exited' ? undefined : <Dot />}
+      sx={{ '& .MuiChip-icon': { color: 'inherit', mr: '-4px' } }}
     />
   );
 }
 /** Photo, or initials on a sunk square. */
-export function VisitorThumb({
-  src,
-  name,
-  size = 64,
-  width,
-  height,
-  radius = 1,
-}) {
+export function VisitorThumb({ src, name, size = 64, width, height, radius = 1 }) {
   const [failed, setFailed] = useState(null);
   const w = width ?? size;
   const h = height ?? size;
@@ -76,12 +57,12 @@ export function VisitorThumb({
         height: h,
         flexShrink: 0,
         borderRadius: radius,
-        overflow: "hidden",
-        bgcolor: "gb.sunk",
+        overflow: 'hidden',
+        bgcolor: 'gb.sunk',
         border: 1,
-        borderColor: "divider",
-        display: "grid",
-        placeItems: "center",
+        borderColor: 'divider',
+        display: 'grid',
+        placeItems: 'center',
       }}
     >
       {showImg ? (
@@ -92,10 +73,10 @@ export function VisitorThumb({
           loading="lazy"
           onError={() => setFailed(src)}
           sx={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            display: "block",
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            display: 'block',
           }}
         />
       ) : (
@@ -104,10 +85,10 @@ export function VisitorThumb({
             fontFamily: fonts.display,
             fontWeight: 700,
             fontSize: Math.max(12, Math.round(Math.min(w, h) * 0.34)),
-            color: "text.secondary",
+            color: 'text.secondary',
           }}
         >
-          {initials(name) || "?"}
+          {initials(name) || '?'}
         </Typography>
       )}
     </Box>
@@ -118,18 +99,15 @@ export function PageHeader({ eyebrow, title, right, eyebrowColor }) {
     <Stack
       direction="row"
       sx={{
-        alignItems: "flex-end",
-        justifyContent: "space-between",
+        alignItems: 'flex-end',
+        justifyContent: 'space-between',
         gap: 2,
         mb: { xs: 2, md: 3 },
-        flexWrap: "wrap",
+        flexWrap: 'wrap',
       }}
     >
       <Box sx={{ minWidth: 0 }}>
-        <Typography
-          variant="eyebrow"
-          sx={{ color: eyebrowColor ?? "text.secondary", mb: 0.5 }}
-        >
+        <Typography variant="eyebrow" sx={{ color: eyebrowColor ?? 'text.secondary', mb: 0.5 }}>
           {eyebrow}
         </Typography>
         <Typography variant="h1">{title}</Typography>
@@ -140,17 +118,13 @@ export function PageHeader({ eyebrow, title, right, eyebrowColor }) {
 }
 export function Panel({ title, action, children, sx, ...rest }) {
   return (
-    <Paper
-      variant="outlined"
-      sx={{ p: { xs: 2, md: 2.5 }, height: "100%", ...sx }}
-      {...rest}
-    >
+    <Paper variant="outlined" sx={{ p: { xs: 2, md: 2.5 }, height: '100%', ...sx }} {...rest}>
       {title || action ? (
         <Stack
           direction="row"
           sx={{
-            alignItems: "center",
-            justifyContent: "space-between",
+            alignItems: 'center',
+            justifyContent: 'space-between',
             mb: 1.5,
             gap: 1,
           }}
@@ -169,17 +143,15 @@ export function EmptyState({ title, text, action }) {
       variant="outlined"
       sx={{
         p: { xs: 4, md: 6 },
-        textAlign: "center",
-        borderStyle: "dashed",
-        bgcolor: "transparent",
+        textAlign: 'center',
+        borderStyle: 'dashed',
+        bgcolor: 'transparent',
       }}
     >
       <Typography variant="h2" sx={{ mb: 1 }}>
         {title}
       </Typography>
-      <Typography sx={{ color: "text.secondary", maxWidth: 440, mx: "auto" }}>
-        {text}
-      </Typography>
+      <Typography sx={{ color: 'text.secondary', maxWidth: 440, mx: 'auto' }}>{text}</Typography>
       {action ? <Box sx={{ mt: 2.5 }}>{action}</Box> : null}
     </Paper>
   );
@@ -190,9 +162,9 @@ export function FieldLabel({ children }) {
     <Typography
       variant="eyebrow"
       sx={{
-        color: "text.secondary",
-        fontSize: "0.75rem",
-        letterSpacing: "0.1em",
+        color: 'text.secondary',
+        fontSize: '0.75rem',
+        letterSpacing: '0.1em',
       }}
     >
       {children}
@@ -212,14 +184,14 @@ export function FillThumb({ src, name, contain, onOpen }) {
       src={src}
       alt={name}
       sx={{
-        width: "100%",
-        height: "100%",
-        objectFit: contain ? "contain" : "cover",
+        width: '100%',
+        height: '100%',
+        objectFit: contain ? 'contain' : 'cover',
         borderRadius: 1,
         border: 1,
-        borderColor: "divider",
-        bgcolor: "gb.sunk",
-        display: "block",
+        borderColor: 'divider',
+        bgcolor: 'gb.sunk',
+        display: 'block',
       }}
     />
   );
@@ -232,18 +204,18 @@ export function FillThumb({ src, name, contain, onOpen }) {
       aria-label={`Open full photo: ${name}`}
       title="Open full photo"
       sx={{
-        all: "unset",
-        boxSizing: "border-box",
-        position: "relative",
-        display: "block",
-        width: "100%",
-        height: "100%",
-        cursor: "zoom-in",
+        all: 'unset',
+        boxSizing: 'border-box',
+        position: 'relative',
+        display: 'block',
+        width: '100%',
+        height: '100%',
+        cursor: 'zoom-in',
         borderRadius: 1,
-        "&:hover img": { filter: "brightness(0.92)" },
-        "&:focus-visible": {
-          outline: "2px solid",
-          outlineColor: "primary.main",
+        '&:hover img': { filter: 'brightness(0.92)' },
+        '&:focus-visible': {
+          outline: '2px solid',
+          outlineColor: 'primary.main',
           outlineOffset: 2,
         },
       }}
@@ -252,16 +224,16 @@ export function FillThumb({ src, name, contain, onOpen }) {
       <Box
         aria-hidden
         sx={{
-          position: "absolute",
+          position: 'absolute',
           right: 6,
           bottom: 6,
           width: 26,
           height: 26,
           borderRadius: 0.75,
-          bgcolor: "rgba(0,0,0,0.55)",
-          color: "#fff",
-          display: "grid",
-          placeItems: "center",
+          bgcolor: 'rgba(0,0,0,0.55)',
+          color: '#fff',
+          display: 'grid',
+          placeItems: 'center',
           fontSize: 15,
           lineHeight: 1,
         }}
@@ -275,20 +247,20 @@ export function FillThumb({ src, name, contain, onOpen }) {
 export function TimelineItem({ kind, last, children }) {
   return (
     <Stack direction="row" spacing={1.5}>
-      <Stack sx={{ alignItems: "center", pt: 0.6 }}>
+      <Stack sx={{ alignItems: 'center', pt: 0.6 }}>
         <Box
           sx={{
             width: 12,
             height: 12,
-            borderRadius: "50%",
+            borderRadius: '50%',
             flexShrink: 0,
-            ...(kind === "in" && { bgcolor: "success.main" }),
-            ...(kind === "out" && { bgcolor: "gb.ink" }),
-            ...(kind === "pending" && {
-              border: "2px dashed",
-              borderColor: "text.secondary",
+            ...(kind === 'in' && { bgcolor: 'success.main' }),
+            ...(kind === 'out' && { bgcolor: 'gb.ink' }),
+            ...(kind === 'pending' && {
+              border: '2px dashed',
+              borderColor: 'text.secondary',
             }),
-            ...(kind === "bad" && { bgcolor: "error.main" }),
+            ...(kind === 'bad' && { bgcolor: 'error.main' }),
           }}
         />
         {!last ? (
@@ -296,7 +268,7 @@ export function TimelineItem({ kind, last, children }) {
             sx={{
               width: 2,
               flex: 1,
-              bgcolor: "divider",
+              bgcolor: 'divider',
               my: 0.5,
               minHeight: 18,
             }}

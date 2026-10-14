@@ -52,6 +52,7 @@ beforeAll(async () => {
   process.env.UPLOAD_DIR = uploadDir;
   process.env.JWT_SECRET = 'test-jwt';
   process.env.FILE_URL_SECRET = 'test-files';
+  process.env.PACE_EMPLOYEES_URL = ''; // local host users (Pace is covered in pace.test.js)
 
   mongod = await MongoMemoryServer.create();
   await mongoose.connect(mongod.getUri('gatebook-test'));

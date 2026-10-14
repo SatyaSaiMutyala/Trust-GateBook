@@ -13,12 +13,13 @@ import { fonts } from '../../theme/tokens';
 import { initials } from '../../utils/format';
 
 /**
- * "For (receiver)" type-ahead over `GET /api/hosts?q=…&limit=8`. Picking a person sets the recipient
- * (and lets the caller fill Department); free text means "not on Gatebook".
+ * "For (receiver)": pick the employee the post is addressed to (type-ahead over `GET /api/hosts?q=…&limit=8`;
+ * they get notified and must confirm collection), or type a name for someone not on Gatebook (security
+ * informs them by phone). The list opens on focus, so it reads as a picker, and explains itself when empty.
  */
 export function RecipientField({ recipient, text, onPick, onText, error }) {
   const q = useDebounced(text.trim(), 250);
-  const [result, setResult] = useState({ q: null, options: [] });
+  const [result, setResult] = useState({ q: null, options: [], error: null });
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -26,8 +27,12 @@ export function RecipientField({ recipient, text, onPick, onText, error }) {
     const ctrl = new AbortController();
     hostsApi
       .list({ q: q || undefined, limit: 8, page: 1, sort: 'name' }, ctrl.signal)
-      .then((r) => setResult({ q, options: r.data }))
-      .catch(() => {});
+      .then((r) => setResult({ q, options: r.data, error: null }))
+      .catch((err) => {
+        // Aborted (typing / closing) → ignore; otherwise show why (e.g. server unreachable).
+        if (ctrl.signal.aborted) return;
+        setResult({ q, options: [], error: err?.message || "Couldn't load employees. You can still type the name." });
+      });
     return () => ctrl.abort();
   }, [q, open]);
 
@@ -38,6 +43,8 @@ export function RecipientField({ recipient, text, onPick, onText, error }) {
     <Box>
       <Autocomplete
         freeSolo
+        forcePopupIcon
+        openOnFocus
         open={open}
         onOpen={() => setOpen(true)}
         onClose={() => setOpen(false)}
@@ -86,9 +93,22 @@ export function RecipientField({ recipient, text, onPick, onText, error }) {
             </Box>
           );
         }}
-        noOptionsText={text.trim() ? 'No one on Gatebook matches. Keep typing the name.' : 'Type a name or department'}
+        noOptionsText={
+          result.error
+            ? result.error
+            : text.trim()
+              ? `No one named “${text.trim()}” can receive post on Gatebook. Keep the typed name — you'll inform them by phone.`
+              : "No one can receive post on Gatebook yet. An admin can add Employees or tick “Can also receive post” in Settings → Users. For now, type the receiver's name — you'll inform them by phone."
+        }
+        loadingText="Loading employees…"
         renderInput={(params) => (
-          <TextField {...params} label="For (receiver)" required error={error} placeholder="Name or department" />
+          <TextField
+            {...params}
+            label="For (receiver)"
+            required
+            error={error}
+            placeholder="Search employees or type a name"
+          />
         )}
       />
       {recipient ? (
@@ -102,10 +122,12 @@ export function RecipientField({ recipient, text, onPick, onText, error }) {
         <FormHelperText component="div" sx={{ color: 'warning.main' }}>
           <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
             <PhoneOutlinedIcon sx={{ fontSize: 16 }} />
-            <span>Not on Gatebook. Inform them by phone.</span>
+            <span>Not on Gatebook — call them to collect it.</span>
           </Stack>
         </FormHelperText>
-      ) : null}
+      ) : (
+        <FormHelperText>Pick the employee it is addressed to. Not listed? Type their name.</FormHelperText>
+      )}
     </Box>
   );
 }

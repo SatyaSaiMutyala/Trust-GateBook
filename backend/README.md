@@ -52,6 +52,7 @@ Scripts: `dev`, `start` (`node src/index.js`), `build` (syntax check of `src/` w
 | `UPLOAD_DIR` | `uploads` | relative to `backend/`; photos stored as random `<32 hex>.jpg` |
 | `TZ_DISPLAY` | `Asia/Kolkata` | CSV dates, pass-number date, times in guard messages |
 | `EMBEDDED_MONGO_PORT` | `27018` | embedded dev DB only |
+| `PACE_EMPLOYEES_URL` | `https://pace.mytrustlab.co.in/api/v1/employees` | Pace HR employee API behind `GET /api/hosts`; set it to an empty value to use local `host` / `isHost` users instead |
 | `NODE_ENV` | `development` | `production` enforces secrets and the CORS default |
 
 ## Layout
@@ -67,9 +68,10 @@ src/
                      MailItem (post room), Settings (singleton, incl. mailKinds)
   middleware/        auth (JWT, roles), error (ApiError -> { error: { code, message, field } })
   routes/            auth, users, hosts, settings, visits, stats, mail, files
-  services/          pagination, pass/entry numbers, image storage (sharp), URL signing, serialization, CSV, formatting
+  services/          pace (Pace HR directory proxy + recipient upsert), pagination, pass/entry numbers, image storage (sharp), URL signing, serialization, CSV, formatting
 test/api.test.js     visitor register integration tests
 test/mail.test.js    post room, roles, hosts directory, profile, settings migration
+test/pace.test.js    Pace directory (fetch mocked: no network), Pace recipients, sign-in rules
 ```
 
 ## Notes
@@ -103,3 +105,19 @@ Changing a user's role or deactivating them disconnects their sockets so they re
 
 Existing databases keep working: new user fields default to empty / `false`, and settings stored before the post room
 get the default `mailKinds` on start-up.
+
+## Employee directory (Pace)
+
+`GET /api/hosts` proxies the company's **Pace** HR API (`PACE_EMPLOYEES_URL`): active employees sorted by name,
+`page` / `limit` (≤ 100) / `q` / `dept` passed through, results cached in memory for 60 s per query, 8 s timeout.
+Items map to `{ id: 'pace:<emp_code>', name, dept, location: 'designation · branch', phone, empCode, designation, branch }`
+(phone only for admin/security callers). If Pace fails or times out the endpoint answers
+`502 { code: 'upstream' }` and the apps fall back to a typed receiver name.
+
+Posting mail to `recipientId: 'pace:<emp_code>'` looks the code up in Pace (exact match, active) and upserts a local
+user: matched by `paceEmpCode`, else by email (the existing account gets linked and becomes a recipient), else a new
+`host` **without a password**. Name, phone, department and location are refreshed from Pace on every resolve.
+Password-less users can't sign in (`401` "This account can't sign in yet…"; `canSignIn: false` in `/api/users`) and get no
+confirmation step: handover goes straight to `closed`, `remind` is a 409, and `notifiedAt` stays null. An admin sets a
+password with `PATCH /api/users/:id { password }` to give them the full flow.
+With `PACE_EMPLOYEES_URL=` (empty) the directory lists local `host` / `isHost` users instead.

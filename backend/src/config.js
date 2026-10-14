@@ -38,6 +38,14 @@ function corsOrigins() {
     .filter(Boolean);
 }
 
+/**
+ * Optional Pace HR employee API. OFF by default: post receivers are Gatebook's own users who can receive
+ * post (role `host` / Employee, or `isHost` "Can also receive post"). Set PACE_EMPLOYEES_URL to switch it on.
+ */
+function paceUrl() {
+  return (env.PACE_EMPLOYEES_URL ?? '').trim();
+}
+
 export const config = {
   nodeEnv,
   isProd,
@@ -59,4 +67,7 @@ export const config = {
   uploadDir: path.resolve(BACKEND_ROOT, str('UPLOAD_DIR', 'uploads')),
   displayTz: str('TZ_DISPLAY', 'Asia/Kolkata'),
   maxUploadBytes: 8 * 1024 * 1024,
+  paceEmployeesUrl: paceUrl(),
+  paceTimeoutMs: 8_000,
+  paceCacheMs: 60_000,
 };

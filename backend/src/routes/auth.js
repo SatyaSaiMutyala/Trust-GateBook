@@ -16,7 +16,11 @@ export const authRouter = Router();
 authRouter.post('/login', async (req, res) => {
   const { email, password } = loginSchema.parse(req.body ?? {});
   const user = await User.findOne({ email: email.toLowerCase() });
-  const ok = user ? await bcrypt.compare(password, user.passwordHash) : false;
+  if (user && !user.passwordHash) {
+    // Pace-linked employees exist without a password until an admin sets one.
+    throw unauthorized("This account can't sign in yet. Ask an admin to set a password.");
+  }
+  const ok = user?.passwordHash ? await bcrypt.compare(password, user.passwordHash) : false;
   if (!user || !ok) throw unauthorized('Wrong email or password.');
   if (!user.active) throw forbidden('This account has been deactivated. Ask an admin.');
   res.json({ token: signToken(user._id.toString()), user: serializeUser(user) });

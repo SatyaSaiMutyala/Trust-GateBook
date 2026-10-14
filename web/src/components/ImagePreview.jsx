@@ -1,19 +1,19 @@
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import CloseIcon from "@mui/icons-material/Close";
-import OpenInNewIcon from "@mui/icons-material/OpenInNew";
-import Box from "@mui/material/Box";
-import Dialog from "@mui/material/Dialog";
-import IconButton from "@mui/material/IconButton";
-import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
-import { useEffect, useState } from "react";
-import { fonts } from "../theme/tokens";
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import CloseIcon from '@mui/icons-material/Close';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import Box from '@mui/material/Box';
+import Dialog from '@mui/material/Dialog';
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import { useEffect, useState } from 'react';
+import { fonts } from '../theme/tokens';
 
 const barBtn = {
-  color: "#fff",
-  bgcolor: "rgba(255,255,255,0.12)",
-  "&:hover": { bgcolor: "rgba(255,255,255,0.22)" },
+  color: '#fff',
+  bgcolor: 'rgba(255,255,255,0.12)',
+  '&:hover': { bgcolor: 'rgba(255,255,255,0.22)' },
 };
 
 /**
@@ -36,11 +36,11 @@ export function ImagePreview({ images, index = 0, open, onClose }) {
   useEffect(() => {
     if (!open || count < 2) return undefined;
     const onKey = (e) => {
-      if (e.key === "ArrowRight") go(1);
-      if (e.key === "ArrowLeft") go(-1);
+      if (e.key === 'ArrowRight') go(1);
+      if (e.key === 'ArrowLeft') go(-1);
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, count]);
 
@@ -56,9 +56,9 @@ export function ImagePreview({ images, index = 0, open, onClose }) {
       slotProps={{
         paper: {
           sx: {
-            bgcolor: "rgba(5,10,8,0.94)",
-            backgroundImage: "none",
-            boxShadow: "none",
+            bgcolor: 'rgba(5,10,8,0.94)',
+            backgroundImage: 'none',
+            boxShadow: 'none',
           },
         },
       }}
@@ -67,11 +67,11 @@ export function ImagePreview({ images, index = 0, open, onClose }) {
       <Stack
         direction="row"
         sx={{
-          alignItems: "center",
+          alignItems: 'center',
           gap: 1.5,
           px: { xs: 2, md: 3 },
           py: 1.5,
-          color: "#fff",
+          color: '#fff',
           flexShrink: 0,
         }}
       >
@@ -80,10 +80,7 @@ export function ImagePreview({ images, index = 0, open, onClose }) {
             {current.label}
           </Typography>
           {count > 1 ? (
-            <Typography
-              variant="caption"
-              sx={{ fontFamily: fonts.mono, opacity: 0.7 }}
-            >
+            <Typography variant="caption" sx={{ fontFamily: fonts.mono, opacity: 0.7 }}>
               {Math.min(page, count - 1) + 1} / {count}
             </Typography>
           ) : null}
@@ -99,12 +96,7 @@ export function ImagePreview({ images, index = 0, open, onClose }) {
         >
           <OpenInNewIcon fontSize="small" />
         </IconButton>
-        <IconButton
-          onClick={onClose}
-          aria-label="Close photo"
-          title="Close (Esc)"
-          sx={barBtn}
-        >
+        <IconButton onClick={onClose} aria-label="Close photo" title="Close (Esc)" sx={barBtn}>
           <CloseIcon />
         </IconButton>
       </Stack>
@@ -115,12 +107,12 @@ export function ImagePreview({ images, index = 0, open, onClose }) {
           if (e.target === e.currentTarget) onClose();
         }}
         sx={{
-          position: "relative",
+          position: 'relative',
           flex: 1,
           minHeight: 0,
-          overflow: zoom ? "auto" : "hidden",
-          display: "grid",
-          placeItems: zoom ? "start center" : "center",
+          overflow: zoom ? 'auto' : 'hidden',
+          display: 'grid',
+          placeItems: zoom ? 'start center' : 'center',
           px: { xs: 1, md: 9 },
           pb: 2,
         }}
@@ -130,18 +122,18 @@ export function ImagePreview({ images, index = 0, open, onClose }) {
           src={current.src}
           alt={current.label}
           onClick={() => setZoom((z) => !z)}
-          title={zoom ? "Click to fit" : "Click to zoom"}
+          title={zoom ? 'Click to fit' : 'Click to zoom'}
           sx={{
-            display: "block",
-            maxWidth: zoom ? "none" : "100%",
-            maxHeight: zoom ? "none" : "100%",
-            width: zoom ? "auto" : undefined,
-            objectFit: "contain",
+            display: 'block',
+            maxWidth: zoom ? 'none' : '100%',
+            maxHeight: zoom ? 'none' : '100%',
+            width: zoom ? 'auto' : undefined,
+            objectFit: 'contain',
             borderRadius: 1,
-            cursor: zoom ? "zoom-out" : "zoom-in",
-            userSelect: "none",
+            cursor: zoom ? 'zoom-out' : 'zoom-in',
+            userSelect: 'none',
             // Zoomed: at least as wide as the stage (enlarges the small stored photos), scroll to pan.
-            ...(zoom && { minWidth: "100%" }),
+            ...(zoom && { minWidth: '100%' }),
           }}
         />
         {count > 1 ? (
@@ -151,10 +143,10 @@ export function ImagePreview({ images, index = 0, open, onClose }) {
               aria-label="Previous photo"
               sx={{
                 ...barBtn,
-                position: "absolute",
+                position: 'absolute',
                 left: { xs: 8, md: 24 },
-                top: "50%",
-                transform: "translateY(-50%)",
+                top: '50%',
+                transform: 'translateY(-50%)',
               }}
             >
               <ChevronLeftIcon />
@@ -164,10 +156,10 @@ export function ImagePreview({ images, index = 0, open, onClose }) {
               aria-label="Next photo"
               sx={{
                 ...barBtn,
-                position: "absolute",
+                position: 'absolute',
                 right: { xs: 8, md: 24 },
-                top: "50%",
-                transform: "translateY(-50%)",
+                top: '50%',
+                transform: 'translateY(-50%)',
               }}
             >
               <ChevronRightIcon />

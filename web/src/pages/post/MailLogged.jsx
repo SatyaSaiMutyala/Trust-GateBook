@@ -45,7 +45,7 @@ export function MailLogged({ item: m, onNext }) {
                 </Typography>
               </Grid>
               <Grid size={12}>
-                {m.recipient ? (
+                {m.notifiedAt ? (
                   <Box
                     sx={{ p: 1.5, borderRadius: 1, bgcolor: 'gb.accentSoft', border: 1, borderColor: 'primary.main' }}
                   >
@@ -56,7 +56,10 @@ export function MailLogged({ item: m, onNext }) {
                 ) : (
                   <Box sx={{ p: 1.5, borderRadius: 1, bgcolor: 'gb.warnSoft', border: 1, borderColor: 'warning.main' }}>
                     <Typography>
-                      <b>{m.recipientName} isn&apos;t on Gatebook.</b> Call them to collect it.
+                      <b>
+                        {m.recipientName} {m.recipient ? "can't sign in to Gatebook." : "isn't on Gatebook."}
+                      </b>{' '}
+                      Call them to collect it.
                     </Typography>
                   </Box>
                 )}

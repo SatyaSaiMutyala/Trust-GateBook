@@ -1,10 +1,9 @@
-import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from 'react-native';
@@ -17,21 +16,13 @@ import { mailFromLine } from '../components/MailCard';
 import { PhotoTile } from '../components/PhotoTile';
 import { SelectField } from '../components/SelectField';
 import { Thumb } from '../components/Thumb';
+import { RecipientPicker } from '../components/RecipientPicker';
 import { fonts, MIN_TOUCH, radius, typo, useTheme } from '../theme';
 import { CARRIERS } from '../types';
 import { captureImage } from '../utils/camera';
-import { initials } from '../utils/format';
-import {
-  ScaledSheet,
-  moderateScale,
-  verticalScale,
-} from 'react-native-size-matters/extend';
+import { ScaledSheet, moderateScale } from 'react-native-size-matters/extend';
 import { useDispatch, useSelector } from 'react-redux';
-import {
-  errorMessage,
-  useCreateMailMutation,
-  useListHostsInfiniteQuery,
-} from '../store/api';
+import { errorMessage, useCreateMailMutation } from '../store/api';
 import { selectCanHandleMail } from '../store/authSlice';
 import {
   logMailCleared,
@@ -40,7 +31,6 @@ import {
   selectLogMailDraft,
 } from '../store/draftsSlice';
 import { useSettings, useToast } from '../store/hooks';
-import { useInfiniteList } from '../store/useInfiniteList';
 
 /** "Item logged" confirmation after a successful create. */
 function ItemLogged({ item, onNext, onPostRoom }) {
@@ -84,7 +74,7 @@ function ItemLogged({ item, onNext, onPostRoom }) {
           {item.refNo ? ` · ${item.refNo}` : ''}
         </Text>
       </View>
-      {item.recipient ? (
+      {item.notifiedAt ? (
         <Banner tone="accent">
           <Text style={[typo.body, { color: c.ink }]}>
             <Text style={{ fontFamily: fonts.bodySemi }}>
@@ -97,7 +87,10 @@ function ItemLogged({ item, onNext, onPostRoom }) {
         <Banner tone="warn">
           <Text style={[typo.body, { color: c.ink }]}>
             <Text style={{ fontFamily: fonts.bodySemi }}>
-              {item.recipientName} isn&apos;t on Gatebook.
+              {item.recipientName}{' '}
+              {item.recipient
+                ? "can't sign in to Gatebook."
+                : "isn't on Gatebook."}
             </Text>{' '}
             Call them to collect it.
           </Text>
@@ -133,7 +126,6 @@ export function LogMailScreen({ navigation }) {
   const { form, recipient, coverUri, personUri } =
     useSelector(selectLogMailDraft);
   const [createMail] = useCreateMailMutation();
-  const [recipientFocused, setRecipientFocused] = useState(false);
   const [carrierFocused, setCarrierFocused] = useState(false);
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState(null);
@@ -156,17 +148,6 @@ export function LogMailScreen({ navigation }) {
     [dispatch],
   );
 
-  // Recipient type-ahead over GET /api/hosts?q=…&limit=8
-  const hostQuery = form.recipientText.trim();
-  const showHosts = recipientFocused && !recipient && hostQuery.length > 0;
-  const hostParams = useMemo(
-    () => ({ q: hostQuery, limit: 8, sort: 'name' }),
-    [hostQuery],
-  );
-  const hosts = useInfiniteList(useListHostsInfiniteQuery, hostParams, {
-    skip: !showHosts,
-  });
-
   const carrierSuggestions = carrierFocused
     ? CARRIERS.filter(
         x =>
@@ -188,7 +169,6 @@ export function LogMailScreen({ navigation }) {
       }),
     );
     setErrors(e => ({ ...e, recipient: false }));
-    setRecipientFocused(false);
   };
 
   const take = async kind => {
@@ -248,7 +228,7 @@ export function LogMailScreen({ navigation }) {
         personUri,
       }).unwrap();
       toast.show(
-        res.item.recipient
+        res.item.notifiedAt
           ? `Logged · ${res.item.recipientName} notified`
           : `Logged · call ${res.item.recipientName}`,
       );
@@ -302,12 +282,6 @@ export function LogMailScreen({ navigation }) {
     { value: '', label: 'Not set' },
     ...settings.departments.map(d => ({ value: d, label: d })),
   ];
-  const recipientHint = recipient
-    ? '🔔 Gets a notification and must confirm collection'
-    : form.recipientText.trim() && !recipientFocused
-    ? '📞 Not on Gatebook. Inform them by phone.'
-    : null;
-
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: c.bg }}
@@ -428,91 +402,21 @@ export function LogMailScreen({ navigation }) {
           />
         </View>
 
-        <View>
-          <Field
-            label="For (receiver)"
-            required
-            value={form.recipientText}
-            onChangeText={t => {
-              set('recipientText', t);
-              if (recipient) dispatch(logMailPatched({ recipient: null }));
-              setErrors(e => ({ ...e, recipient: false }));
-            }}
-            onFocus={() => setRecipientFocused(true)}
-            onBlur={() => setTimeout(() => setRecipientFocused(false), 150)}
-            autoCapitalize="words"
-            autoCorrect={false}
-            error={errors.recipient}
-            placeholder="Start typing a name"
-            hint={recipientHint}
-            hintTone={recipient ? 'muted' : 'warn'}
-            dropdown={
-              showHosts && hosts.items.length ? (
-                <>
-                  {hosts.items.map((h, i) => (
-                    <Pressable
-                      key={h.id}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${h.name}, ${[h.dept, h.location]
-                        .filter(Boolean)
-                        .join(', ')}`}
-                      onPress={() => pickHost(h)}
-                      style={({ pressed }) => [
-                        styles.hostRow,
-                        {
-                          backgroundColor: pressed ? c.sunk : 'transparent',
-                          borderTopColor: c.line,
-                          borderTopWidth: i ? StyleSheet.hairlineWidth : 0,
-                        },
-                      ]}
-                    >
-                      <View
-                        style={[
-                          styles.avatar,
-                          { backgroundColor: c.sunk, borderColor: c.line },
-                        ]}
-                      >
-                        <Text
-                          style={{
-                            fontFamily: fonts.display,
-                            color: c.muted,
-                            fontSize: moderateScale(14),
-                          }}
-                        >
-                          {initials(h.name)}
-                        </Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text
-                          numberOfLines={1}
-                          style={[typo.bodySemi, { color: c.ink }]}
-                        >
-                          {h.name}
-                        </Text>
-                        <Text
-                          numberOfLines={1}
-                          style={[typo.small, { color: c.muted }]}
-                        >
-                          {[h.dept, h.location].filter(Boolean).join(' · ') ||
-                            '—'}
-                        </Text>
-                      </View>
-                    </Pressable>
-                  ))}
-                </>
-              ) : null
-            }
-          />
-        </View>
-        {recipient ? (
-          <Text
-            style={[typo.small, { color: c.ok, marginTop: verticalScale(-6) }]}
-            accessibilityLiveRegion="polite"
-          >
-            Picked {recipient.name}
-            {recipient.location ? ` · ${recipient.location}` : ''}
-          </Text>
-        ) : null}
+        <RecipientPicker
+          text={form.recipientText}
+          recipient={recipient}
+          error={errors.recipient}
+          onText={t => {
+            set('recipientText', t);
+            setErrors(e => ({ ...e, recipient: false }));
+          }}
+          onPick={pickHost}
+          onClear={() =>
+            dispatch(
+              logMailPatched({ recipient: null, form: { recipientText: '' } }),
+            )
+          }
+        />
 
         <SelectField
           label="Department"
@@ -590,22 +494,6 @@ const styles = ScaledSheet.create({
     borderRadius: radius.chip,
     paddingHorizontal: '12@s',
     minHeight: MIN_TOUCH,
-    justifyContent: 'center',
-  },
-  hostRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: '10@ms',
-    paddingHorizontal: '12@s',
-    minHeight: MIN_TOUCH + 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  avatar: {
-    width: '34@ms',
-    height: '34@ms',
-    borderRadius: '17@ms',
-    borderWidth: 1,
-    alignItems: 'center',
     justifyContent: 'center',
   },
 });

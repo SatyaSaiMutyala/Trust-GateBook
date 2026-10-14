@@ -23,7 +23,7 @@ export async function userFromToken(token) {
   }
   if (typeof sub !== 'string' || !mongoose.isValidObjectId(sub)) return null;
   const user = await User.findById(sub);
-  return user && user.active ? user : null;
+  return user && user.active && user.passwordHash ? user : null;
 }
 
 /** Sets `req.user` from the Bearer token, or 401. @type {import('express').RequestHandler} */

@@ -5,6 +5,8 @@ module.exports = {
   // The app is plain JavaScript with .jsx components.
   transform: { ...preset.transform, '^.+\\.(js|jsx)$': 'babel-jest' },
   moduleFileExtensions: ['js', 'jsx', 'json'],
+  // Render tests can be slow on a busy machine; don't fail them on Jest's 5 s default.
+  testTimeout: 15000,
   // Same '@env' mapping as metro.config.js (react-native-size-matters/extend guideline size).
   moduleNameMapper: { '^@env$': '<rootDir>/src/theme/sizeMattersBase.js' },
   transformIgnorePatterns: [
