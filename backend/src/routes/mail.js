@@ -12,7 +12,7 @@ import { mailToCsv } from '../services/csv.js';
 import { isoDay } from '../services/format.js';
 import { COVER_MAX_EDGE, PERSON_MAX_EDGE, deleteImage, storeImage } from '../services/images.js';
 import { PACE_ID_PREFIX, upsertPaceRecipient } from '../services/pace.js';
-import { sendToUsers } from '../services/push.js';
+import { notify } from '../services/notify.js';
 import { paginate, parseListQuery, queryString, searchFilter } from '../services/pagination.js';
 import { generatePassNumber } from '../services/passNumber.js';
 import { serializeMail } from '../services/serializeMail.js';
@@ -41,42 +41,47 @@ const upload = multer({
 // ---------------------------------------------------------------- helpers
 
 /**
- * Push notifications (docs/API.md "What is pushed"). Fire-and-forget: never awaited by the request.
+ * Notifications (docs/API.md "What is pushed" + "In-app notifications"): stored per user, sent over the
+ * user's socket room and pushed to their phones. Storing is awaited; pushes are fire-and-forget.
  * @param {any} item
  */
-const pushData = (item) => ({ type: 'mail', id: item.code });
-const push = {
+const mailData = (item) => ({ type: 'mail', id: item.code });
+const notifyMail = {
   /** @param {any} item */
   logged: (item) =>
-    sendToUsers([item.recipient.id], {
+    notify([item.recipient.id], {
+      event: 'mail_logged',
       title: `📬 ${item.kind} for you`,
       body: `From ${item.sender} · collect it at the gate`,
-      data: pushData(item),
+      data: mailData(item),
     }),
   /** @param {any} item */
   reminder: (item) =>
-    sendToUsers([item.recipient.id], {
+    notify([item.recipient.id], {
+      event: 'mail_reminder',
       title: `⏰ Reminder: ${item.kind} waiting`,
       body: `From ${item.sender} · still at the gate`,
-      data: pushData(item),
+      data: mailData(item),
     }),
   /** @param {any} item */
   handed: (item) =>
-    sendToUsers([item.recipient.id], {
+    notify([item.recipient.id], {
+      event: 'mail_confirm',
       title: '✅ Please confirm collection',
       body: `${item.kind} from ${item.sender} was handed to ${item.collectedBy}. Did you get it?`,
-      data: pushData(item),
+      data: mailData(item),
     }),
   /** All active security + admin users. @param {any} item */
   disputed: (item) =>
-    sendToUsers(
+    notify(
       User.find({ active: true, role: { $in: ['security', 'admin'] } }, { _id: 1 })
         .lean()
         .then((staff) => staff.map((u) => u._id.toString())),
       {
+        event: 'mail_disputed',
         title: `⚠️ ${item.recipientName} didn't get it`,
         body: `${item.kind} from ${item.sender} · ${item.disputeNote}`,
-        data: pushData(item),
+        data: mailData(item),
       },
     ),
 };
@@ -262,7 +267,7 @@ mailRouter.post('/', canWrite, upload, async (req, res) => {
 
   let recipient = null;
   /** Only recipients who can sign in get notified and asked to confirm. */
-  let notify = false;
+  let notifyRecipient = false;
   if (recipientId) {
     let user;
     if (recipientId.startsWith(PACE_ID_PREFIX)) {
@@ -276,7 +281,7 @@ mailRouter.post('/', canWrite, upload, async (req, res) => {
     }
     recipient = { id: user._id.toString(), name: user.name, phone: user.phone ?? '', location: user.location ?? '' };
     recipient.dept = user.dept ?? '';
-    notify = canSignIn(user);
+    notifyRecipient = canSignIn(user);
   }
 
   const cover = await storeImage(files.cover[0].buffer, COVER_MAX_EDGE, 'cover');
@@ -313,7 +318,7 @@ mailRouter.post('/', canWrite, upload, async (req, res) => {
         cover,
         person,
         status: 'lodged',
-        notifiedAt: notify ? now : null,
+        notifiedAt: notifyRecipient ? now : null,
       });
     } catch (e) {
       if (/** @type {any} */ (e)?.code === 11000) continue; // id collision: retry
@@ -327,7 +332,7 @@ mailRouter.post('/', canWrite, upload, async (req, res) => {
   }
 
   emitMailCreated(item);
-  if (notify && item.recipient?.id) void push.logged(item);
+  if (notifyRecipient && item.recipient?.id) await notifyMail.logged(item);
   res.status(201).json({ item: serializeMail(item) });
 });
 
@@ -355,7 +360,7 @@ mailRouter.post('/:id/remind', canWrite, async (req, res) => {
   if (!updated) throw conflict('Already handed over. Nothing to remind about.');
   emitMailReminder(updated);
   emitMailUpdated(updated);
-  void push.reminder(updated);
+  await notifyMail.reminder(updated);
   res.json({ item: serializeMail(updated) });
 });
 
@@ -383,7 +388,7 @@ mailRouter.post('/:id/handover', canWrite, async (req, res) => {
   });
   if (!updated) throw conflict('Already handed over');
   emitMailUpdated(updated);
-  if (updated.status === 'handed') void push.handed(updated);
+  if (updated.status === 'handed') await notifyMail.handed(updated);
   res.json({ item: serializeMail(updated) });
 });
 
@@ -416,7 +421,7 @@ mailRouter.post('/:id/confirm', async (req, res) => {
     throw conflict('This item has already been answered for.', undefined, { item: serializeMail(fresh) });
   }
   emitMailUpdated(updated);
-  if (updated.status === 'disputed') void push.disputed(updated);
+  if (updated.status === 'disputed') await notifyMail.disputed(updated);
   res.json({ item: serializeMail(updated) });
 });
 

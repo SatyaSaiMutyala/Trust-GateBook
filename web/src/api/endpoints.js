@@ -200,3 +200,25 @@ export const mailApi = {
   resolve: (id, body) =>
     request('POST', `/api/mail/${encodeURIComponent(id)}/resolve`, { body }).then((r) => normalizeMail(r.item)),
 };
+
+// ---- in-app notifications -------------------------------------------------------
+
+/** @typedef {{ id: string, event: 'mail_logged' | 'mail_reminder' | 'mail_confirm' | 'mail_disputed', title: string, body: string, data: { type: 'mail', id: string }, readAt: string | null, createdAt: string }} AppNotification */
+
+export const notificationsApi = {
+  /**
+   * Paginated, own notifications only. Query: page, limit, unread ('true'), sort (createdAt, default -createdAt).
+   * @returns {Promise<{ data: AppNotification[], pagination: Pagination, unreadCount: number }>}
+   */
+  list: (query, signal) =>
+    request('GET', '/api/notifications', { query, signal }).then((r) => ({
+      ...page(r),
+      unreadCount: r.unreadCount ?? 0,
+    })),
+  /** @returns {Promise<number>} */
+  unreadCount: (signal) => request('GET', '/api/notifications/unread-count', { signal }).then((r) => r.count ?? 0),
+  /** @returns {Promise<{ notification: AppNotification, unreadCount: number }>} */
+  read: (id) => request('POST', `/api/notifications/${encodeURIComponent(id)}/read`),
+  /** @returns {Promise<{ updated: number, unreadCount: number }>} */
+  readAll: () => request('POST', '/api/notifications/read-all'),
+};

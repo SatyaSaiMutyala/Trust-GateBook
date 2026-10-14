@@ -16,6 +16,8 @@ export const TAGS = [
   'Users',
   'Hosts',
   'Me',
+  'Notifications',
+  'UnreadCount',
 ];
 
 const rawBaseQuery = fetchBaseQuery({
@@ -129,6 +131,53 @@ export const api = createApi({
         method: 'DELETE',
       }),
     }),
+    // ---------------- in-app notifications (inbox) ----------------
+    /** Paginated own notifications, newest first. Query: unread ('true'), limit. Response adds `unreadCount`. */
+    listNotifications: build.infiniteQuery({
+      query: listQuery('/api/notifications'),
+      infiniteQueryOptions: pages,
+      providesTags: ['Notifications'],
+    }),
+    /** Bell badge: `{ count }` → number. */
+    unreadCount: build.query({
+      query: () => '/api/notifications/unread-count',
+      transformResponse: res => res?.count ?? 0,
+      providesTags: ['UnreadCount'],
+    }),
+    markNotificationRead: build.mutation({
+      query: id => ({
+        url: `/api/notifications/${encodeURIComponent(id)}/read`,
+        method: 'POST',
+        body: {},
+      }),
+      async onQueryStarted(id, { dispatch, getState, queryFulfilled }) {
+        const undo = applyNotificationRead(dispatch, getState, id);
+        try {
+          const { data } = await queryFulfilled;
+          if (typeof data?.unreadCount === 'number')
+            dispatch(setUnreadCount(data.unreadCount));
+        } catch {
+          undo();
+        }
+      },
+    }),
+    markAllNotificationsRead: build.mutation({
+      query: () => ({
+        url: '/api/notifications/read-all',
+        method: 'POST',
+        body: {},
+      }),
+      async onQueryStarted(_arg, { dispatch, getState, queryFulfilled }) {
+        const undo = applyNotificationRead(dispatch, getState, 'all');
+        try {
+          await queryFulfilled;
+          dispatch(setUnreadCount(0));
+        } catch {
+          undo();
+        }
+      },
+    }),
+
     me: build.query({
       query: () => '/api/auth/me',
       providesTags: ['Me'],
@@ -390,6 +439,10 @@ export const api = createApi({
 
 export const {
   useLoginMutation,
+  useListNotificationsInfiniteQuery,
+  useUnreadCountQuery,
+  useMarkNotificationReadMutation,
+  useMarkAllNotificationsReadMutation,
   useRegisterDeviceMutation,
   useUnregisterDeviceMutation,
   useMeQuery,
@@ -418,3 +471,69 @@ export const {
   useConfirmMailMutation,
   useResolveMailMutation,
 } = api;
+
+// ---------------- notification cache helpers ----------------
+
+/** Writes the bell badge count into the `unreadCount` cache (creates it if needed). */
+export const setUnreadCount = count => (dispatch, getState) => {
+  const value = Math.max(0, count);
+  const entry = api.endpoints.unreadCount.select()(getState());
+  if (entry?.data !== undefined) {
+    // Existing cache entry (the bell is subscribed): synchronous patch.
+    dispatch(api.util.updateQueryData('unreadCount', undefined, () => value));
+  } else {
+    dispatch(api.util.upsertQueryData('unreadCount', undefined, value));
+  }
+};
+
+/**
+ * Optimistically marks one notification (or 'all') read in every cached notifications list and the badge.
+ * Returns an undo function.
+ */
+export function applyNotificationRead(dispatch, getState, ids) {
+  const now = new Date().toISOString();
+  const all = ids === 'all';
+  const wanted = all ? null : new Set(Array.isArray(ids) ? ids : [ids]);
+  let newlyRead = 0;
+  let found = false;
+  const patches = [];
+  const args = api.util.selectCachedArgsForQuery(
+    getState(),
+    'listNotifications',
+  );
+  const seen = new Set();
+  args.forEach(arg => {
+    patches.push(
+      dispatch(
+        api.util.updateQueryData('listNotifications', arg, draft => {
+          draft.pages.forEach(page => {
+            (page.data ?? []).forEach(n => {
+              if (!all && wanted.has(n.id)) found = true;
+              if (!n.readAt && (all || wanted.has(n.id))) {
+                n.readAt = now;
+                if (!seen.has(n.id)) {
+                  seen.add(n.id);
+                  newlyRead += 1;
+                }
+              }
+            });
+          });
+        }),
+      ),
+    );
+  });
+  const before = api.endpoints.unreadCount.select()(getState())?.data;
+  if (typeof before === 'number') {
+    // An id that is not in any loaded page (e.g. opened from a push) is assumed unread; the server's
+    // unreadCount in the response corrects it either way.
+    const delta = all ? before : found ? newlyRead : wanted.size;
+    patches.push(
+      dispatch(
+        api.util.updateQueryData('unreadCount', undefined, () =>
+          Math.max(0, before - delta),
+        ),
+      ),
+    );
+  }
+  return () => patches.forEach(p => p.undo());
+}

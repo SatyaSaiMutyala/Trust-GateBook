@@ -2,6 +2,7 @@ import React from 'react';
 import { ActivityIndicator, Image, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fonts, MIN_TOUCH, radius, useTheme } from '../theme';
+import { NotificationBell } from './NotificationBell';
 import {
   ScaledSheet,
   moderateScale,
@@ -10,10 +11,11 @@ import {
 
 /**
  * App bar on the dark rail: the screen title on the left (after the Gatebook mark, or a back
- * button on pushed screens) and the screen's own actions on the right (`right`, e.g. Export).
- * Screens provide title / subtitle / actions through navigation options — see RootNavigator.
+ * button on pushed screens), then the notifications bell (`showBell`) and the screen's own actions
+ * (`right`, e.g. Export). Screens provide title / subtitle / actions through navigation options —
+ * see RootNavigator.
  */
-export function TopBar({ onBack, title, subtitle, right }) {
+export function TopBar({ onBack, title, subtitle, right, showBell = false }) {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
   return (
@@ -63,7 +65,12 @@ export function TopBar({ onBack, title, subtitle, right }) {
           </Text>
         ) : null}
       </View>
-      {right ? <View style={styles.actions}>{right}</View> : null}
+      {showBell || right ? (
+        <View style={styles.actions}>
+          {showBell ? <NotificationBell /> : null}
+          {right}
+        </View>
+      ) : null}
     </View>
   );
 }

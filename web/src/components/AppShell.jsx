@@ -5,6 +5,7 @@ import MailOutlineIcon from '@mui/icons-material/EmailOutlined';
 import MarkunreadMailboxOutlinedIcon from '@mui/icons-material/MarkunreadMailboxOutlined';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutlined';
+import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AppBar from '@mui/material/AppBar';
 import Badge from '@mui/material/Badge';
@@ -24,9 +25,10 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { useUser } from '../auth/context';
 import { isEmployee, isRecipient, ROLE_LABEL } from '../auth/roles';
 import { useIsDesktop } from '../hooks';
-import { useInside, useMailCounts } from '../state/context';
+import { useInside, useMailCounts, useNotifications } from '../state/context';
 import { fonts, RAIL_WIDTH } from '../theme/tokens';
 import { IssueAlerts, MailNotifier } from './mail/IssueAlerts';
+import { NotificationBell } from './NotificationBell';
 
 /** Gatebook logo on a white rounded tile (its teal would disappear on the dark rail). */
 export function LogoTile({ size }) {
@@ -156,6 +158,7 @@ function DesktopRail() {
   const employee = isEmployee(user);
   const { count } = useInside();
   const mail = useMailBadge(employee);
+  const { unreadCount: unread } = useNotifications();
   return (
     <Drawer
       variant="permanent"
@@ -186,6 +189,12 @@ function DesktopRail() {
             label="My post"
             right={<CountBadge count={mail.count} tone="warn" />}
           />
+          <RailLink
+            to="/notifications"
+            icon={<NotificationsNoneOutlinedIcon />}
+            label="Notifications"
+            right={<CountBadge count={unread} tone="warn" />}
+          />
           <RailLink to="/settings" icon={<PersonOutlineIcon />} label="My account" />
         </List>
       ) : (
@@ -215,6 +224,12 @@ function DesktopRail() {
             {isRecipient(user) ? (
               <RailLink to="/my-post" icon={<MarkunreadMailboxOutlinedIcon />} label="My post" />
             ) : null}
+            <RailLink
+              to="/notifications"
+              icon={<NotificationsNoneOutlinedIcon />}
+              label="Notifications"
+              right={<CountBadge count={unread} tone="warn" />}
+            />
           </List>
           <RailGroup label="Admin" />
           <List disablePadding>
@@ -286,6 +301,7 @@ function PhoneChrome() {
       <AppBar position="sticky" elevation={0} sx={{ bgcolor: 'gb.rail', color: 'gb.railInk', backgroundImage: 'none' }}>
         <Toolbar sx={{ gap: 1.5, justifyContent: 'space-between', minHeight: 60, px: 2 }}>
           <Brand compact />
+          <NotificationBell onRail />
         </Toolbar>
       </AppBar>
       <Box
@@ -383,6 +399,11 @@ export function AppShell() {
             pb: { xs: 'calc(96px + env(safe-area-inset-bottom))', md: 6 },
           }}
         >
+          {desktop ? (
+            <Stack direction="row" sx={{ justifyContent: 'flex-end', mt: -2, mb: 1 }}>
+              <NotificationBell />
+            </Stack>
+          ) : null}
           {!employee ? <IssueAlerts /> : null}
           {isRecipient(user) ? <MailNotifier /> : null}
           <Outlet />

@@ -10,6 +10,7 @@ import { LoginPage } from './pages/LoginPage';
 import { OverviewPage } from './pages/OverviewPage';
 import { LogPostPage } from './pages/post/LogPostPage';
 import { MyPostPage } from './pages/post/MyPostPage';
+import { NotificationsPage } from './pages/NotificationsPage';
 import { PostRoomPage } from './pages/post/PostRoomPage';
 import { SettingsPage } from './pages/settings/SettingsPage';
 import { VisitorLogPage } from './pages/VisitorLogPage';
@@ -18,6 +19,7 @@ import { CheckInDraftProvider, MailDraftProvider } from './state/CheckInDraftPro
 import { InsideProvider } from './state/InsideProvider';
 import { MailCountsProvider } from './state/MailCountsProvider';
 import { MailUiProvider } from './state/MailUiProvider';
+import { NotificationsProvider } from './state/NotificationsProvider';
 import { SettingsProvider } from './state/SettingsProvider';
 import { VisitUiProvider } from './state/VisitUiProvider';
 
@@ -46,7 +48,9 @@ function SignedInApp() {
               <MailDraftProvider>
                 <VisitUiProvider>
                   <MailUiProvider>
-                    <AppShell />
+                    <NotificationsProvider>
+                      <AppShell />
+                    </NotificationsProvider>
                   </MailUiProvider>
                 </VisitUiProvider>
               </MailDraftProvider>
@@ -86,6 +90,7 @@ export function App() {
             </Only>
           }
         />
+        <Route path="notifications" element={<NotificationsPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="*" element={<HomeRedirect />} />
       </Route>

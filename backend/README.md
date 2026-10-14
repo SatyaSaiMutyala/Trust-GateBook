@@ -72,6 +72,7 @@ src/
   services/          pace (Pace HR directory proxy + recipient upsert), pagination, pass/entry numbers, image storage (sharp), URL signing, serialization, CSV, formatting
 test/api.test.js     visitor register integration tests
 test/mail.test.js    post room, roles, hosts directory, profile, settings migration
+test/notifications.test.js  in-app inbox: triggers, pagination, read / read-all, socket rooms, notificationId in pushes
 test/push.test.js    device tokens, FCM pushes (fake sender, no network), invalid-token cleanup
 test/pace.test.js    Pace directory (fetch mocked: no network), Pace recipients, sign-in rules
 ```
@@ -138,3 +139,18 @@ everything else keeps working. Tests never initialise Firebase; they inject a fa
   receiver disputes → every active `security` and `admin` user.
 - Sends go out in chunks of 500 with `sendEachForMulticast`, fire-and-forget (never fail the request). Tokens FCM reports
   as unregistered / invalid are deleted; deactivating a user deletes their devices.
+
+## In-app notifications (inbox)
+
+Every mail notification is stored per user (`Notification`: event, title, body, `data { type: 'mail', id }`, readAt,
+createdAt; kept 90 days via a TTL index), whether or not the user has a phone registered. `src/services/notify.js`
+is the single entry point used by the mail triggers: it stores one notification per target user, emits
+`notification:new { notification, unreadCount }` to that user's socket room, then pushes to that user's phones with
+`data { type, id, notificationId }` (one push per user, so each carries the user's own notification id).
+Storing works with push disabled.
+
+- `GET /api/notifications` (paginated, own only; `unread=true`; `sort` = `createdAt`, default newest first) also
+  returns `unreadCount`. `GET /api/notifications/unread-count` → `{ count }`.
+- `POST /api/notifications/:id/read` (owner only, idempotent; others' / invalid ids → `not_found`) and
+  `POST /api/notifications/read-all` → `{ updated, unreadCount: 0 }`. Both emit `notification:read { ids | 'all', unreadCount }`
+  to the user's room when something changed, so other devices/tabs update their badge.

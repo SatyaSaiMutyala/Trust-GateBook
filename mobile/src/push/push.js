@@ -95,7 +95,9 @@ export const signOut = () => async dispatch => {
 export function routeOf(message) {
   const data = message?.data;
   if (!data || data.type !== 'mail' || !data.id) return null;
-  return { type: 'mail', id: String(data.id) };
+  const route = { type: 'mail', id: String(data.id) };
+  if (data.notificationId) route.notificationId = String(data.notificationId);
+  return route;
 }
 
 /** A notification was tapped (app in background or cold start). */
@@ -129,5 +131,11 @@ export const routePendingOpen = navigation => (dispatch, getState) => {
   const list = selectIsGateUser(state) ? 'Post' : 'MyPost';
   navigation.navigate('Main', { screen: list });
   navigation.navigate('MailDetails', { id: pending.id });
+  // Opening a push marks its stored inbox notification read (optimistic; best-effort).
+  if (pending.notificationId) {
+    dispatch(
+      api.endpoints.markNotificationRead.initiate(pending.notificationId),
+    );
+  }
   return true;
 };

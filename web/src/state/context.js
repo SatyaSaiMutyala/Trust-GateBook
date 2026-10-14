@@ -33,3 +33,10 @@ export const useMailCounts = () => required(useContext(MailCountsContext), 'useM
 /** Post item details drawer + handover / resolve sheets. */
 export const MailUiContext = createContext(null);
 export const useMailUi = () => required(useContext(MailUiContext), 'useMailUi');
+
+/**
+ * In-app notifications: { unreadCount, refresh(), markRead(id), markAllRead() }.
+ * unreadCount is null until the first fetch.
+ */
+export const NotificationsContext = createContext(null);
+export const useNotifications = () => required(useContext(NotificationsContext), 'useNotifications');

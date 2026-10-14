@@ -9,6 +9,7 @@ import { devicesRouter } from './routes/devices.js';
 import { filesRouter } from './routes/files.js';
 import { hostsRouter } from './routes/hosts.js';
 import { mailRouter } from './routes/mail.js';
+import { notificationsRouter } from './routes/notifications.js';
 import { settingsRouter } from './routes/settings.js';
 import { statsRouter } from './routes/stats.js';
 import { usersRouter } from './routes/users.js';
@@ -47,6 +48,7 @@ export function createApp() {
   app.use('/api/visits', visitsRouter);
   app.use('/api/stats', statsRouter);
   app.use('/api/mail', mailRouter);
+  app.use('/api/notifications', notificationsRouter);
   app.use('/api/files', filesRouter);
 
   app.use(notFoundHandler);

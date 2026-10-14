@@ -4,6 +4,8 @@ import { io } from 'socket.io-client';
 import { API_URL } from '../api/config';
 import { selectToken } from '../store/authSlice';
 import {
+  notificationNewEvent,
+  notificationReadEvent,
   mailEvent,
   mailReminderEvent,
   reconnected,
@@ -36,6 +38,8 @@ export function useRealtime() {
     socket.on('mail:updated', p => dispatch(mailEvent('updated', p.item)));
     socket.on('mail:reminder', p => dispatch(mailReminderEvent(p.item)));
     socket.on('settings:updated', p => dispatch(settingsEvent(p.settings)));
+    socket.on('notification:new', p => dispatch(notificationNewEvent(p)));
+    socket.on('notification:read', p => dispatch(notificationReadEvent(p)));
     return () => {
       socket.removeAllListeners();
       socket.disconnect();

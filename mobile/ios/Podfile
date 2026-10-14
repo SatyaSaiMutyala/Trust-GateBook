@@ -12,6 +12,10 @@ prepare_react_native_project!
 # https://rnfirebase.io/#altering-cocoapods-to-use-frameworks
 $RNFirebaseAsStaticFramework = true
 
+# Get the Firebase iOS SDK from CocoaPods, not Swift Package Manager: RNFB 26 refuses SPM together with
+# static linkage (each RNFB pod would embed its own Firebase copy → duplicate symbols at link time).
+$RNFirebaseDisableSPM = true
+
 # Static frameworks by default (Firebase); USE_FRAMEWORKS=dynamic|static still overrides.
 linkage = ENV['USE_FRAMEWORKS'] || 'static'
 Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green

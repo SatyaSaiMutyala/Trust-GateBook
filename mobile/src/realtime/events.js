@@ -1,5 +1,5 @@
 import { Vibration } from 'react-native';
-import { api } from '../store/api';
+import { api, applyNotificationRead, setUnreadCount } from '../store/api';
 import { selectIsGateUser } from '../store/authSlice';
 import { settingsReceived } from '../store/settingsSlice';
 import { issuePulsed, toastShown } from '../store/uiSlice';
@@ -97,6 +97,39 @@ export const reconnected = () => dispatch => {
     'Stats',
     'Mail',
     'MailCounts',
+    'Notifications',
+    'UnreadCount',
     'Settings',
   ]);
 };
+
+/**
+ * `notification:new` — a stored inbox notification for me: update the bell, refresh the list, and toast
+ * unless the same post item was already announced (socket mail event or foreground push) in the last 5 s.
+ */
+export const notificationNewEvent =
+  ({ notification, unreadCount }) =>
+  dispatch => {
+    if (typeof unreadCount === 'number') dispatch(setUnreadCount(unreadCount));
+    else dispatch(api.util.invalidateTags(['UnreadCount']));
+    invalidateSoon(dispatch, ['Notifications']);
+    const mailId = notification?.data?.id;
+    const key = mailId
+      ? mailNoticeKey(mailId)
+      : `notification:${notification?.id}`;
+    if (notification && claimNotice(key)) {
+      const text = [notification.title, notification.body]
+        .filter(Boolean)
+        .join(' · ');
+      if (text) dispatch(toastShown(text));
+    }
+  };
+
+/** `notification:read` — read on another device/tab: mark them read here too and sync the badge. */
+export const notificationReadEvent =
+  ({ ids, unreadCount }) =>
+  (dispatch, getState) => {
+    if (ids === 'all' || (Array.isArray(ids) && ids.length))
+      applyNotificationRead(dispatch, getState, ids);
+    if (typeof unreadCount === 'number') dispatch(setUnreadCount(unreadCount));
+  };

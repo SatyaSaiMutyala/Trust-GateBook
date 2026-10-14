@@ -3,7 +3,7 @@
 The single source of truth that `backend/`, `web/` and `mobile/` all implement against.
 
 Type blocks below use TypeScript-style notation only to describe JSON shapes; all three projects are plain JavaScript.
-Base URL: `http://localhost:4000` (configurable). All JSON. All timestamps are ISO-8601 strings (UTC).
+Base URL: production `https://gatebook.mytrustlab.co.in` (live AWS server; all paths below start with `/api`, so the base is the bare origin), local dev `http://localhost:4000`. All JSON. All timestamps are ISO-8601 strings (UTC).
 
 ## Auth
 
@@ -250,6 +250,42 @@ interface MailItem {
 Pieces, Gate, Received, Logged by, Status, Handed over, Collected by, Handed by, Receiver confirmed, Dispute, Resolution, Remarks`
 (Status labels: To collect, Handed · awaiting confirmation, Handed over, Collected · confirmed, Receiver disputes, Resolved.)
 
+## In-app notifications (inbox)
+
+Every notification the backend sends (see the table in "Push notifications") is also **stored per user**, whether
+or not that user has a phone registered for push. Web and mobile show them in a Notifications screen behind a 🔔
+bell with an unread badge. Stored for 90 days (TTL index on `createdAt`).
+
+```js
+type NotificationEvent = 'mail_logged' | 'mail_reminder' | 'mail_confirm' | 'mail_disputed';
+interface AppNotification {
+  id: string;
+  event: NotificationEvent;
+  title: string;            // same text as the push title, e.g. "📬 Courier for you"
+  body: string;             // same text as the push body
+  data: { type: 'mail'; id: string };   // what to open when tapped (a post item)
+  readAt: string | null;
+  createdAt: string;
+}
+```
+
+| method | path | role | notes |
+|--------|------|------|-------|
+| GET    | `/api/notifications` | any signed-in | **paginated** (own notifications only). Filters: `unread=true` (only unread). `sort` ∈ `createdAt` (default `-createdAt`). → `Paginated<AppNotification>` plus `unreadCount` (total unread for the caller, ignoring filters) |
+| GET    | `/api/notifications/unread-count` | any | → `{ count }` |
+| POST   | `/api/notifications/:id/read` | owner | marks one read (idempotent) → `{ notification, unreadCount }`; someone else's id → `not_found` |
+| POST   | `/api/notifications/read-all` | any | marks all the caller's unread as read → `{ updated, unreadCount: 0 }` |
+
+Push messages carry the stored notification's id: `data: { type: 'mail', id, notificationId }`, so opening a push
+marks that notification read.
+
+Realtime (to the user's own socket room only):
+
+| event | payload |
+|-------|---------|
+| `notification:new` | `{ notification: AppNotification, unreadCount }` |
+| `notification:read` | `{ ids: string[] \| 'all', unreadCount }` (so other open devices/tabs update their badge) |
+
 ## Push notifications (Firebase Cloud Messaging)
 
 Firebase project **trustlab-diagnostics**; apps registered as `com.app.gatebook` (Android + iOS). The backend
@@ -270,7 +306,7 @@ Tokens are also removed when FCM reports them invalid (`messaging/registration-t
 ### What is pushed
 
 Every message has a `notification { title, body }` (shown by the OS when the app is in the background / closed)
-and `data` for routing: `{ type, id }` (strings). Android: `priority: high`, channel `gatebook_default`.
+and `data` for routing: `{ type, id, notificationId }` (strings; `notificationId` = the stored in-app notification). Android: `priority: high`, channel `gatebook_default`.
 iOS: `sound: default`.
 
 | event | to | title | body | data |

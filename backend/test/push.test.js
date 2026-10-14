@@ -170,7 +170,7 @@ describe('mail pushes', () => {
     expect({ ...sent[0], tokens: [...sent[0].tokens].sort() }).toEqual({
       tokens: ['tok-r1', 'tok-r2'],
       notification: { title: '📬 Registered post for you', body: 'From Income Tax Dept · collect it at the gate' },
-      data: { type: 'mail', id: item.id },
+      data: { type: 'mail', id: item.id, notificationId: expect.stringMatching(/^[a-f0-9]{24}$/) },
       android: { priority: 'high', notification: { channelId: 'gatebook_default', sound: 'default' } },
       apns: { payload: { aps: { sound: 'default' } } },
     });
@@ -195,7 +195,7 @@ describe('mail pushes', () => {
       title: '✅ Please confirm collection',
       body: 'Registered post from Income Tax Dept was handed to Office boy. Did you get it?',
     });
-    expect(sent[0].data).toEqual({ type: 'mail', id: item.id });
+    expect(sent[0].data).toEqual({ type: 'mail', id: item.id, notificationId: expect.stringMatching(/^[a-f0-9]{24}$/) });
   });
 
   it('pushes a dispute to every active security and admin user', async () => {
@@ -204,13 +204,18 @@ describe('mail pushes', () => {
 
     await post('ravi', `/api/mail/${item.id}/confirm`, { ok: false, note: 'I was on leave' }).expect(200);
     await pushMod.pushIdle();
-    expect(sent).toHaveLength(1);
-    expect([...sent[0].tokens].sort()).toEqual(['tok-a1', 'tok-s1', 'tok-s2']);
-    expect(sent[0].notification).toEqual({
-      title: "⚠️ Ravi Kumar didn't get it",
-      body: 'Registered post from Income Tax Dept · I was on leave',
-    });
-    expect(sent[0].data).toEqual({ type: 'mail', id: item.id });
+    // One push per user, each carrying that user's own stored notification id.
+    expect(sent).toHaveLength(3);
+    expect(sent.flatMap((m) => m.tokens).sort()).toEqual(['tok-a1', 'tok-s1', 'tok-s2']);
+    for (const m of sent) {
+      expect(m.tokens).toHaveLength(1);
+      expect(m.notification).toEqual({
+        title: "⚠️ Ravi Kumar didn't get it",
+        body: 'Registered post from Income Tax Dept · I was on leave',
+      });
+      expect(m.data).toEqual({ type: 'mail', id: item.id, notificationId: expect.stringMatching(/^[a-f0-9]{24}$/) });
+    }
+    expect(new Set(sent.map((m) => m.data.notificationId)).size).toBe(3);
   });
 
   it('sends nothing for confirmations, resolutions, closed handovers or recipients who cannot sign in', async () => {

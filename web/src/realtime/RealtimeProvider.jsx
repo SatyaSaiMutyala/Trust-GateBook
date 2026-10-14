@@ -28,6 +28,8 @@ export function RealtimeProvider({ children }) {
     socket.on('mail:created', (p) => bus.emit('mail:created', { item: normalizeMail(p.item) }));
     socket.on('mail:updated', (p) => bus.emit('mail:updated', { item: normalizeMail(p.item) }));
     socket.on('mail:reminder', (p) => bus.emit('mail:reminder', { item: normalizeMail(p.item) }));
+    socket.on('notification:new', (p) => bus.emit('notification:new', p));
+    socket.on('notification:read', (p) => bus.emit('notification:read', p));
     return () => {
       socket.removeAllListeners();
       socket.disconnect();

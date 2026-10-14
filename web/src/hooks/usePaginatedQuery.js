@@ -128,6 +128,19 @@ export function usePaginatedQuery(fetcher, params, { append = false, enabled = t
     });
   }, []);
 
+  /** Put a new item at the top (realtime "new" events); ignored if already loaded. */
+  const prepend = useCallback((item) => {
+    setState((s) => {
+      if (s.data.some((x) => x.id === item.id)) return s;
+      return { ...s, data: [item, ...s.data], pagination: { ...s.pagination, total: s.pagination.total + 1 } };
+    });
+  }, []);
+
+  /** Transform every loaded item (e.g. mark several read). */
+  const mapData = useCallback((fn) => {
+    setState((s) => ({ ...s, data: s.data.map(fn) }));
+  }, []);
+
   const loading = enabled && state.key !== key;
   return {
     data: loading && state.key === null ? [] : state.data,
@@ -141,5 +154,7 @@ export function usePaginatedQuery(fetcher, params, { append = false, enabled = t
     loadMore,
     refresh,
     patch,
+    prepend,
+    mapData,
   };
 }

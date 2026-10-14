@@ -5,11 +5,12 @@ import { Visit } from '../models/Visit.js';
 import { ensureUploadDir } from './images.js';
 import { Device } from '../models/Device.js';
 import { MailItem } from '../models/MailItem.js';
+import { Notification } from '../models/Notification.js';
 import { getSettings, migrateSettings } from './settings.js';
 
 /** Idempotent start-up work: indexes, settings doc, upload dir, first admin. */
 export async function bootstrap() {
-  await Promise.all([User.syncIndexes(), Visit.syncIndexes(), MailItem.syncIndexes(), Device.syncIndexes()]);
+  await Promise.all([User.syncIndexes(), Visit.syncIndexes(), MailItem.syncIndexes(), Device.syncIndexes(), Notification.syncIndexes()]);
   await getSettings();
   await migrateSettings();
   await ensureUploadDir();

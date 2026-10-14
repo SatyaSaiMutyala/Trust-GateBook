@@ -28,6 +28,7 @@ import { InsideScreen } from '../screens/InsideScreen';
 import { LogMailScreen } from '../screens/LogMailScreen';
 import { LogScreen } from '../screens/LogScreen';
 import { MailDetailsScreen } from '../screens/MailDetailsScreen';
+import { NotificationsScreen } from '../screens/NotificationsScreen';
 import { MyPostScreen } from '../screens/MyPostScreen';
 import { PostRoomScreen } from '../screens/PostRoomScreen';
 import { TodayScreen } from '../screens/TodayScreen';
@@ -57,6 +58,8 @@ function barProps(options) {
     title: options.title,
     subtitle: options.headerSubtitle,
     right: options.headerActions ?? null,
+    // The bell is on every signed-in screen except the Notifications screen itself.
+    showBell: options.hideBell !== true,
   };
 }
 
@@ -81,6 +84,10 @@ function renderGateStackHeader({ navigation, options }) {
 
 function renderEmployeeHeader({ options }) {
   return <TopBar {...barProps(options)} />;
+}
+
+function renderEmployeeStackHeader({ navigation, options }) {
+  return <TopBar {...barProps(options)} onBack={() => navigation.goBack()} />;
 }
 
 /** Security / admin / viewer: Inside now · Post · Check in (raised) · Log · Account. Opens on Check in. */
@@ -172,6 +179,16 @@ function GateStack() {
         }}
       />
       <Stack.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{
+          headerShown: true,
+          header: renderGateStackHeader,
+          title: 'Notifications',
+          hideBell: true,
+        }}
+      />
+      <Stack.Screen
         name="VisitDetails"
         component={VisitDetailsScreen}
         options={modal}
@@ -189,6 +206,16 @@ function EmployeeStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Main" component={EmployeeTabs} />
+      <Stack.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{
+          headerShown: true,
+          header: renderEmployeeStackHeader,
+          title: 'Notifications',
+          hideBell: true,
+        }}
+      />
       <Stack.Screen
         name="MailDetails"
         component={MailDetailsScreen}

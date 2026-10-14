@@ -153,3 +153,15 @@ export function fmtTimeOrDate(v, now = new Date()) {
 export function fmtAgo(v, now = new Date()) {
   return `${fmtMinutes(minutesBetween(v, now))} ago`;
 }
+
+/** Inbox times: `Just now`, `5m ago`, `3h ago` (today), `Yesterday 3:10 pm`, else `12 Oct, 3:10 pm`. */
+export function fmtRelative(v, now = new Date()) {
+  const d = toDate(v);
+  const mins = Math.floor((now.getTime() - d.getTime()) / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  if (isSameDay(d, now)) return `${Math.floor(mins / 60)}h ago`;
+  if (isSameDay(d, addDays(startOfDay(now), -1)))
+    return `Yesterday ${fmtTime(d)}`;
+  return `${fmtShortDate(d)}, ${fmtTime(d)}`;
+}

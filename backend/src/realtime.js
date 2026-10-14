@@ -100,3 +100,13 @@ export function emitMailReminder(item) {
   if (!io || !item.recipient?.id) return;
   io.to(userRoom(item.recipient.id)).emit('mail:reminder', { item: serializeMail(item) });
 }
+
+/**
+ * Emit to every open socket of one user (e.g. notification:new / notification:read).
+ * @param {string} userId
+ * @param {string} event
+ * @param {unknown} payload
+ */
+export function emitToUser(userId, event, payload) {
+  io?.to(userRoom(userId)).emit(event, payload);
+}

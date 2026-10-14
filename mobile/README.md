@@ -36,20 +36,17 @@ First login: `admin@gatebook.local` / `admin123` unless the backend was configur
 
 ## API URL
 
-`API_URL` in `mobile/.env` is read at **build time** by react-native-config (rebuild the app after changing it).
+The app talks to the **live server `https://gatebook.mytrustlab.co.in`** by default (set in `src/api/config.js`).
+To point a build at a backend on your computer, set `API_URL` in `mobile/.env` and rebuild:
 
-| Where the app runs | Value |
-| --- | --- |
-| iOS simulator | empty → `http://localhost:4000` |
-| Android emulator | empty → `http://10.0.2.2:4000` (the emulator's alias for your computer) |
-| Physical phone | your computer's LAN IP, e.g. `API_URL=http://192.168.1.20:4000` (same Wi-Fi; backend listening on all interfaces) |
+| Where the app runs | `API_URL` |
+|---|---|
+| Android emulator | `http://10.0.2.2:4000` |
+| iOS simulator | `http://localhost:4000` |
+| Phone on the same Wi-Fi | `http://<your computer's LAN IP>:4000` |
 
-Find the LAN IP with `ipconfig getifaddr en0` (macOS). The login screen shows which server the app uses. Signed photo
-URLs (`/api/files/...`) are prefixed with this base URL; Socket.IO connects to the same URL.
-
-**Plain HTTP:** debug builds allow it (Android `usesCleartextTraffic` is on for debug via the React Native Gradle plugin;
-iOS allows local networking through `NSAllowsLocalNetworking`). **Release builds** block cleartext on Android and
-non-local HTTP on iOS: use HTTPS for production, or add a network security config / ATS exception deliberately.
+Give the server origin only. The app adds `/api/...` itself, and a trailing `/api` is ignored. Leave `API_URL`
+empty to use the live server. The login screen shows which server a build uses.
 
 ## Architecture
 

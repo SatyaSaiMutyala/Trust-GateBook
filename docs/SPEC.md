@@ -251,3 +251,18 @@ The native app is a **bare React Native CLI** project (no Expo) in plain JavaScr
 folders. State management is **Redux Toolkit**: a single store with slices for app state (auth, settings, gate, UI/toasts,
 form drafts) and **RTK Query** for every API call, using infinite queries for paginated lists. Sizing uses
 `react-native-size-matters`.
+
+
+## Notifications screen (web + mobile)
+- **Bell:** a 🔔 bell sits in the app bar on every screen (mobile: right side of the top bar, before the screen's
+  own actions; web: top-right of the page header area / phone top bar). It shows an amber badge with the unread
+  count (99+ cap), updated live via `notification:new` / `notification:read` and on app focus.
+- **Notifications screen** (mobile: stack screen titled "Notifications" with ‹ back; web: route `/notifications`
+  and a rail/nav link): newest first, paginated (mobile FlatList infinite scroll + pull-to-refresh; web "Load
+  more"). Tabs/pills **All · Unread (n)**. Each row: icon by event (📬 logged, ⏰ reminder, ✅ confirm, ⚠️ dispute),
+  bold title + body, relative time ("5m ago", "Yesterday 3:10 pm"); unread rows have an accent-soft background
+  and a small amber dot. Tapping marks it read and opens the post item (mobile MailDetails; web the post item
+  drawer). "Mark all read" action in the app bar / page header when there are unread items.
+- **Empty states:** "No notifications yet — you'll see post and alerts for you here." / Unread tab: "You're all
+  caught up."
+- Opening a push notification marks its stored notification read.
