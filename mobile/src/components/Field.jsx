@@ -89,7 +89,10 @@ export const Field = forwardRef(function Field(
               ? verticalScale(88)
               : MIN_TOUCH,
             textAlignVertical: multiline ? 'top' : 'center',
+            // Android's EditText adds its own vertical padding (and font padding), which pushes
+            // single-line text above centre; zero both so the text sits in the middle of the box.
             paddingTop: multiline ? verticalScale(10) : 0,
+            paddingBottom: multiline ? verticalScale(10) : 0,
             letterSpacing: large ? 2 : 0,
           },
           attached && styles.inputJoined,
@@ -118,7 +121,11 @@ const styles = ScaledSheet.create({
   wrap: { gap: '6@ms' },
   label: { fontFamily: fonts.bodySemi, fontSize: '13@ms', lineHeight: '18@ms' },
   hint: { fontFamily: fonts.body, fontSize: '13@ms', lineHeight: '18@ms' },
-  input: { borderRadius: radius.control, paddingHorizontal: '12@s' },
+  input: {
+    borderRadius: radius.control,
+    paddingHorizontal: '12@s',
+    includeFontPadding: false,
+  },
   inputJoined: { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
   dropdown: {
     marginTop: -1,

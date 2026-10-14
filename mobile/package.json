@@ -5,9 +5,10 @@
   "scripts": {
     "start": "react-native start",
     "ios": "react-native run-ios",
-    "android": "react-native run-android",
+    "android": "npm run reverse && react-native run-android",
     "lint": "eslint . --ext .js,.jsx",
-    "test": "jest"
+    "test": "jest",
+    "reverse": "adb reverse tcp:4000 tcp:4000 && adb reverse tcp:8081 tcp:8081"
   },
   "dependencies": {
     "@bam.tech/react-native-image-resizer": "^3.0.11",

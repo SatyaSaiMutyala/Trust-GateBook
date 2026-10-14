@@ -217,6 +217,8 @@ const styles = ScaledSheet.create({
     width: '52@ms',
     height: '28@ms',
     borderRadius: '14@ms',
+    // Android draws the tint as a square when it's toggled on after mount unless the view clips to its radius.
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
   },
