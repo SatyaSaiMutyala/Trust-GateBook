@@ -68,6 +68,8 @@ export const config = {
   displayTz: str('TZ_DISPLAY', 'Asia/Kolkata'),
   maxUploadBytes: 8 * 1024 * 1024,
   paceEmployeesUrl: paceUrl(),
+  /** Firebase Admin service account JSON (push). Missing file = push disabled. */
+  firebaseServiceAccount: path.resolve(BACKEND_ROOT, str('FIREBASE_SERVICE_ACCOUNT', 'secrets/firebase-service-account.json')),
   paceTimeoutMs: 8_000,
   paceCacheMs: 60_000,
 };

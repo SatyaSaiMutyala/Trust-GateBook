@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fonts, MIN_TOUCH, radius, useTheme } from '../theme';
 import {
@@ -37,11 +37,13 @@ export function TopBar({ onBack, title, subtitle, right }) {
           <Text style={[styles.backText, { color: c.railInk }]}>‹</Text>
         </Pressable>
       ) : (
-        <View
-          style={[styles.mark, { backgroundColor: c.accent }]}
-          accessibilityLabel="Gatebook"
-        >
-          <View style={[styles.markInner, { backgroundColor: c.rail }]} />
+        // Gatebook logo on a small white tile (its teal would disappear on the dark bar).
+        <View style={styles.mark} accessibilityLabel="Gatebook">
+          <Image
+            source={require('../assets/logo.png')}
+            style={styles.markImage}
+            resizeMode="contain"
+          />
         </View>
       )}
       <View style={styles.titles}>
@@ -155,18 +157,14 @@ const styles = ScaledSheet.create({
     lineHeight: '28@ms',
   },
   mark: {
-    width: '22@ms',
-    height: '22@ms',
-    borderRadius: '6@ms',
+    width: '28@ms',
+    height: '28@ms',
+    borderRadius: '7@ms',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
   },
-  markInner: {
-    width: '9@ms',
-    height: '13@ms',
-    borderTopLeftRadius: '5@ms',
-    borderTopRightRadius: '5@ms',
-  },
+  markImage: { width: '23@ms', height: '23@ms' },
   titles: { flex: 1, minWidth: 0 },
   title: {
     includeFontPadding: false,

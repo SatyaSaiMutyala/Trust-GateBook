@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { StatusBar } from 'react-native';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   DarkTheme,
   DefaultTheme,
@@ -15,6 +15,13 @@ import { TabBar } from '../components/TabBar';
 import { ToastHost } from '../components/Toast';
 import { TopBar } from '../components/TopBar';
 import { useRealtime } from '../realtime/useRealtime';
+import {
+  usePushOpenListeners,
+  usePushRegistration,
+  usePushRouting,
+} from '../push/usePush';
+import { navigationReady } from '../store/pushSlice';
+import { navigationRef } from './navigationRef';
 import { AccountScreen } from '../screens/AccountScreen';
 import { CheckInScreen } from '../screens/CheckInScreen';
 import { InsideScreen } from '../screens/InsideScreen';
@@ -194,6 +201,8 @@ function EmployeeStack() {
 /** Signed-in shell: socket, settings subscription, role-based navigator. */
 function SignedIn() {
   useRealtime();
+  usePushRegistration();
+  usePushRouting();
   useGetSettingsQuery(); // keeps the settings slice fresh (also refreshed by `settings:updated`)
   const gate = useSelector(selectIsGateUser);
   return gate ? <GateStack /> : <EmployeeStack />;
@@ -204,6 +213,8 @@ export function RootNavigator() {
   const signedIn = useSelector(selectIsSignedIn);
   const user = useSelector(selectUser);
   const { c, dark } = useTheme();
+  const dispatch = useDispatch();
+  usePushOpenListeners();
   const navTheme = useMemo(() => {
     const base = dark ? DarkTheme : DefaultTheme;
     return {
@@ -221,7 +232,11 @@ export function RootNavigator() {
 
   if (!ready) return null;
   return (
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer
+      ref={navigationRef}
+      theme={navTheme}
+      onReady={() => dispatch(navigationReady())}
+    >
       {/* Top bar and login header are always the dark rail, so light status-bar content everywhere. */}
       <StatusBar barStyle="light-content" backgroundColor={c.rail} />
       {signedIn ? (

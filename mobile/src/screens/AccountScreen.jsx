@@ -37,7 +37,6 @@ import {
   useUpdateUserMutation,
 } from '../store/api';
 import {
-  loggedOut,
   ROLE_LABELS,
   selectIsAdmin,
   selectIsGateUser,
@@ -45,6 +44,8 @@ import {
   selectUser,
 } from '../store/authSlice';
 import { useSettings, useToast } from '../store/hooks';
+import { signOut } from '../push/push';
+import { PushHint } from '../push/PushHint';
 import { useInfiniteList } from '../store/useInfiniteList';
 import { fmtDate, initials } from '../utils/format';
 import { version as APP_VERSION } from '../../package.json';
@@ -754,6 +755,7 @@ function ProfileView() {
           </Panel>
         )}
 
+        <PushHint />
         <Button
           title="Sign out"
           variant="danger"
@@ -772,7 +774,7 @@ function ProfileView() {
         onCancel={() => setConfirmSignOut(false)}
         onConfirm={() => {
           setConfirmSignOut(false);
-          dispatch(loggedOut());
+          dispatch(signOut());
         }}
       />
     </KeyboardAvoidingView>
@@ -873,6 +875,7 @@ export function AccountScreen() {
           </Text>
         </Text>
         <Text style={[typo.small, { color: c.muted }]}>{user?.email}</Text>
+        <PushHint />
         <Button
           title="Sign out"
           variant="danger"
@@ -888,7 +891,7 @@ export function AccountScreen() {
         onCancel={() => setConfirmSignOut(false)}
         onConfirm={() => {
           setConfirmSignOut(false);
-          dispatch(loggedOut());
+          dispatch(signOut());
         }}
       />
     </View>

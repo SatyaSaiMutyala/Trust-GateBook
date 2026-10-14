@@ -116,6 +116,19 @@ export const api = createApi({
     login: build.mutation({
       query: body => ({ url: '/api/auth/login', method: 'POST', body }),
     }),
+
+    // ---------------- push devices (FCM) ----------------
+    /** `{ token, platform: 'android' | 'ios' }` — upsert this device's FCM token for the signed-in user. */
+    registerDevice: build.mutation({
+      query: body => ({ url: '/api/devices', method: 'POST', body }),
+    }),
+    /** Remove this device's FCM token (sign-out). */
+    unregisterDevice: build.mutation({
+      query: token => ({
+        url: `/api/devices/${encodeURIComponent(token)}`,
+        method: 'DELETE',
+      }),
+    }),
     me: build.query({
       query: () => '/api/auth/me',
       providesTags: ['Me'],
@@ -377,6 +390,8 @@ export const api = createApi({
 
 export const {
   useLoginMutation,
+  useRegisterDeviceMutation,
+  useUnregisterDeviceMutation,
   useMeQuery,
   useUpdateMeMutation,
   useListUsersInfiniteQuery,

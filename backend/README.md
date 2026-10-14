@@ -1,6 +1,6 @@
 # Gatebook backend
 
-Node 24, plain JavaScript (ESM), Express 5, MongoDB (Mongoose), Socket.IO. Implements `../docs/API.md`:
+Node 20 (`>=20 <21`; the AWS server runs 20.20.2 — `nvm use` picks it from `.nvmrc`), plain JavaScript (ESM), Express 5, MongoDB (Mongoose), Socket.IO. Implements `../docs/API.md`:
 visitor register (check-in / exit / log / overview) and the **post room** (incoming mail & parcels).
 
 ## Run
@@ -53,6 +53,7 @@ Scripts: `dev`, `start` (`node src/index.js`), `build` (syntax check of `src/` w
 | `TZ_DISPLAY` | `Asia/Kolkata` | CSV dates, pass-number date, times in guard messages |
 | `EMBEDDED_MONGO_PORT` | `27018` | embedded dev DB only |
 | `PACE_EMPLOYEES_URL` | `https://pace.mytrustlab.co.in/api/v1/employees` | Pace HR employee API behind `GET /api/hosts`; set it to an empty value to use local `host` / `isHost` users instead |
+| `FIREBASE_SERVICE_ACCOUNT` | `secrets/firebase-service-account.json` | Firebase Admin service account (relative to `backend/`, git-ignored, never commit). Missing = push disabled (one log line) |
 | `NODE_ENV` | `development` | `production` enforces secrets and the CORS default |
 
 ## Layout
@@ -71,6 +72,7 @@ src/
   services/          pace (Pace HR directory proxy + recipient upsert), pagination, pass/entry numbers, image storage (sharp), URL signing, serialization, CSV, formatting
 test/api.test.js     visitor register integration tests
 test/mail.test.js    post room, roles, hosts directory, profile, settings migration
+test/push.test.js    device tokens, FCM pushes (fake sender, no network), invalid-token cleanup
 test/pace.test.js    Pace directory (fetch mocked: no network), Pace recipients, sign-in rules
 ```
 
@@ -121,3 +123,18 @@ Password-less users can't sign in (`401` "This account can't sign in yet…"; `c
 confirmation step: handover goes straight to `closed`, `remind` is a 409, and `notifiedAt` stays null. An admin sets a
 password with `PATCH /api/users/:id { password }` to give them the full flow.
 With `PACE_EMPLOYEES_URL=` (empty) the directory lists local `host` / `isHost` users instead.
+
+## Push notifications (FCM)
+
+On start-up the server reads `FIREBASE_SERVICE_ACCOUNT` and initialises `firebase-admin`
+(`[push] enabled: Firebase project …`). If the file is missing or invalid it logs `[push] disabled: …` once and
+everything else keeps working. Tests never initialise Firebase; they inject a fake sender.
+
+- `POST /api/devices { token, platform: 'android' | 'ios' }` registers the phone's FCM token (upsert by token; a token
+  moves to the caller if another user had it). `DELETE /api/devices/:token` removes the caller's own token on sign-out.
+- Pushes (`src/services/push.js`, triggered from `src/routes/mail.js`), each with `notification { title, body }` and
+  `data { type: 'mail', id }`, Android high priority on channel `gatebook_default`, iOS default sound:
+  post logged / reminder / handover (`handed`) → the recipient (only recipients who can sign in);
+  receiver disputes → every active `security` and `admin` user.
+- Sends go out in chunks of 500 with `sendEachForMulticast`, fire-and-forget (never fail the request). Tokens FCM reports
+  as unregistered / invalid are deleted; deactivating a user deletes their devices.

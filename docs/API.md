@@ -250,6 +250,38 @@ interface MailItem {
 Pieces, Gate, Received, Logged by, Status, Handed over, Collected by, Handed by, Receiver confirmed, Dispute, Resolution, Remarks`
 (Status labels: To collect, Handed · awaiting confirmation, Handed over, Collected · confirmed, Receiver disputes, Resolved.)
 
+## Push notifications (Firebase Cloud Messaging)
+
+Firebase project **trustlab-diagnostics**; apps registered as `com.app.gatebook` (Android + iOS). The backend
+sends with the Firebase Admin SDK using the service account at `FIREBASE_SERVICE_ACCOUNT`
+(default `backend/secrets/firebase-service-account.json`, git-ignored). If the file is missing, push is disabled
+(logged once) and everything else keeps working.
+
+### Device tokens
+
+| method | path | role | body | response |
+|--------|------|------|------|----------|
+| POST   | `/api/devices` | any signed-in | `{ token*, platform*: 'android' \| 'ios' }` | `{ ok: true }` — upsert by token; a token moves to the caller if another user had it |
+| DELETE | `/api/devices/:token` | any signed-in | — | `{ ok: true }` — removes the caller's token (sign-out) |
+
+Tokens are also removed when FCM reports them invalid (`messaging/registration-token-not-registered`,
+`invalid-registration-token`, `invalid-argument`) and when a user is deactivated.
+
+### What is pushed
+
+Every message has a `notification { title, body }` (shown by the OS when the app is in the background / closed)
+and `data` for routing: `{ type, id }` (strings). Android: `priority: high`, channel `gatebook_default`.
+iOS: `sound: default`.
+
+| event | to | title | body | data |
+|-------|----|-------|------|------|
+| post logged for a recipient who can sign in | recipient | "📬 {kind} for you" | "From {sender} · collect it at the gate" | `{ type: 'mail', id }` |
+| remind | recipient | "⏰ Reminder: {kind} waiting" | "From {sender} · still at the gate" | `{ type: 'mail', id }` |
+| handover (status `handed`) | recipient | "✅ Please confirm collection" | "{kind} from {sender} was handed to {collectedBy}. Did you get it?" | `{ type: 'mail', id }` |
+| receiver disputes | all active `security` + `admin` users | "⚠️ {recipientName} didn't get it" | "{kind} from {sender} · {disputeNote}" | `{ type: 'mail', id }` |
+
+Pushes are best-effort and never fail the API request that triggered them.
+
 ## Overview stats
 
 `GET /api/stats/overview?site=<site>&tzOffset=<minutes>` (any role; omit `site` = all gates; `tzOffset` = the client's

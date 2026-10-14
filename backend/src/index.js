@@ -4,10 +4,12 @@ import { config } from './config.js';
 import { connectDb } from './db.js';
 import { closeRealtime, initRealtime } from './realtime.js';
 import { bootstrap } from './services/bootstrap.js';
+import { initPush } from './services/push.js';
 
 async function main() {
   const db = await connectDb();
   await bootstrap();
+  await initPush();
 
   const server = http.createServer(createApp());
   initRealtime(server);

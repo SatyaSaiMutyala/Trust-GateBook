@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { badRequest, conflict, notFound } from '../middleware/error.js';
 import { ROLES, User, serializeUser } from '../models/User.js';
+import { Device } from '../models/Device.js';
 import { disconnectUser } from '../realtime.js';
 import { paginate, parseListQuery, queryString, searchFilter } from '../services/pagination.js';
 import { deptField, locationField, phoneField } from '../services/profile.js';
@@ -116,5 +117,7 @@ usersRouter.patch('/:id', async (req, res) => {
   await user.save();
   // Sockets join rooms by role at connect time: make them reconnect with the new role.
   if (!user.active || roleChanged) disconnectUser(user._id.toString());
+  // A deactivated user's phones must stop getting pushes.
+  if (!user.active) await Device.deleteMany({ user: user._id });
   res.json({ user: serializeUser(user) });
 });

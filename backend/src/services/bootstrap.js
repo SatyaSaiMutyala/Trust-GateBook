@@ -3,12 +3,13 @@ import { config } from '../config.js';
 import { User } from '../models/User.js';
 import { Visit } from '../models/Visit.js';
 import { ensureUploadDir } from './images.js';
+import { Device } from '../models/Device.js';
 import { MailItem } from '../models/MailItem.js';
 import { getSettings, migrateSettings } from './settings.js';
 
 /** Idempotent start-up work: indexes, settings doc, upload dir, first admin. */
 export async function bootstrap() {
-  await Promise.all([User.syncIndexes(), Visit.syncIndexes(), MailItem.syncIndexes()]);
+  await Promise.all([User.syncIndexes(), Visit.syncIndexes(), MailItem.syncIndexes(), Device.syncIndexes()]);
   await getSettings();
   await migrateSettings();
   await ensureUploadDir();

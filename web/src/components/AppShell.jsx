@@ -28,27 +28,30 @@ import { useInside, useMailCounts } from '../state/context';
 import { fonts, RAIL_WIDTH } from '../theme/tokens';
 import { IssueAlerts, MailNotifier } from './mail/IssueAlerts';
 
+/** Gatebook logo on a white rounded tile (its teal would disappear on the dark rail). */
+export function LogoTile({ size }) {
+  return (
+    <Box
+      aria-hidden
+      sx={{
+        width: size,
+        height: size,
+        borderRadius: `${Math.round(size * 0.24)}px`,
+        bgcolor: '#fff',
+        display: 'grid',
+        placeItems: 'center',
+        flexShrink: 0,
+      }}
+    >
+      <Box component="img" src="/logo.png" alt="" sx={{ width: '82%', height: '82%', objectFit: 'contain' }} />
+    </Box>
+  );
+}
+
 function Brand({ compact = false }) {
   return (
     <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 0 }}>
-      <Box
-        aria-hidden
-        sx={{
-          width: compact ? 30 : 34,
-          height: compact ? 30 : 34,
-          borderRadius: 1,
-          bgcolor: 'gb.accent',
-          color: 'gb.accentInk',
-          display: 'grid',
-          placeItems: 'center',
-          fontFamily: fonts.display,
-          fontWeight: 700,
-          fontSize: compact ? 17 : 19,
-          flexShrink: 0,
-        }}
-      >
-        G
-      </Box>
+      <LogoTile size={compact ? 32 : 38} />
       <Box sx={{ minWidth: 0 }}>
         <Typography
           sx={{

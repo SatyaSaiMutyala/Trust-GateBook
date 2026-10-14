@@ -1,5 +1,6 @@
-package com.trustlab.gatebook
+package com.app.gatebook
 
+import android.os.Bundle
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
@@ -12,6 +13,16 @@ class MainActivity : ReactActivity() {
    * rendering of the component.
    */
   override fun getMainComponentName(): String = "Gatebook"
+
+  /**
+   * The activity starts on LaunchTheme (Gatebook splash). Switch to the normal theme before the UI is
+   * created. `null` instead of savedInstanceState: react-native-screens can't restore fragments after
+   * the process is killed.
+   */
+  override fun onCreate(savedInstanceState: Bundle?) {
+    setTheme(R.style.AppTheme)
+    super.onCreate(null)
+  }
 
   /**
    * Returns the instance of the [ReactActivityDelegate]. We use [DefaultReactActivityDelegate]

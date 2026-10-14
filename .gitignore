@@ -15,3 +15,6 @@ mobile/android/build/
 mobile/vendor/
 mobile/.env
 coverage/
+
+# Server secrets (Firebase service account etc.) — never commit
+backend/secrets/

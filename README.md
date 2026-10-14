@@ -5,7 +5,7 @@ review the log and today's numbers.
 
 | folder      | what                                   | stack |
 |-------------|----------------------------------------|-------|
-| `backend/`  | REST API + realtime updates            | Node 24, Express, JavaScript (ESM), MongoDB (Mongoose), Socket.IO |
+| `backend/`  | REST API + realtime updates            | Node 20 (20.20.2, matches the AWS server), Express, JavaScript (ESM), MongoDB (Mongoose), Socket.IO |
 | `web/`      | Admin / desk web app                   | React, Vite, JavaScript, MUI (12-column `Grid`) |
 | `mobile/`   | Guard app for phones                   | React Native CLI (no Expo), JavaScript, Redux Toolkit, react-native-size-matters |
 | `docs/`     | `API.md` (contract all three follow), `SPEC.md` (screens and design) | |

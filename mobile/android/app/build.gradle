@@ -1,6 +1,7 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
+apply plugin: "com.google.gms.google-services"
 // react-native-config: expose .env values (API_URL) to BuildConfig / JS.
 apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle"
 
@@ -79,15 +80,15 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.trustlab.gatebook"
+    namespace "com.app.gatebook"
     defaultConfig {
-        applicationId "com.trustlab.gatebook"
+        applicationId "com.app.gatebook"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
         // react-native-config reads BuildConfig from the app package.
-        resValue "string", "build_config_package", "com.trustlab.gatebook"
+        resValue "string", "build_config_package", "com.app.gatebook"
     }
     signingConfigs {
         debug {

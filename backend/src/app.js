@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import { config } from './config.js';
 import { errorHandler, notFoundHandler } from './middleware/error.js';
 import { authRouter } from './routes/auth.js';
+import { devicesRouter } from './routes/devices.js';
 import { filesRouter } from './routes/files.js';
 import { hostsRouter } from './routes/hosts.js';
 import { mailRouter } from './routes/mail.js';
@@ -41,6 +42,7 @@ export function createApp() {
   app.use('/api/auth', authRouter);
   app.use('/api/users', usersRouter);
   app.use('/api/hosts', hostsRouter);
+  app.use('/api/devices', devicesRouter);
   app.use('/api/settings', settingsRouter);
   app.use('/api/visits', visitsRouter);
   app.use('/api/stats', statsRouter);

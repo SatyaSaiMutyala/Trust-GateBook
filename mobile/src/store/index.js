@@ -3,6 +3,7 @@ import { api } from './api';
 import auth from './authSlice';
 import drafts from './draftsSlice';
 import { listenerMiddleware } from './listeners';
+import push from './pushSlice';
 import settings from './settingsSlice';
 import ui from './uiSlice';
 
@@ -11,6 +12,7 @@ export const rootReducer = combineReducers({
   settings,
   ui,
   drafts,
+  push,
   [api.reducerPath]: api.reducer,
 });
 

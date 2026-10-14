@@ -1,6 +1,6 @@
 import * as Keychain from 'react-native-keychain';
 
-const SERVICE = 'com.trustlab.gatebook.session';
+const SERVICE = 'com.app.gatebook.session';
 
 /** Session (token + cached user) in the iOS Keychain / Android Keystore. */
 export async function saveSession(token, user) {

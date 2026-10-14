@@ -12,6 +12,7 @@ import { mailToCsv } from '../services/csv.js';
 import { isoDay } from '../services/format.js';
 import { COVER_MAX_EDGE, PERSON_MAX_EDGE, deleteImage, storeImage } from '../services/images.js';
 import { PACE_ID_PREFIX, upsertPaceRecipient } from '../services/pace.js';
+import { sendToUsers } from '../services/push.js';
 import { paginate, parseListQuery, queryString, searchFilter } from '../services/pagination.js';
 import { generatePassNumber } from '../services/passNumber.js';
 import { serializeMail } from '../services/serializeMail.js';
@@ -38,6 +39,47 @@ const upload = multer({
 ]);
 
 // ---------------------------------------------------------------- helpers
+
+/**
+ * Push notifications (docs/API.md "What is pushed"). Fire-and-forget: never awaited by the request.
+ * @param {any} item
+ */
+const pushData = (item) => ({ type: 'mail', id: item.code });
+const push = {
+  /** @param {any} item */
+  logged: (item) =>
+    sendToUsers([item.recipient.id], {
+      title: `📬 ${item.kind} for you`,
+      body: `From ${item.sender} · collect it at the gate`,
+      data: pushData(item),
+    }),
+  /** @param {any} item */
+  reminder: (item) =>
+    sendToUsers([item.recipient.id], {
+      title: `⏰ Reminder: ${item.kind} waiting`,
+      body: `From ${item.sender} · still at the gate`,
+      data: pushData(item),
+    }),
+  /** @param {any} item */
+  handed: (item) =>
+    sendToUsers([item.recipient.id], {
+      title: '✅ Please confirm collection',
+      body: `${item.kind} from ${item.sender} was handed to ${item.collectedBy}. Did you get it?`,
+      data: pushData(item),
+    }),
+  /** All active security + admin users. @param {any} item */
+  disputed: (item) =>
+    sendToUsers(
+      User.find({ active: true, role: { $in: ['security', 'admin'] } }, { _id: 1 })
+        .lean()
+        .then((staff) => staff.map((u) => u._id.toString())),
+      {
+        title: `⚠️ ${item.recipientName} didn't get it`,
+        body: `${item.kind} from ${item.sender} · ${item.disputeNote}`,
+        data: pushData(item),
+      },
+    ),
+};
 
 /** @param {any} user */
 const isHostRole = (user) => user.role === 'host';
@@ -285,6 +327,7 @@ mailRouter.post('/', canWrite, upload, async (req, res) => {
   }
 
   emitMailCreated(item);
+  if (notify && item.recipient?.id) void push.logged(item);
   res.status(201).json({ item: serializeMail(item) });
 });
 
@@ -312,6 +355,7 @@ mailRouter.post('/:id/remind', canWrite, async (req, res) => {
   if (!updated) throw conflict('Already handed over. Nothing to remind about.');
   emitMailReminder(updated);
   emitMailUpdated(updated);
+  void push.reminder(updated);
   res.json({ item: serializeMail(updated) });
 });
 
@@ -339,6 +383,7 @@ mailRouter.post('/:id/handover', canWrite, async (req, res) => {
   });
   if (!updated) throw conflict('Already handed over');
   emitMailUpdated(updated);
+  if (updated.status === 'handed') void push.handed(updated);
   res.json({ item: serializeMail(updated) });
 });
 
@@ -371,6 +416,7 @@ mailRouter.post('/:id/confirm', async (req, res) => {
     throw conflict('This item has already been answered for.', undefined, { item: serializeMail(fresh) });
   }
   emitMailUpdated(updated);
+  if (updated.status === 'disputed') void push.disputed(updated);
   res.json({ item: serializeMail(updated) });
 });
 

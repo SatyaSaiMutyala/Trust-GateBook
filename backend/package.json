@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=24"
+    "node": ">=20 <21"
   },
   "scripts": {
     "dev": "node --watch src/index.js",
@@ -19,6 +19,7 @@
     "cors": "^2.8.6",
     "dotenv": "^18.0.7",
     "express": "^5.3.0",
+    "firebase-admin": "^13.10.0",
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "mongodb-memory-server": "^11.3.0",
@@ -35,6 +36,6 @@
     "globals": "^17.13.0",
     "socket.io-client": "^4.8.4",
     "supertest": "^7.3.1",
-    "vitest": "^5.0.3"
+    "vitest": "^4.1.11"
   }
 }

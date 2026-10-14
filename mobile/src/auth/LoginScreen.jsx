@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -54,8 +55,12 @@ export function LoginScreen() {
           },
         ]}
       >
-        <View style={[styles.mark, { backgroundColor: c.accent }]}>
-          <View style={[styles.markInner, { backgroundColor: c.rail }]} />
+        <View style={styles.mark} accessibilityLabel="Gatebook logo">
+          <Image
+            source={require('../assets/logo-large.png')}
+            style={styles.markImage}
+            resizeMode="contain"
+          />
         </View>
         <Text style={[styles.brand, { color: c.railInk }]}>GATEBOOK</Text>
         <Text style={[typo.body, { color: c.railMuted }]}>
@@ -132,20 +137,17 @@ export function LoginScreen() {
 
 const styles = ScaledSheet.create({
   rail: { paddingHorizontal: '24@s', paddingBottom: '28@vs', gap: '4@ms' },
+  // Logo on a white tile, like the app icon (its teal would disappear on the dark header).
   mark: {
-    width: '34@ms',
-    height: '34@ms',
-    borderRadius: '8@ms',
+    width: '76@ms',
+    height: '76@ms',
+    borderRadius: '18@ms',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
     marginBottom: '12@vs',
   },
-  markInner: {
-    width: '14@s',
-    height: '20@vs',
-    borderTopLeftRadius: '7@ms',
-    borderTopRightRadius: '7@ms',
-  },
+  markImage: { width: '62@ms', height: '62@ms' },
   brand: {
     fontFamily: fonts.display,
     fontSize: '32@ms',

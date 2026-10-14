@@ -1,3 +1,4 @@
+import { LogoTile } from '../components/AppShell';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -49,22 +50,7 @@ export function LoginPage() {
           <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
             <Box sx={{ bgcolor: 'gb.rail', color: 'gb.railInk', px: 3, py: 3 }}>
               <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-                <Box
-                  sx={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: 1,
-                    bgcolor: 'gb.accent',
-                    color: 'gb.accentInk',
-                    display: 'grid',
-                    placeItems: 'center',
-                    fontFamily: fonts.display,
-                    fontWeight: 700,
-                    fontSize: 24,
-                  }}
-                >
-                  G
-                </Box>
+                <LogoTile size={56} />
                 <Box>
                   <Typography
                     sx={{

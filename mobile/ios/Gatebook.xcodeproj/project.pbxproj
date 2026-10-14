@@ -16,6 +16,7 @@
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		B5887C12AD7945189146B6C7 /* JetBrainsMono-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 89EF5E7919F54E9EB7DE519E /* JetBrainsMono-Medium.ttf */; };
 		BA60E7E8873D41E79718FFC9 /* Barlow-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 7FE24313526649BE8C3EA659 /* Barlow-Medium.ttf */; };
+		C1CDA950809DC1F94F39B790 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = B036E7CB5A8CE0EAF26E939A /* GoogleService-Info.plist */; };
 		DDCE82DD0E3B4089B80951A0 /* Barlow-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 200F8963EF6A4C8AB270FC56 /* Barlow-SemiBold.ttf */; };
 		F23C726FF921C0E464DF3380 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
@@ -34,7 +35,9 @@
 		7FE24313526649BE8C3EA659 /* Barlow-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Barlow-Medium.ttf"; path = "../assets/fonts/Barlow-Medium.ttf"; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = Gatebook/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		89EF5E7919F54E9EB7DE519E /* JetBrainsMono-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "JetBrainsMono-Medium.ttf"; path = "../assets/fonts/JetBrainsMono-Medium.ttf"; sourceTree = "<group>"; };
+		B036E7CB5A8CE0EAF26E939A /* GoogleService-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "Gatebook/GoogleService-Info.plist"; sourceTree = "<group>"; };
 		CC737D3CDC9B442ABC4633B3 /* Barlow-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Barlow-Regular.ttf"; path = "../assets/fonts/Barlow-Regular.ttf"; sourceTree = "<group>"; };
+		D1B3DCA9277B27D3A3562A08 /* Gatebook.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; name = Gatebook.entitlements; path = Gatebook/Gatebook.entitlements; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F4071CABAE9942EEA3371F12 /* BarlowCondensed-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "BarlowCondensed-Bold.ttf"; path = "../assets/fonts/BarlowCondensed-Bold.ttf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -59,6 +62,8 @@
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
+				B036E7CB5A8CE0EAF26E939A /* GoogleService-Info.plist */,
+				D1B3DCA9277B27D3A3562A08 /* Gatebook.entitlements */,
 			);
 			name = Gatebook;
 			sourceTree = "<group>";
@@ -194,6 +199,7 @@
 				DDCE82DD0E3B4089B80951A0 /* Barlow-SemiBold.ttf in Resources */,
 				B5887C12AD7945189146B6C7 /* JetBrainsMono-Medium.ttf in Resources */,
 				F23C726FF921C0E464DF3380 /* PrivacyInfo.xcprivacy in Resources */,
+				C1CDA950809DC1F94F39B790 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -292,6 +298,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = Gatebook/Gatebook.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Gatebook/Info.plist;
@@ -306,7 +313,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.trustlab.gatebook;
+				PRODUCT_BUNDLE_IDENTIFIER = com.app.gatebook;
 				PRODUCT_NAME = Gatebook;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -322,6 +329,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = Gatebook/Gatebook.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = Gatebook/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -335,7 +343,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.trustlab.gatebook;
+				PRODUCT_BUNDLE_IDENTIFIER = com.app.gatebook;
 				PRODUCT_NAME = Gatebook;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_VERSION = 5.0;

@@ -1,0 +1,220 @@
+{
+  "project_info": {
+    "project_number": "1097441735329",
+    "firebase_url": "https://trustlab-diagnostics-default-rtdb.firebaseio.com",
+    "project_id": "trustlab-diagnostics",
+    "storage_bucket": "trustlab-diagnostics.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1097441735329:android:b30b8a12423ceae924f6e0",
+        "android_client_info": {
+          "package_name": "com.app.gatebook"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCOXP1xCh8UiuSWPixQ0PYbT-jOVX_kACs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1097441735329:android:b95e443dfc3dbdce24f6e0",
+        "android_client_info": {
+          "package_name": "com.app.pace"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCOXP1xCh8UiuSWPixQ0PYbT-jOVX_kACs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1097441735329:android:f733f4434897d3ce24f6e0",
+        "android_client_info": {
+          "package_name": "com.app.trustian"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCOXP1xCh8UiuSWPixQ0PYbT-jOVX_kACs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1097441735329:android:8d16eb01503b26e424f6e0",
+        "android_client_info": {
+          "package_name": "com.app.trustlab"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCOXP1xCh8UiuSWPixQ0PYbT-jOVX_kACs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1097441735329:android:55df149f3f90319a24f6e0",
+        "android_client_info": {
+          "package_name": "com.app.trustlife"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCOXP1xCh8UiuSWPixQ0PYbT-jOVX_kACs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1097441735329:android:9af16f85b56f3a0124f6e0",
+        "android_client_info": {
+          "package_name": "com.app.trusttat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCOXP1xCh8UiuSWPixQ0PYbT-jOVX_kACs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1097441735329:android:a234c107bd91741e24f6e0",
+        "android_client_info": {
+          "package_name": "com.trustlab.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCOXP1xCh8UiuSWPixQ0PYbT-jOVX_kACs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1097441735329:android:cfb1137daf1f74b524f6e0",
+        "android_client_info": {
+          "package_name": "com.trustlab.mydiary"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCOXP1xCh8UiuSWPixQ0PYbT-jOVX_kACs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1097441735329:android:67cbc340a55dbde224f6e0",
+        "android_client_info": {
+          "package_name": "com.trustlab.pace"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCOXP1xCh8UiuSWPixQ0PYbT-jOVX_kACs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1097441735329:android:d4aa97decefb4f2324f6e0",
+        "android_client_info": {
+          "package_name": "com.trustlab.salespulse365"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCOXP1xCh8UiuSWPixQ0PYbT-jOVX_kACs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1097441735329:android:0a15ce0eea2ea70324f6e0",
+        "android_client_info": {
+          "package_name": "com.trustlab.trustticket"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCOXP1xCh8UiuSWPixQ0PYbT-jOVX_kACs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

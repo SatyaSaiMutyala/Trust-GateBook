@@ -3,6 +3,7 @@ import { api } from '../store/api';
 import { selectIsGateUser } from '../store/authSlice';
 import { settingsReceived } from '../store/settingsSlice';
 import { issuePulsed, toastShown } from '../store/uiSlice';
+import { claimNotice, mailNoticeKey } from '../push/dedupe';
 
 /**
  * Socket.IO → store. Lists are refreshed by invalidating RTK Query tags (batched per 300 ms; infinite queries
@@ -46,7 +47,8 @@ export const mailEvent = (type, item) => (dispatch, getState) => {
     type === 'created' &&
     item.recipient &&
     me &&
-    item.recipient.id === me.id
+    item.recipient.id === me.id &&
+    claimNotice(mailNoticeKey(item.id)) // FCM may announce the same item
   ) {
     dispatch(toastShown(`${item.kind} for you from ${item.sender}`));
     Vibration.vibrate(400);
@@ -54,7 +56,8 @@ export const mailEvent = (type, item) => (dispatch, getState) => {
   if (
     type === 'updated' &&
     item.status === 'disputed' &&
-    selectIsGateUser(state)
+    selectIsGateUser(state) &&
+    claimNotice(mailNoticeKey(item.id))
   ) {
     dispatch(
       toastShown(
@@ -72,6 +75,7 @@ export const mailEvent = (type, item) => (dispatch, getState) => {
 
 export const mailReminderEvent = item => dispatch => {
   dispatch(api.util.updateQueryData('getMail', item.id, () => item));
+  if (!claimNotice(mailNoticeKey(item.id))) return;
   dispatch(
     toastShown(
       `Reminder: ${item.kind} from ${item.sender} is waiting for you at the gate`,
