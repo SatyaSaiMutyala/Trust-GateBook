@@ -58,6 +58,9 @@ export const config = {
   isProd,
   isTest: nodeEnv === 'test',
   port: Number.parseInt(str('PORT', '4000'), 10),
+  // Interface to listen on. Production default 127.0.0.1 (behind nginx on the same machine); dev: all interfaces
+  // (undefined) so phones on the Wi-Fi can reach a laptop backend. Override with HOST=0.0.0.0 / 127.0.0.1.
+  host: env.HOST?.trim() || (isProd ? '127.0.0.1' : undefined),
   mongodbUri: env.MONGODB_URI?.trim() || '',
   embeddedMongoPort: Number.parseInt(str('EMBEDDED_MONGO_PORT', '27018'), 10),
   embeddedMongoDbPath: path.join(BACKEND_ROOT, '.data', 'mongo'),

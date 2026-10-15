@@ -298,3 +298,25 @@ describe('account deletion', () => {
     await get('admin', '/api/auth/me').expect(200);
   });
 });
+
+// Runs last so the extra user doesn't change the counts asserted above.
+describe('admin-created users skip approval', () => {
+  it('a user created by an admin (web or mobile Users screen) is active and can sign in at once — only self sign-up is pending', async () => {
+    const before = await Notification.countDocuments({ event: 'signup_request' });
+    const c = await post('admin', '/api/users', {
+      name: 'Direct Hire',
+      email: 'direct@test.local',
+      password: 'secret123',
+      role: 'host',
+    }).expect(201);
+    expect(c.body.user).toMatchObject({ status: 'active', active: true, canSignIn: true });
+
+    const l = await login('direct@test.local', 'secret123').expect(200);
+    expect(l.body.token).toBeTruthy();
+
+    const pending = await get('admin', '/api/users', { status: 'pending', limit: 100 }).expect(200);
+    expect(pending.body.data.some((/** @type {any} */ x) => x.email === 'direct@test.local')).toBe(false);
+    // no approval request is raised for admin-created accounts
+    expect(await Notification.countDocuments({ event: 'signup_request' })).toBe(before);
+  });
+});

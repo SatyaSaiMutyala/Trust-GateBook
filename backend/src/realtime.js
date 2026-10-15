@@ -1,4 +1,8 @@
-import { Server } from 'socket.io';
+// Load socket.io through require(): on the AWS server the ESM named import failed to resolve, while the
+// CommonJS entry works everywhere (same fix as applied on the server).
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const { Server } = require('socket.io');
 import { config } from './config.js';
 import { isGateUser, userFromToken } from './middleware/auth.js';
 import { serializeMail } from './services/serializeMail.js';

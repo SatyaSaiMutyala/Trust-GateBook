@@ -16,7 +16,8 @@ async function main() {
 
   await new Promise((resolve, reject) => {
     server.once('error', reject);
-    server.listen(config.port, () => resolve(undefined));
+    // Production listens on 127.0.0.1 only (nginx on the same server proxies to it); dev listens on all interfaces.
+    server.listen(config.port, config.host, () => resolve(undefined));
   });
   console.log(`[http] Gatebook API listening on http://localhost:${config.port} (${config.nodeEnv})`);
 
