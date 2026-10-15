@@ -266,3 +266,25 @@ form drafts) and **RTK Query** for every API call, using infinite queries for pa
 - **Empty states:** "No notifications yet — you'll see post and alerts for you here." / Unread tab: "You're all
   caught up."
 - Opening a push notification marks its stored notification read.
+
+
+## Sign-up and account deletion (behind server switches) — MOBILE APP ONLY
+
+> **Mobile only.** The web app has no sign-up page, no Delete account and no pending-requests UI (user decision,
+> 2026-10-15). Web only renders `signup_request` notifications (🙋) and marks them read on click.
+Shown only when `GET /api/config` says so (see API.md "Feature switches"); both apps load it at start and on return
+to the foreground / window focus, and hide the options when off.
+- **Login screen:** under Sign in, a text link "New here? **Create an account**" → **Create account** screen/page:
+  Full name*, Email*, Mobile number*, Department (select from settings, optional — settings need auth, so use the
+  public list fallback: just a free-text field is fine), Password* (8+, show/hide), Confirm password*. Primary button
+  "Create account". On success: themed success dialog ("Account requested" / server message / OK) → back to Login.
+  Server errors shown inline (email taken, rate limit, validation).
+- **Pending sign-in:** the login error shows the server message ("Your account is waiting for admin approval.").
+- **Admin — Users:** a **Pending requests (n)** section/tab at the top: name, email, phone, dept, requested time,
+  buttons **Approve** (role select, default Employee) and **Reject** (confirm dialog). Approved users move to the
+  normal list. Admins get a 🙋 notification per request; tapping it opens Users → Pending.
+- **Delete account** (Account / My account for every role, incl. the non-admin profile view): a danger outlined
+  button at the bottom, above Sign out → themed ConfirmDialog (tone danger): title "Delete your account?", text
+  "This permanently removes your name, contact details and login from Gatebook. Gate-register records stay for the
+  audit trail. This can't be undone.", a password field, buttons Cancel / **Delete account** → success message
+  "Your account has been deleted." → signed out (mobile also unregisters push first).

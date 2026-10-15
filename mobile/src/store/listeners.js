@@ -26,6 +26,10 @@ startListening({
   actionCreator: loggedOut,
   effect: async (_action, { dispatch }) => {
     dispatch(api.util.resetApiState());
+    // The public feature switches are needed on the Login screen right away (Create an account link).
+    dispatch(
+      api.endpoints.getConfig.initiate(undefined, { forceRefetch: true }),
+    );
     await clearSession().catch(() => undefined);
   },
 });

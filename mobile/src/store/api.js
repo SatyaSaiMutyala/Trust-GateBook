@@ -34,6 +34,9 @@ const rawBaseQuery = fetchBaseQuery({
  * Normalises errors to `{ status, code, message, field?, item? }` from the contract's
  * `{ error: { code, message, field } }` body; signs out on any 401 while signed in.
  */
+/** Endpoints whose 401 means "wrong password", not "session expired". */
+const PASSWORD_CHECK_ENDPOINTS = new Set(['deleteMe']);
+
 export const baseQuery = async (args, apiCtx, extra) => {
   const result = await rawBaseQuery(args, apiCtx, extra);
   if (!result.error) return result;
@@ -58,7 +61,13 @@ export const baseQuery = async (args, apiCtx, extra) => {
     };
   }
   const body = data && data.error ? data.error : null;
-  if (status === 401 && apiCtx.getState().auth.token)
+  // A 401 means the session is gone — except where 401 answers a password check
+  // (DELETE /api/auth/me → "Wrong password."), which must stay inside the dialog.
+  if (
+    status === 401 &&
+    apiCtx.getState().auth.token &&
+    !PASSWORD_CHECK_ENDPOINTS.has(apiCtx.endpoint)
+  )
     apiCtx.dispatch(loggedOut());
   return {
     error: {
@@ -117,6 +126,24 @@ export const api = createApi({
     // ---------------- auth ----------------
     login: build.mutation({
       query: body => ({ url: '/api/auth/login', method: 'POST', body }),
+    }),
+
+    // ---------------- feature switches, sign-up, account deletion ----------------
+    /** Public: `{ features: { signup, accountDeletion } }`. Loaded before login and on return to foreground. */
+    getConfig: build.query({
+      query: () => '/api/config',
+      transformResponse: res => ({
+        signup: !!res?.features?.signup,
+        accountDeletion: !!res?.features?.accountDeletion,
+      }),
+    }),
+    /** Public: `{ name, email, phone, password, dept? }` → `{ message }` (creates a pending account). */
+    signup: build.mutation({
+      query: body => ({ url: '/api/auth/signup', method: 'POST', body }),
+    }),
+    /** `{ password }` → `{ ok }`. 401 = wrong password (does not sign out), 409 = last admin. */
+    deleteMe: build.mutation({
+      query: body => ({ url: '/api/auth/me', method: 'DELETE', body }),
     }),
 
     // ---------------- push devices (FCM) ----------------
@@ -204,6 +231,24 @@ export const api = createApi({
       query: listQuery('/api/users'),
       infiniteQueryOptions: pages,
       providesTags: ['Users'],
+    }),
+    /** Pending sign-up: approve with a role (default Employee). */
+    approveUser: build.mutation({
+      query: ({ id, role }) => ({
+        url: `/api/users/${encodeURIComponent(id)}/approve`,
+        method: 'POST',
+        body: role ? { role } : {},
+      }),
+      invalidatesTags: ['Users', 'Hosts'],
+    }),
+    /** Pending sign-up: reject (deletes the request). */
+    rejectUser: build.mutation({
+      query: id => ({
+        url: `/api/users/${encodeURIComponent(id)}/reject`,
+        method: 'POST',
+        body: {},
+      }),
+      invalidatesTags: ['Users'],
     }),
     createUser: build.mutation({
       query: body => ({ url: '/api/users', method: 'POST', body }),
@@ -439,6 +484,11 @@ export const api = createApi({
 
 export const {
   useLoginMutation,
+  useGetConfigQuery,
+  useSignupMutation,
+  useDeleteMeMutation,
+  useApproveUserMutation,
+  useRejectUserMutation,
   useListNotificationsInfiniteQuery,
   useUnreadCountQuery,
   useMarkNotificationReadMutation,
@@ -536,4 +586,12 @@ export function applyNotificationRead(dispatch, getState, ids) {
     );
   }
   return () => patches.forEach(p => p.undo());
+}
+
+const NO_FEATURES = { signup: false, accountDeletion: false };
+
+/** Server feature switches; both false while loading or on error. */
+export function useFeatures() {
+  const { data } = useGetConfigQuery();
+  return data ?? NO_FEATURES;
 }

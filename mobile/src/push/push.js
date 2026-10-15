@@ -9,7 +9,7 @@ import {
   permissionResolved,
 } from '../store/pushSlice';
 import { toastShown } from '../store/uiSlice';
-import { claimNotice, mailNoticeKey } from './dedupe';
+import { claimNotice, routeNoticeKey } from './dedupe';
 import { fcm } from './messaging';
 
 const platform = () => (Platform.OS === 'ios' ? 'ios' : 'android');
@@ -65,37 +65,48 @@ function withTimeout(promise, ms) {
  * Before the auth token is cleared: DELETE /api/devices/:token, then drop the local FCM token.
  * Best-effort with a short timeout so sign-out never hangs offline.
  */
-export const unregisterPush = () => async (dispatch, getState) => {
-  const token = getState().push.token;
-  try {
-    if (token && getState().auth.token) {
-      await withTimeout(
-        dispatch(api.endpoints.unregisterDevice.initiate(token)),
-        4000,
-      );
+export const unregisterPush =
+  ({ skipServer = false } = {}) =>
+  async (dispatch, getState) => {
+    const token = getState().push.token;
+    try {
+      if (!skipServer && token && getState().auth.token) {
+        await withTimeout(
+          dispatch(api.endpoints.unregisterDevice.initiate(token)),
+          4000,
+        );
+      }
+    } catch {
+      // best-effort
     }
-  } catch {
-    // best-effort
-  }
-  try {
-    if (token) await withTimeout(fcm.deleteToken(), 4000);
-  } catch {
-    // best-effort
-  }
-  dispatch(deviceUnregistered());
-};
+    try {
+      if (token) await withTimeout(fcm.deleteToken(), 4000);
+    } catch {
+      // best-effort
+    }
+    dispatch(deviceUnregistered());
+  };
 
 /** User-initiated sign-out: unregister this device for push first, then clear the session. */
-export const signOut = () => async dispatch => {
-  await dispatch(unregisterPush());
-  dispatch(loggedOut());
-};
+export const signOut =
+  ({ skipServer = false } = {}) =>
+  async dispatch => {
+    await dispatch(unregisterPush({ skipServer }));
+    dispatch(loggedOut());
+  };
+
+/**
+ * After DELETE /api/auth/me succeeded: the server already removed this account's devices, so only the
+ * local FCM token is dropped (no DELETE /api/devices), then the session is cleared.
+ */
+export const signOutDeletedAccount = () => signOut({ skipServer: true });
 
 /** Routing data from an FCM message (`data: { type, id }`), or null. */
 export function routeOf(message) {
   const data = message?.data;
-  if (!data || data.type !== 'mail' || !data.id) return null;
-  const route = { type: 'mail', id: String(data.id) };
+  if (!data || !data.id || (data.type !== 'mail' && data.type !== 'user'))
+    return null;
+  const route = { type: data.type, id: String(data.id) };
   if (data.notificationId) route.notificationId = String(data.notificationId);
   return route;
 }
@@ -110,7 +121,7 @@ export const pushOpened = message => dispatch => {
 export const foregroundMessage = message => dispatch => {
   const route = routeOf(message);
   const key = route
-    ? mailNoticeKey(route.id)
+    ? routeNoticeKey(route)
     : `push:${message?.messageId ?? Date.now()}`;
   if (!claimNotice(key)) return;
   const title = message?.notification?.title;
@@ -128,6 +139,19 @@ export const routePendingOpen = navigation => (dispatch, getState) => {
   const pending = state.push.pendingOpen;
   if (!pending || !state.auth.token || !navigation?.isReady?.()) return false;
   dispatch(pendingOpenHandled());
+  if (pending.type === 'user') {
+    // 🙋 sign-up request (admins): Account → Pending requests.
+    navigation.navigate('Main', {
+      screen: 'Account',
+      params: { section: 'pending' },
+    });
+    if (pending.notificationId) {
+      dispatch(
+        api.endpoints.markNotificationRead.initiate(pending.notificationId),
+      );
+    }
+    return true;
+  }
   const list = selectIsGateUser(state) ? 'Post' : 'MyPost';
   navigation.navigate('Main', { screen: list });
   navigation.navigate('MailDetails', { id: pending.id });

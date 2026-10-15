@@ -1,5 +1,13 @@
 import React from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { fonts, radius, typo, useTheme } from '../theme';
 import { Button } from './Button';
 import { ScaledSheet, moderateScale } from 'react-native-size-matters/extend';
@@ -7,7 +15,9 @@ import { ScaledSheet, moderateScale } from 'react-native-size-matters/extend';
 /**
  * Confirmation dialog in the app's own style (replaces the system Alert): centred card on the
  * dark overlay, display-font title, body text, and Cancel + confirm buttons from the app's Button.
- * `tone="danger"` gives a red icon and a solid red confirm button (sign out, delete…).
+ * `tone="danger"` gives a red icon and a solid red confirm button (sign out, delete…);
+ * `tone="success"` a green tick (info/success notices — pair with `hideCancel`).
+ * `children` render under the message (e.g. a password field, an inline error).
  */
 export function ConfirmDialog({
   visible,
@@ -19,9 +29,12 @@ export function ConfirmDialog({
   loading,
   onConfirm,
   onCancel,
+  hideCancel = false,
+  children,
 }) {
   const { c } = useTheme();
   const danger = tone === 'danger';
+  const success = tone === 'success';
   return (
     <Modal
       visible={visible}
@@ -30,7 +43,11 @@ export function ConfirmDialog({
       statusBarTranslucent
       onRequestClose={onCancel}
     >
-      <View style={styles.root}>
+      {/* Keyboard-aware so a field in `children` (e.g. password) stays visible. */}
+      <KeyboardAvoidingView
+        style={styles.root}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <Pressable
           style={[StyleSheet.absoluteFill, { backgroundColor: c.overlay }]}
           onPress={onCancel}
@@ -47,13 +64,22 @@ export function ConfirmDialog({
           <View
             style={[
               styles.icon,
-              { backgroundColor: danger ? c.badSoft : c.accentSoft },
+              {
+                backgroundColor: danger
+                  ? c.badSoft
+                  : success
+                  ? c.okSoft
+                  : c.accentSoft,
+              },
             ]}
           >
             <Text
-              style={[styles.iconText, { color: danger ? c.bad : c.accentInk }]}
+              style={[
+                styles.iconText,
+                { color: danger ? c.bad : success ? c.ok : c.accentInk },
+              ]}
             >
-              {danger ? '!' : '?'}
+              {danger ? '!' : success ? '✓' : '?'}
             </Text>
           </View>
           <Text
@@ -67,14 +93,17 @@ export function ConfirmDialog({
               {message}
             </Text>
           ) : null}
+          {children ? <View style={styles.extra}>{children}</View> : null}
           <View style={styles.actions}>
-            <Button
-              title={cancelLabel}
-              variant="ghost"
-              onPress={onCancel}
-              disabled={loading}
-              style={styles.action}
-            />
+            {hideCancel ? null : (
+              <Button
+                title={cancelLabel}
+                variant="ghost"
+                onPress={onCancel}
+                disabled={loading}
+                style={styles.action}
+              />
+            )}
             <Button
               title={confirmLabel}
               variant={danger ? 'destructive' : 'primary'}
@@ -84,7 +113,7 @@ export function ConfirmDialog({
             />
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -134,6 +163,7 @@ const styles = ScaledSheet.create({
     textAlign: 'center',
   },
   message: { textAlign: 'center', marginTop: moderateScale(6) },
+  extra: { alignSelf: 'stretch', gap: '10@ms', marginTop: '14@ms' },
   actions: {
     flexDirection: 'row',
     gap: '10@ms',

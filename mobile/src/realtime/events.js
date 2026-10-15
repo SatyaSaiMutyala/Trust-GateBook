@@ -3,7 +3,7 @@ import { api, applyNotificationRead, setUnreadCount } from '../store/api';
 import { selectIsGateUser } from '../store/authSlice';
 import { settingsReceived } from '../store/settingsSlice';
 import { issuePulsed, toastShown } from '../store/uiSlice';
-import { claimNotice, mailNoticeKey } from '../push/dedupe';
+import { claimNotice, mailNoticeKey, routeNoticeKey } from '../push/dedupe';
 
 /**
  * Socket.IO → store. Lists are refreshed by invalidating RTK Query tags (batched per 300 ms; infinite queries
@@ -113,9 +113,9 @@ export const notificationNewEvent =
     if (typeof unreadCount === 'number') dispatch(setUnreadCount(unreadCount));
     else dispatch(api.util.invalidateTags(['UnreadCount']));
     invalidateSoon(dispatch, ['Notifications']);
-    const mailId = notification?.data?.id;
-    const key = mailId
-      ? mailNoticeKey(mailId)
+    const data = notification?.data;
+    const key = data?.id
+      ? routeNoticeKey({ type: data.type, id: data.id })
       : `notification:${notification?.id}`;
     if (notification && claimNotice(key)) {
       const text = [notification.title, notification.body]

@@ -1,4 +1,11 @@
-import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useState,
+  useEffect,
+  useRef,
+} from 'react';
 import { useNavigation } from '@react-navigation/native';
 import {
   FlatList,
@@ -46,6 +53,8 @@ import {
 import { useSettings, useToast } from '../store/hooks';
 import { signOut } from '../push/push';
 import { PushHint } from '../push/PushHint';
+import { DeleteAccount } from '../auth/DeleteAccount';
+import { PendingRequests } from './account/PendingRequests';
 import { useInfiniteList } from '../store/useInfiniteList';
 import { fmtDate, initials } from '../utils/format';
 import { version as APP_VERSION } from '../../package.json';
@@ -756,6 +765,7 @@ function ProfileView() {
         )}
 
         <PushHint />
+        <DeleteAccount />
         <Button
           title="Sign out"
           variant="danger"
@@ -781,12 +791,20 @@ function ProfileView() {
   );
 }
 
-export function AccountScreen() {
+export function AccountScreen({ route } = {}) {
   const { c } = useTheme();
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const user = useSelector(selectUser);
   const isAdmin = useSelector(selectIsAdmin);
+  const listRef = useRef(null);
+  const section = route?.params?.section;
+  // Opened from a 🙋 sign-up notification: Pending requests sits at the top of the list.
+  useEffect(() => {
+    if (section !== 'pending' || !isAdmin) return;
+    listRef.current?.scrollToOffset?.({ offset: 0, animated: true });
+    navigation.setParams?.({ section: undefined });
+  }, [section, isAdmin, navigation]);
   // Admins see their name under the title; the profile view shows it in the card instead.
   useLayoutEffect(() => {
     navigation.setOptions({ headerSubtitle: isAdmin ? user?.name : undefined });
@@ -797,7 +815,8 @@ export function AccountScreen() {
   const [q, setQ] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
-  const params = useMemo(() => ({ q, sort: 'name' }), [q]);
+  // Pending sign-ups have their own section above; this list shows active users only.
+  const params = useMemo(() => ({ q, sort: 'name', status: 'active' }), [q]);
   const users = useInfiniteList(useListUsersInfiniteQuery, params, {
     skip: !isAdmin,
   });
@@ -821,6 +840,7 @@ export function AccountScreen() {
         marginBottom: isAdmin ? verticalScale(10) : 0,
       }}
     >
+      <PendingRequests />
       <MyDetailsPanel />
       <ListEditor title="Departments" field="departments" editable />
       <ListEditor title="Purposes" field="purposes" editable />
@@ -876,6 +896,7 @@ export function AccountScreen() {
         </Text>
         <Text style={[typo.small, { color: c.muted }]}>{user?.email}</Text>
         <PushHint />
+        <DeleteAccount />
         <Button
           title="Sign out"
           variant="danger"
@@ -915,6 +936,7 @@ export function AccountScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <FlatList
+        ref={listRef}
         style={{ flex: 1 }}
         contentContainerStyle={styles.content}
         data={isAdmin ? users.items : []}

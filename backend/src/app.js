@@ -40,6 +40,10 @@ export function createApp() {
   app.get('/api/health', (_req, res) => {
     res.json({ ok: true });
   });
+  // Public feature switches; the apps load them before login.
+  app.get('/api/config', (_req, res) => {
+    res.json({ features: { signup: config.features.signup, accountDeletion: config.features.accountDeletion } });
+  });
   app.use('/api/auth', authRouter);
   app.use('/api/users', usersRouter);
   app.use('/api/hosts', hostsRouter);

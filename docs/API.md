@@ -250,6 +250,34 @@ interface MailItem {
 Pieces, Gate, Received, Logged by, Status, Handed over, Collected by, Handed by, Receiver confirmed, Dispute, Resolution, Remarks`
 (Status labels: To collect, Handed · awaiting confirmation, Handed over, Collected · confirmed, Receiver disputes, Resolved.)
 
+## Feature switches, sign-up and account deletion
+
+Two server switches in `backend/.env` (both default `false`):
+
+| env | effect |
+|-----|--------|
+| `SIGNUP_ENABLED=true` | apps show **Create an account** on the login screen; `POST /api/auth/signup` works |
+| `ACCOUNT_DELETION_ENABLED=true` | apps show **Delete account** in Account / My account; `DELETE /api/auth/me` works |
+
+Account deletion is **forced on whenever sign-up is on** (Apple guideline 5.1.1(v): apps that let people create an
+account must let them delete it in the app). Turning a switch off hides the option in the apps (after they next load
+the config) and makes the endpoint return `404 { code: 'feature_disabled' }`.
+
+| method | path | auth | notes |
+|--------|------|------|-------|
+| GET    | `/api/config` | none | → `{ features: { signup: boolean, accountDeletion: boolean } }` (apps load it at start, before login) |
+| POST   | `/api/auth/signup` | none | `{ name*, email*, phone*, password* (8–100), dept? }` → `201 { message: "Account requested. An admin will approve it — you can sign in once it's approved." }`. Creates a **pending** user: role `host` (Employee), `active: false`, `status: 'pending'`, `isHost: true`. Email already used → `409 conflict` "An account with this email already exists." Rate-limited: 5 sign-ups per IP per hour → `429 rate_limited`. Notifies all active admins (`event: 'signup_request'`, data `{ type: 'user', id }`, title "🙋 New account request", body "{name} · {email}"). |
+| POST   | `/api/users/:id/approve` | admin | pending user only; `{ role?: Role (default 'host') }` → sets `active: true`, `status: 'active'` → `{ user }` |
+| POST   | `/api/users/:id/reject` | admin | pending user only → deletes the user → `{ ok: true }` |
+| DELETE | `/api/auth/me` | any signed-in | `{ password* }` (wrong → `401` "Wrong password."). The last active admin can't delete themselves (`409 conflict`). Anonymises the account: name "Deleted user", email `deleted-<id>@deleted.invalid`, phone/dept/location cleared, password removed, `isHost: false`, `active: false`, `status: 'deleted'`, `deletedAt` set; deletes the user's devices and notifications; disconnects their sockets. Visit and post records are kept for the gate register's audit trail (people who appear in them stay as stored). → `{ ok: true }` |
+
+Users gain `status: 'active' | 'pending' | 'deleted'` (existing users are `active`). `GET /api/users` accepts
+`status=pending|active|deleted` (default: active + pending, deleted hidden). Login for a pending user → `403
+forbidden` "Your account is waiting for admin approval."; for a deleted user → the normal "Wrong email or password.".
+
+`AppNotification.event` gains `'signup_request'` and `data.type` gains `'user'` (admins: tapping opens Users →
+pending requests).
+
 ## In-app notifications (inbox)
 
 Every notification the backend sends (see the table in "Push notifications") is also **stored per user**, whether
@@ -257,13 +285,13 @@ or not that user has a phone registered for push. Web and mobile show them in a 
 bell with an unread badge. Stored for 90 days (TTL index on `createdAt`).
 
 ```js
-type NotificationEvent = 'mail_logged' | 'mail_reminder' | 'mail_confirm' | 'mail_disputed';
+type NotificationEvent = 'mail_logged' | 'mail_reminder' | 'mail_confirm' | 'mail_disputed' | 'signup_request';
 interface AppNotification {
   id: string;
   event: NotificationEvent;
   title: string;            // same text as the push title, e.g. "📬 Courier for you"
   body: string;             // same text as the push body
-  data: { type: 'mail'; id: string };   // what to open when tapped (a post item)
+  data: { type: 'mail' | 'user'; id: string };   // what to open when tapped (a post item, or a pending user for admins)
   readAt: string | null;
   createdAt: string;
 }

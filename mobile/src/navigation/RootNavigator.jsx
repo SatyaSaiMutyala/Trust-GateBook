@@ -9,6 +9,7 @@ import {
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { LoginScreen } from '../auth/LoginScreen';
+import { CreateAccountScreen } from '../auth/CreateAccountScreen';
 import { IssueAlerts } from '../components/IssueAlerts';
 import { SheetHost } from '../components/SheetHost';
 import { TabBar } from '../components/TabBar';
@@ -22,6 +23,7 @@ import {
 } from '../push/usePush';
 import { navigationReady } from '../store/pushSlice';
 import { navigationRef } from './navigationRef';
+import { useAppConfig } from '../store/useAppConfig';
 import { AccountScreen } from '../screens/AccountScreen';
 import { CheckInScreen } from '../screens/CheckInScreen';
 import { InsideScreen } from '../screens/InsideScreen';
@@ -225,6 +227,16 @@ function EmployeeStack() {
   );
 }
 
+/** Signed out: Login and (when the server allows sign-up) Create account. */
+function AuthStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="CreateAccount" component={CreateAccountScreen} />
+    </Stack.Navigator>
+  );
+}
+
 /** Signed-in shell: socket, settings subscription, role-based navigator. */
 function SignedIn() {
   useRealtime();
@@ -242,6 +254,7 @@ export function RootNavigator() {
   const { c, dark } = useTheme();
   const dispatch = useDispatch();
   usePushOpenListeners();
+  useAppConfig();
   const navTheme = useMemo(() => {
     const base = dark ? DarkTheme : DefaultTheme;
     return {
@@ -266,11 +279,7 @@ export function RootNavigator() {
     >
       {/* Top bar and login header are always the dark rail, so light status-bar content everywhere. */}
       <StatusBar barStyle="light-content" backgroundColor={c.rail} />
-      {signedIn ? (
-        <SignedIn key={`${user.id}:${user.role}`} />
-      ) : (
-        <LoginScreen />
-      )}
+      {signedIn ? <SignedIn key={`${user.id}:${user.role}`} /> : <AuthStack />}
       <SheetHost />
       <ToastHost />
     </NavigationContainer>

@@ -13,6 +13,8 @@ export async function bootstrap() {
   await Promise.all([User.syncIndexes(), Visit.syncIndexes(), MailItem.syncIndexes(), Device.syncIndexes(), Notification.syncIndexes()]);
   await getSettings();
   await migrateSettings();
+  // Users created before sign-up existed have no status: they are active accounts.
+  await User.updateMany({ status: { $exists: false } }, { $set: { status: 'active' } });
   await ensureUploadDir();
   if ((await User.estimatedDocumentCount()) === 0) {
     await User.create({

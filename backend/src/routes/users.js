@@ -4,7 +4,8 @@ import mongoose from 'mongoose';
 import { z } from 'zod';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { badRequest, conflict, notFound } from '../middleware/error.js';
-import { ROLES, User, serializeUser } from '../models/User.js';
+import { Notification } from '../models/Notification.js';
+import { ROLES, USER_STATUSES, User, serializeUser } from '../models/User.js';
 import { Device } from '../models/Device.js';
 import { disconnectUser } from '../realtime.js';
 import { paginate, parseListQuery, queryString, searchFilter } from '../services/pagination.js';
@@ -58,6 +59,16 @@ usersRouter.get('/', async (req, res) => {
   if (roleQ !== undefined) {
     if (!ROLES.includes(/** @type {any} */ (roleQ))) throw badRequest('role must be admin, security, viewer or host.', 'role');
     filter.role = roleQ;
+  }
+  // status: pending | active | deleted; default = active + pending (deleted accounts hidden).
+  const statusQ = queryString(req.query, 'status');
+  if (statusQ === undefined) {
+    filter.status = { $ne: 'deleted' };
+  } else {
+    if (!USER_STATUSES.includes(/** @type {any} */ (statusQ))) {
+      throw badRequest('status must be pending, active or deleted.', 'status');
+    }
+    filter.status = statusQ === 'active' ? { $nin: ['pending', 'deleted'] } : statusQ;
   }
   const activeQ = queryString(req.query, 'active');
   if (activeQ !== undefined) {
@@ -120,4 +131,40 @@ usersRouter.patch('/:id', async (req, res) => {
   // A deactivated user's phones must stop getting pushes.
   if (!user.active) await Device.deleteMany({ user: user._id });
   res.json({ user: serializeUser(user) });
+});
+
+// ---------------------------------------------------------------- sign-up approvals
+
+/** @param {string} id */
+async function findPending(id) {
+  if (!mongoose.isValidObjectId(id)) throw notFound('User not found.');
+  const user = await User.findById(id);
+  if (!user || user.status === 'deleted') throw notFound('User not found.');
+  if (user.status !== 'pending') throw conflict('This account is not waiting for approval.');
+  return user;
+}
+
+const approveSchema = z.object({ role: role.optional() });
+
+// POST /api/users/:id/approve { role? } — pending sign-up → active account (default Employee).
+usersRouter.post('/:id/approve', async (req, res) => {
+  const body = approveSchema.parse(req.body ?? {});
+  const user = await findPending(String(req.params.id));
+  user.role = body.role ?? 'host';
+  user.isHost = user.role === 'host';
+  user.active = true;
+  user.status = 'active';
+  await user.save();
+  res.json({ user: serializeUser(user) });
+});
+
+// POST /api/users/:id/reject — pending sign-up only; removes the account.
+usersRouter.post('/:id/reject', async (req, res) => {
+  const user = await findPending(String(req.params.id));
+  await Promise.all([
+    User.deleteOne({ _id: user._id }),
+    Notification.deleteMany({ user: user._id }),
+    Device.deleteMany({ user: user._id }),
+  ]);
+  res.json({ ok: true });
 });

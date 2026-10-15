@@ -2,7 +2,7 @@ import multer from 'multer';
 import { ZodError } from 'zod';
 
 /**
- * @typedef {'unauthorized'|'forbidden'|'not_found'|'validation'|'badge_in_use'|'already_inside'|'conflict'|'internal'} ErrorCode
+ * @typedef {'unauthorized'|'forbidden'|'not_found'|'validation'|'badge_in_use'|'already_inside'|'conflict'|'rate_limited'|'feature_disabled'|'upstream'|'internal'} ErrorCode
  */
 
 /** An error that maps to the contract's `{ error: { code, message, field? } }` body. */

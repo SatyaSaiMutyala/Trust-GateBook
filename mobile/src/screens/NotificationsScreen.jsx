@@ -24,6 +24,7 @@ export const EVENT_ICONS = {
   mail_reminder: '⏰',
   mail_confirm: '✅',
   mail_disputed: '⚠️',
+  signup_request: '🙋',
 };
 
 const EMPTY = {
@@ -40,7 +41,11 @@ function NotificationRow({ item: n, now, onPress }) {
       accessibilityLabel={`${unread ? 'Unread. ' : ''}${n.title}. ${
         n.body
       }. ${fmtRelative(n.createdAt, now)}`}
-      accessibilityHint="Opens the post item"
+      accessibilityHint={
+        n.data?.type === 'user'
+          ? 'Opens pending account requests'
+          : 'Opens the post item'
+      }
       onPress={() => onPress(n)}
       testID={`notification-${n.id}`}
       style={({ pressed }) => [
@@ -130,6 +135,12 @@ export function NotificationsScreen({ navigation }) {
       if (!n.readAt) markRead(n.id);
       if (n.data?.type === 'mail' && n.data.id) {
         navigation.navigate('MailDetails', { id: n.data.id });
+      } else if (n.data?.type === 'user') {
+        // 🙋 sign-up request (admins): Account → Pending requests.
+        navigation.navigate('Main', {
+          screen: 'Account',
+          params: { section: 'pending' },
+        });
       }
     },
     [markRead, navigation],

@@ -54,6 +54,8 @@ Scripts: `dev`, `start` (`node src/index.js`), `build` (syntax check of `src/` w
 | `EMBEDDED_MONGO_PORT` | `27018` | embedded dev DB only |
 | `PACE_EMPLOYEES_URL` | `https://pace.mytrustlab.co.in/api/v1/employees` | Pace HR employee API behind `GET /api/hosts`; set it to an empty value to use local `host` / `isHost` users instead |
 | `FIREBASE_SERVICE_ACCOUNT` | `secrets/firebase-service-account.json` | Firebase Admin service account (relative to `backend/`, git-ignored, never commit). Missing = push disabled (one log line) |
+| `SIGNUP_ENABLED` | `false` | `true`/`1`/`yes`: self sign-up (`POST /api/auth/signup`), accounts wait for admin approval |
+| `ACCOUNT_DELETION_ENABLED` | `false` | in-app account deletion (`DELETE /api/auth/me`); **forced on when sign-up is on** (Apple guideline 5.1.1(v)) |
 | `NODE_ENV` | `development` | `production` enforces secrets and the CORS default |
 
 ## Layout
@@ -73,6 +75,7 @@ src/
 test/api.test.js     visitor register integration tests
 test/mail.test.js    post room, roles, hosts directory, profile, settings migration
 test/notifications.test.js  in-app inbox: triggers, pagination, read / read-all, socket rooms, notificationId in pushes
+test/signup.test.js  feature switches, sign-up + approval, rate limit, account deletion
 test/push.test.js    device tokens, FCM pushes (fake sender, no network), invalid-token cleanup
 test/pace.test.js    Pace directory (fetch mocked: no network), Pace recipients, sign-in rules
 ```
@@ -154,3 +157,21 @@ Storing works with push disabled.
 - `POST /api/notifications/:id/read` (owner only, idempotent; others' / invalid ids → `not_found`) and
   `POST /api/notifications/read-all` → `{ updated, unreadCount: 0 }`. Both emit `notification:read { ids | 'all', unreadCount }`
   to the user's room when something changed, so other devices/tabs update their badge.
+
+## Feature switches, sign-up and account deletion
+
+`GET /api/config` (no auth) → `{ features: { signup, accountDeletion } }`; the apps show or hide the options from it.
+A switched-off endpoint returns `404 { code: 'feature_disabled' }`.
+
+- **Sign-up** (`SIGNUP_ENABLED`): `POST /api/auth/signup { name, email, phone, password (8–100), dept? }` creates a
+  pending Employee (`role: host`, `isHost`, `active: false`, `status: 'pending'`) and notifies every active admin
+  (`signup_request`, data `{ type: 'user', id }`). Limited to 5 valid sign-ups per IP per hour (in memory;
+  `req.ip`, so the `trust proxy` setting in `src/app.js` must match the proxy in front of the server).
+  Pending users get `403` "Your account is waiting for admin approval." at login and are not receivers.
+  Admins: `GET /api/users?status=pending`, `POST /api/users/:id/approve { role? }` (default `host`),
+  `POST /api/users/:id/reject` (deletes the request).
+- **Account deletion** (`ACCOUNT_DELETION_ENABLED`, or implied by sign-up): `DELETE /api/auth/me { password }`
+  anonymises the account (name "Deleted user", `deleted-<id>@deleted.invalid`, contact details and password removed,
+  `status: 'deleted'`), deletes its devices and notifications and disconnects its sockets. Gate-register records are
+  kept. The last active admin can't delete themselves. Deleted users are hidden from `/api/hosts` and the default
+  users list (`status=deleted` shows them) and log in like unknown emails.

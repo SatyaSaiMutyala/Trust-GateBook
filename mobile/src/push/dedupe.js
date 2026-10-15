@@ -16,6 +16,10 @@ export function claimNotice(key, now = Date.now()) {
 
 export const mailNoticeKey = id => `mail:${id}`;
 
+/** Key for a routed item `{ type: 'mail' | 'user', id }`. */
+export const routeNoticeKey = route =>
+  route.type === 'user' ? `user:${route.id}` : mailNoticeKey(route.id);
+
 /** For tests. */
 export function resetNotices() {
   seen.clear();

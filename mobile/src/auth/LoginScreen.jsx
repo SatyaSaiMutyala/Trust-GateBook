@@ -1,24 +1,28 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   Text,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
-import { errorMessage, useLoginMutation } from '../store/api';
+import { errorMessage, useFeatures, useLoginMutation } from '../store/api';
 import { loggedIn } from '../store/authSlice';
 import { API_URL } from '../api/config';
 import { Button } from '../components/Button';
 import { Field } from '../components/Field';
-import { fonts, radius, typo, useTheme } from '../theme';
+import { fonts, MIN_TOUCH, radius, typo, useTheme } from '../theme';
 import { ScaledSheet, verticalScale } from 'react-native-size-matters/extend';
 
-export function LoginScreen() {
+/** Sign in. `route.params.email` pre-fills the email (after Create account). */
+export function LoginScreen({ navigation, route }) {
   const { c } = useTheme();
+  const { signup } = useFeatures();
+  const prefill = route?.params?.email;
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
   const [login] = useLoginMutation();
@@ -27,6 +31,14 @@ export function LoginScreen() {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const passwordRef = useRef(null);
+
+  useEffect(() => {
+    if (prefill) {
+      setEmail(prefill);
+      setPassword('');
+      setError(null);
+    }
+  }, [prefill]);
 
   const submit = async () => {
     if (!email.trim() || !password) {
@@ -39,6 +51,7 @@ export function LoginScreen() {
       const res = await login({ email: email.trim(), password }).unwrap();
       dispatch(loggedIn(res));
     } catch (e) {
+      // e.g. 403 "Your account is waiting for admin approval." — shown as the server wrote it.
       setError(errorMessage(e));
       setBusy(false);
     }
@@ -123,6 +136,24 @@ export function LoginScreen() {
               </Text>
             ) : null}
             <Button title="Sign in" onPress={submit} loading={busy} size="lg" />
+            {signup && navigation ? (
+              <Pressable
+                accessibilityRole="link"
+                accessibilityLabel="New here? Create an account"
+                onPress={() => navigation.navigate('CreateAccount')}
+                style={styles.signupLink}
+                testID="create-account-link"
+              >
+                <Text
+                  style={[typo.body, { color: c.muted, textAlign: 'center' }]}
+                >
+                  New here?{' '}
+                  <Text style={{ fontFamily: fonts.bodySemi, color: c.ink }}>
+                    Create an account
+                  </Text>
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
           <Text
             style={[typo.monoSmall, { color: c.muted, textAlign: 'center' }]}
@@ -155,6 +186,7 @@ const styles = ScaledSheet.create({
     letterSpacing: 2,
   },
   body: { padding: '16@ms', gap: '16@ms' },
+  signupLink: { minHeight: MIN_TOUCH, justifyContent: 'center' },
   card: {
     borderWidth: 1,
     borderRadius: radius.panel,

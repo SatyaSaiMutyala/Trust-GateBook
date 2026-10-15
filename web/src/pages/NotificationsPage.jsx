@@ -28,18 +28,19 @@ import { fmtRelative } from '../utils/format';
 
 const DEFAULTS = { tab: 'all', limit: 20 };
 
-/** Event → icon + token colour (📬 logged, ⏰ reminder, ✅ confirm, ⚠️ dispute). */
+/** Event → icon + token colour (📬 logged, ⏰ reminder, ✅ confirm, ⚠️ dispute, 🙋 sign-up request). */
 const EVENT = {
   mail_logged: { Icon: MarkunreadMailboxOutlinedIcon, fg: 'gb.accentInk', bg: 'gb.accent' },
   mail_reminder: { Icon: AlarmOutlinedIcon, fg: 'gb.warn', bg: 'gb.warnSoft' },
   mail_confirm: { Icon: CheckCircleOutlineIcon, fg: 'gb.ok', bg: 'gb.okSoft' },
   mail_disputed: { Icon: ReportProblemOutlinedIcon, fg: 'gb.bad', bg: 'gb.badSoft' },
+  signup_request: { emoji: '🙋', fg: 'gb.ink', bg: 'gb.accentSoft' },
 };
 const FALLBACK = { Icon: NotificationsNoneOutlinedIcon, fg: 'gb.muted', bg: 'gb.sunk' };
 
 function NotificationRow({ n, now, onOpen }) {
   const unread = !n.readAt;
-  const { Icon, fg, bg } = EVENT[n.event] ?? FALLBACK;
+  const { Icon, emoji, fg, bg } = EVENT[n.event] ?? FALLBACK;
   return (
     <ButtonBase
       onClick={() => onOpen(n)}
@@ -70,7 +71,13 @@ function NotificationRow({ n, now, onOpen }) {
               placeItems: 'center',
             }}
           >
-            <Icon fontSize="small" />
+            {emoji ? (
+              <Box component="span" aria-hidden sx={{ fontSize: 20, lineHeight: 1 }}>
+                {emoji}
+              </Box>
+            ) : (
+              <Icon fontSize="small" />
+            )}
           </Box>
         </Grid>
         <Grid size="grow" sx={{ minWidth: 0 }}>

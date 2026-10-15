@@ -46,6 +46,13 @@ function paceUrl() {
   return (env.PACE_EMPLOYEES_URL ?? '').trim();
 }
 
+/** 'true' / '1' / 'yes' (any case) → true; anything else (or unset) → false. @param {string} name */
+function flag(name) {
+  return ['true', '1', 'yes'].includes((env[name] ?? '').trim().toLowerCase());
+}
+
+const signupEnabled = flag('SIGNUP_ENABLED');
+
 export const config = {
   nodeEnv,
   isProd,
@@ -70,6 +77,12 @@ export const config = {
   paceEmployeesUrl: paceUrl(),
   /** Firebase Admin service account JSON (push). Missing file = push disabled. */
   firebaseServiceAccount: path.resolve(BACKEND_ROOT, str('FIREBASE_SERVICE_ACCOUNT', 'secrets/firebase-service-account.json')),
+  features: {
+    signup: signupEnabled,
+    // Apple guideline 5.1.1(v): apps that let people create an account must let them delete it.
+    accountDeletion: signupEnabled || flag('ACCOUNT_DELETION_ENABLED'),
+  },
+  signupRateLimit: { max: 5, windowMs: 60 * 60 * 1000 },
   paceTimeoutMs: 8_000,
   paceCacheMs: 60_000,
 };

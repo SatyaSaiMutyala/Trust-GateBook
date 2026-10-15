@@ -1,6 +1,12 @@
 import { Schema, model } from 'mongoose';
 
-export const NOTIFICATION_EVENTS = /** @type {const} */ (['mail_logged', 'mail_reminder', 'mail_confirm', 'mail_disputed']);
+export const NOTIFICATION_EVENTS = /** @type {const} */ ([
+  'mail_logged',
+  'mail_reminder',
+  'mail_confirm',
+  'mail_disputed',
+  'signup_request',
+]);
 /** @typedef {(typeof NOTIFICATION_EVENTS)[number]} NotificationEvent */
 
 const NINETY_DAYS_S = 90 * 24 * 60 * 60;

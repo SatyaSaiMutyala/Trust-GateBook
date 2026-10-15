@@ -3,6 +3,9 @@ import { Schema, model } from 'mongoose';
 /** @typedef {'admin' | 'security' | 'viewer' | 'host'} Role */
 export const ROLES = /** @type {const} */ (['admin', 'security', 'viewer', 'host']);
 
+/** @typedef {'active' | 'pending' | 'deleted'} UserStatus */
+export const USER_STATUSES = /** @type {const} */ (['active', 'pending', 'deleted']);
+
 const userSchema = new Schema(
   {
     name: { type: String, required: true, trim: true },
@@ -20,6 +23,9 @@ const userSchema = new Schema(
     isHost: { type: Boolean, default: false },
     /** Pace HR employee code (e.g. TLE0145) for users created/linked from the Pace directory. Never null: sparse. */
     paceEmpCode: { type: String, required: false },
+    /** pending = self sign-up awaiting admin approval; deleted = anonymised by the user. Missing = active. */
+    status: { type: String, enum: USER_STATUSES, default: 'active' },
+    deletedAt: { type: Date, default: null },
   },
   { timestamps: true },
 );
@@ -32,13 +38,17 @@ userSchema.index({ paceEmpCode: 1 }, { unique: true, sparse: true });
 export const User = model('User', userSchema);
 
 /** Mongo filter for active post recipients: role `host` or `isHost`. */
-export const RECIPIENT_FILTER = { active: true, $or: [{ role: 'host' }, { isHost: true }] };
+export const RECIPIENT_FILTER = {
+  active: true,
+  status: { $nin: ['pending', 'deleted'] },
+  $or: [{ role: 'host' }, { isHost: true }],
+};
 
 /** @param {{ role: string, isHost?: boolean | null }} u */
 export const isRecipient = (u) => u.role === 'host' || u.isHost === true;
 
 /** Active and has a password (Pace-linked users get one only when an admin sets it). @param {any} u */
-export const canSignIn = (u) => Boolean(u && u.active && u.passwordHash);
+export const canSignIn = (u) => Boolean(u && u.active && u.passwordHash && (u.status ?? 'active') === 'active');
 
 /**
  * @typedef {object} UserDto
@@ -53,6 +63,7 @@ export const canSignIn = (u) => Boolean(u && u.active && u.passwordHash);
  * @property {string} location
  * @property {boolean} isHost   always true when role = 'host'
  * @property {boolean} canSignIn  active and has a password
+ * @property {UserStatus} status
  */
 
 /** @param {any} u a User document @returns {UserDto} */
@@ -69,6 +80,7 @@ export function serializeUser(u) {
     location: u.location ?? '',
     isHost: isRecipient(u),
     canSignIn: canSignIn(u),
+    status: u.status ?? 'active',
   };
 }
 

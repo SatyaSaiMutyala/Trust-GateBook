@@ -23,7 +23,8 @@ export async function userFromToken(token) {
   }
   if (typeof sub !== 'string' || !mongoose.isValidObjectId(sub)) return null;
   const user = await User.findById(sub);
-  return user && user.active && user.passwordHash ? user : null;
+  // Pending sign-ups and deleted accounts are inactive and (deleted) password-less: tokens stop working.
+  return user && user.active && user.passwordHash && (user.status ?? 'active') === 'active' ? user : null;
 }
 
 /** Sets `req.user` from the Bearer token, or 401. @type {import('express').RequestHandler} */
