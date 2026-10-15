@@ -262,6 +262,7 @@ async function seedMail(security) {
     const handedAt = d.status === 'lodged' ? null : new Date(receivedAt.getTime() + 40 * 60_000);
     const answeredAt = handedAt ? new Date(handedAt.getTime() + 15 * 60_000) : null;
     const cover = await storeImage(await placeholderCover(d.sender, d.refNo || d.kind, i), COVER_MAX_EDGE, 'cover');
+    const coverBack = await storeImage(await placeholderCover('(back of cover)', d.sender, i + 1), COVER_MAX_EDGE, 'coverBack');
     const person = await storeImage(await placeholderPhoto(d.broughtBy, i + 3), PERSON_MAX_EDGE, 'person');
     const recipientName = user ? user.name : (d.toName ?? 'Unknown');
     const wasDisputed = d.status === 'disputed' || d.status === 'resolved';
@@ -286,6 +287,7 @@ async function seedMail(security) {
           receivedAt,
           receivedBy: guard,
           cover,
+          coverBack,
           person,
           status: d.status,
           notifiedAt: user ? receivedAt : null,

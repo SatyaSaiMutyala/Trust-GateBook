@@ -107,7 +107,8 @@
  * @property {string} site
  * @property {string} receivedAt
  * @property {GuardRef} receivedBy
- * @property {string} coverPhotoUrl
+ * @property {string} coverPhotoUrl       front of the cover
+ * @property {string | null} coverBackPhotoUrl  back of the cover; null on items logged before it existed
  * @property {string} personPhotoUrl
  * @property {MailStatus} status
  * @property {string | null} notifiedAt

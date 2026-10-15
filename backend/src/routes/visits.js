@@ -11,7 +11,7 @@ import { formatDateTime, formatTime, isoDay } from '../services/format.js';
 import { ID_PHOTO_MAX_EDGE, PHOTO_MAX_EDGE, deleteImage, storeImage } from '../services/images.js';
 import { paginate, parseListQuery, queryString, searchFilter } from '../services/pagination.js';
 import { generatePassNumber } from '../services/passNumber.js';
-import { serializeVisit } from '../services/serialize.js';
+import { serializeVisit, visitFields } from '../services/serialize.js';
 import { getSettings } from '../services/settings.js';
 
 export const visitsRouter = Router();
@@ -164,7 +164,7 @@ visitsRouter.get('/lookup', async (req, res) => {
     Visit.findOne({ phone10, outAt: null }),
     paginate(Visit, { phone10, outAt: { $ne: null } }, lq, map),
   ]);
-  res.json({ open: open ? map(open) : null, ...history });
+  res.json({ open: open ? await map(open) : null, ...history });
 });
 
 // GET /api/visits/badge-check?badge=&site= (site optional: defaults to the first gate)
@@ -174,7 +174,7 @@ visitsRouter.get('/badge-check', async (req, res) => {
   const { overstayHours, sites } = await getSettings();
   const site = queryString(req.query, 'site') || sites[0];
   const visit = await Visit.findOne({ site, badge, outAt: null });
-  res.json({ inUse: visit ? serializeVisit(visit, overstayHours) : null });
+  res.json({ inUse: visit ? await serializeVisit(visit, overstayHours) : null });
 });
 
 // GET /api/visits/export.csv — same filters/q/sort as the log, not paginated, capped
@@ -185,7 +185,7 @@ visitsRouter.get('/export.csv', async (req, res) => {
   const { overstayHours } = await getSettings();
   const filter = logFilter(req.query, lq.q, overstayHours, now);
   const visits = await Visit.find(filter).sort(lq.sort).limit(EXPORT_CAP);
-  const csv = visitsToCsv(visits.map((v) => serializeVisit(v, overstayHours, now)));
+  const csv = visitsToCsv(visits.map((v) => visitFields(v, overstayHours, now)));
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="visitor-log-${isoDay(new Date(now))}.csv"`);
   res.setHeader('Cache-Control', 'no-store');
@@ -195,7 +195,7 @@ visitsRouter.get('/export.csv', async (req, res) => {
 visitsRouter.get('/:id', async (req, res) => {
   const visit = await findVisit(String(req.params.id));
   const { overstayHours } = await getSettings();
-  res.json({ visit: serializeVisit(visit, overstayHours) });
+  res.json({ visit: await serializeVisit(visit, overstayHours) });
 });
 
 // ---------------------------------------------------------------- check-in
@@ -353,7 +353,7 @@ visitsRouter.post('/', canWrite, upload, async (req, res) => {
   }
 
   emitVisitCreated(visit);
-  res.status(201).json({ visit: serializeVisit(visit, settings.overstayHours) });
+  res.status(201).json({ visit: await serializeVisit(visit, settings.overstayHours) });
 });
 
 // ---------------------------------------------------------------- exit
@@ -399,5 +399,5 @@ visitsRouter.post('/:id/exit', canWrite, async (req, res) => {
 
   emitVisitUpdated(updated);
   const { overstayHours } = await getSettings();
-  res.json({ visit: serializeVisit(updated, overstayHours) });
+  res.json({ visit: await serializeVisit(updated, overstayHours) });
 });

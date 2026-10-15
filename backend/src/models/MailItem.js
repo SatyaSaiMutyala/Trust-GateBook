@@ -57,6 +57,8 @@ const mailSchema = new Schema(
     receivedBy: { type: guardSchema, required: true },
     /** Stored file names in UPLOAD_DIR. */
     cover: { type: String, required: true },
+    /** Back of the cover. Required for new items by the API; absent on items logged before it existed. */
+    coverBack: { type: String, default: null },
     person: { type: String, required: true },
     status: { type: String, enum: MAIL_STATUSES, required: true, default: 'lodged' },
     notifiedAt: { type: Date, default: null },

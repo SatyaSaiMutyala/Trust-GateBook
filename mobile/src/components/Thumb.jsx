@@ -56,7 +56,32 @@ export function Thumb({ url, name, size = 52, width, height, fill, style }) {
   );
 }
 
+/**
+ * Neutral stand-in for a post item's back cover when there is none (items logged before back photos were
+ * required). Not tappable; same 4:3 shape as the photo it replaces.
+ */
+export function NoBackPhoto({ style }) {
+  const { c } = useTheme();
+  return (
+    <View
+      accessible
+      accessibilityLabel="No back photo"
+      testID="no-back-photo"
+      style={[
+        styles.box,
+        styles.noBack,
+        { backgroundColor: c.sunk, borderColor: c.line },
+        style,
+      ]}
+    >
+      <Text style={[styles.noBackText, { color: c.muted }]}>No back photo</Text>
+    </View>
+  );
+}
+
 const styles = ScaledSheet.create({
+  noBack: { width: '100%', aspectRatio: 4 / 3, borderStyle: 'dashed' },
+  noBackText: { fontFamily: fonts.bodyMedium, fontSize: '12@ms' },
   box: {
     borderRadius: radius.control,
     borderWidth: StyleSheet.hairlineWidth,

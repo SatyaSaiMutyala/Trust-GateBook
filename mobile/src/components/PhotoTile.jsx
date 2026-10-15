@@ -3,7 +3,10 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { radius, typo, useTheme } from '../theme';
 import { ScaledSheet, moderateScale } from 'react-native-size-matters/extend';
 
-/** Dashed camera tile (visitor photo, ID proof, post cover, delivery person). Tapping a filled tile retakes. */
+/**
+ * Dashed camera tile (visitor photo, ID proof, post cover, delivery person). Tapping a filled tile retakes.
+ * `aspect` fixes the shape; `fill` instead stretches the tile to its container's height (flex: 1).
+ */
 export function PhotoTile({
   label,
   sub,
@@ -12,6 +15,7 @@ export function PhotoTile({
   onPress,
   error,
   required,
+  fill = false,
 }) {
   const { c } = useTheme();
   return (
@@ -24,7 +28,7 @@ export function PhotoTile({
       style={({ pressed }) => [
         styles.tile,
         {
-          aspectRatio: aspect,
+          ...(fill ? { flex: 1 } : { aspectRatio: aspect }),
           borderColor: error ? c.bad : uri ? c.line : c.muted,
           borderStyle: uri ? 'solid' : 'dashed',
           borderWidth: error ? 2 : 1.5,

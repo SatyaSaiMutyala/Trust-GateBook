@@ -12,7 +12,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 import { errorMessage, useFeatures, useLoginMutation } from '../store/api';
 import { loggedIn } from '../store/authSlice';
-import { API_URL } from '../api/config';
 import { Button } from '../components/Button';
 import { Field } from '../components/Field';
 import { fonts, MIN_TOUCH, radius, typo, useTheme } from '../theme';
@@ -155,11 +154,6 @@ export function LoginScreen({ navigation, route }) {
               </Pressable>
             ) : null}
           </View>
-          <Text
-            style={[typo.monoSmall, { color: c.muted, textAlign: 'center' }]}
-          >
-            Server: {API_URL}
-          </Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>

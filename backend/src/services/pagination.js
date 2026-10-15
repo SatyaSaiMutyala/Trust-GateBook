@@ -114,7 +114,7 @@ export function buildPagination(page, limit, total) {
  * @param {import('mongoose').Model<any>} model
  * @param {Record<string, unknown>} filter
  * @param {ListQuery} lq
- * @param {(doc: any) => T} map
+ * @param {(doc: any) => T | Promise<T>} map
  * @returns {Promise<{ data: T[], pagination: Pagination }>}
  */
 export async function paginate(model, filter, lq, map) {
@@ -122,5 +122,5 @@ export async function paginate(model, filter, lq, map) {
     model.find(filter).sort(lq.sort).skip(lq.skip).limit(lq.limit),
     model.countDocuments(filter),
   ]);
-  return { data: docs.map(map), pagination: buildPagination(lq.page, lq.limit, total) };
+  return { data: await Promise.all(docs.map(map)), pagination: buildPagination(lq.page, lq.limit, total) };
 }

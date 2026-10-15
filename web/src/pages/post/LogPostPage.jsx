@@ -25,7 +25,8 @@ import { CARRIERS } from '../../utils/mail';
 import { MailLogged } from './MailLogged';
 import { RecipientField } from './RecipientField';
 
-const REQUIRED = ['cover', 'person', 'kind', 'sender', 'broughtBy', 'recipient'];
+const PHOTOS = ['cover', 'coverBack', 'person'];
+const REQUIRED = [...PHOTOS, 'kind', 'sender', 'broughtBy', 'recipient'];
 /** Server field names → form fields to highlight. */
 const FIELD_MAP = { recipientId: 'recipient', recipientName: 'recipient' };
 
@@ -95,7 +96,15 @@ function LogPostForm({ draft, update, reset, onIssued }) {
     );
     if (missing.size) {
       setInvalid(missing);
-      setFormError('Fill the highlighted fields and take both photos.');
+      const photosMissing = PHOTOS.some((f) => missing.has(f));
+      const fieldsMissing = [...missing].some((f) => !PHOTOS.includes(f));
+      setFormError(
+        photosMissing && fieldsMissing
+          ? 'Fill the highlighted fields and take all three photos.'
+          : photosMissing
+            ? 'Take all three photos.'
+            : 'Fill the highlighted fields.',
+      );
       return;
     }
     const pieces = Math.min(99, Math.max(1, Number.parseInt(draft.pieces, 10) || 1));
@@ -115,6 +124,7 @@ function LogPostForm({ draft, update, reset, onIssued }) {
           notes: draft.notes.trim(),
         },
         draft.cover.blob,
+        draft.coverBack.blob,
         draft.person.blob,
       );
       emit('mail:created', { item });
@@ -150,11 +160,11 @@ function LogPostForm({ draft, update, reset, onIssued }) {
           {/* Photo column */}
           <Grid size={{ xs: 12, md: 4, lg: 3 }}>
             <Grid container spacing={2}>
-              <Grid size={{ xs: 6, md: 12 }}>
+              <Grid size={{ xs: 6, sm: 4, md: 6 }}>
                 <PhotoTile
-                  title="Cover"
-                  label="Photo of the cover"
-                  hint="Show the address label and tracking number"
+                  title="Cover — front"
+                  label="Front of the cover"
+                  hint="Address label side, tracking number visible"
                   aspect="4 / 3"
                   facing="environment"
                   icon={MailOutlineIcon}
@@ -165,7 +175,22 @@ function LogPostForm({ draft, update, reset, onIssued }) {
                   onChange={(cover) => setField('cover', cover)}
                 />
               </Grid>
-              <Grid size={{ xs: 6, md: 12 }}>
+              <Grid size={{ xs: 6, sm: 4, md: 6 }}>
+                <PhotoTile
+                  title="Cover — back"
+                  label="Back of the cover"
+                  hint="Turn it over"
+                  aspect="4 / 3"
+                  facing="environment"
+                  icon={MailOutlineIcon}
+                  maxEdge={1800}
+                  required
+                  error={err('coverBack')}
+                  value={draft.coverBack}
+                  onChange={(coverBack) => setField('coverBack', coverBack)}
+                />
+              </Grid>
+              <Grid size={{ xs: 6, sm: 4, md: 6 }}>
                 <PhotoTile
                   title="Delivery person"
                   label="Photo of delivery person"

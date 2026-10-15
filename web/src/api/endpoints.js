@@ -154,7 +154,12 @@ export const statsApi = {
  * @returns {MailItem}
  */
 export function normalizeMail(m) {
-  return { ...m, coverPhotoUrl: fileUrl(m.coverPhotoUrl), personPhotoUrl: fileUrl(m.personPhotoUrl) };
+  return {
+    ...m,
+    coverPhotoUrl: fileUrl(m.coverPhotoUrl),
+    coverBackPhotoUrl: fileUrl(m.coverBackPhotoUrl ?? null),
+    personPhotoUrl: fileUrl(m.personPhotoUrl),
+  };
 }
 
 const EMPTY_COUNTS = { lodged: 0, handed: 0, disputed: 0 };
@@ -175,16 +180,17 @@ export const mailApi = {
   /** Same filters / q / sort as list, not paginated. */
   exportCsv: (query) => requestBlob('/api/mail/export.csv', { query }),
   /**
-   * Multipart create. `fields` carries recipientId or recipientName.
+   * Multipart create. `fields` carries recipientId or recipientName; files `cover` (front), `coverBack`, `person`.
    * @returns {Promise<MailItem>}
    */
-  create: (fields, cover, person) => {
+  create: (fields, cover, coverBack, person) => {
     const form = new FormData();
     for (const [k, v] of Object.entries(fields)) {
       if (v === undefined || v === null || v === '') continue;
       form.append(k, String(v));
     }
     form.append('cover', cover, 'cover.jpg');
+    form.append('coverBack', coverBack, 'cover-back.jpg');
     form.append('person', person, 'person.jpg');
     return request('POST', '/api/mail', { form }).then((r) => normalizeMail(r.item));
   },

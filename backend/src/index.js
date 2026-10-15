@@ -5,8 +5,16 @@ import { connectDb } from './db.js';
 import { closeRealtime, initRealtime } from './realtime.js';
 import { bootstrap } from './services/bootstrap.js';
 import { initPush } from './services/push.js';
+import { assertStorageConfig } from './services/storage.js';
 
 async function main() {
+  // Fail fast on a bad STORAGE setup, before connecting to anything.
+  assertStorageConfig();
+  console.log(
+    config.storage === 's3'
+      ? `[storage] photos → S3 bucket ${config.s3.bucket} (${config.s3.region}), prefix "${config.s3.prefix}"`
+      : `[storage] photos → local disk ${config.uploadDir}`,
+  );
   const db = await connectDb();
   await bootstrap();
   await initPush();

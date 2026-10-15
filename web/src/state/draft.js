@@ -38,6 +38,8 @@ export const EMPTY_MAIL_DRAFT = Object.freeze({
   notes: '',
   /** @type {{ blob: Blob, url: string } | null} */
   cover: null,
+  /** Back of the cover. @type {{ blob: Blob, url: string } | null} */
+  coverBack: null,
   /** @type {{ blob: Blob, url: string } | null} */
   person: null,
 });

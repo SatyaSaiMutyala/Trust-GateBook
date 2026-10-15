@@ -5,7 +5,7 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useNavigate } from 'react-router';
-import { FillThumb, PageHeader } from '../../components/bits';
+import { FieldLabel, FillThumb, PageHeader, PhotoPlaceholder } from '../../components/bits';
 import { KindTag } from '../../components/mail/MailBits';
 import { fonts } from '../../theme/tokens';
 
@@ -26,12 +26,27 @@ export function MailLogged({ item: m, onNext }) {
         <Grid size={{ xs: 12, sm: 10, md: 8, lg: 6 }}>
           <Paper variant="outlined" sx={{ p: { xs: 2, md: 2.5 } }}>
             <Grid container spacing={2}>
-              <Grid size={{ xs: 12, sm: 5 }}>
-                <Box sx={{ aspectRatio: '4 / 3' }}>
-                  <FillThumb src={m.coverPhotoUrl} name="Cover" contain />
-                </Box>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <Grid container spacing={1}>
+                  <Grid size={6}>
+                    <FieldLabel>Front</FieldLabel>
+                    <Box sx={{ aspectRatio: '4 / 3', mt: 0.5 }}>
+                      <FillThumb src={m.coverPhotoUrl} name="Cover, front" contain />
+                    </Box>
+                  </Grid>
+                  <Grid size={6}>
+                    <FieldLabel>Back</FieldLabel>
+                    <Box sx={{ aspectRatio: '4 / 3', mt: 0.5 }}>
+                      {m.coverBackPhotoUrl ? (
+                        <FillThumb src={m.coverBackPhotoUrl} name="Cover, back" contain />
+                      ) : (
+                        <PhotoPlaceholder text="No back photo" />
+                      )}
+                    </Box>
+                  </Grid>
+                </Grid>
               </Grid>
-              <Grid size={{ xs: 12, sm: 7 }}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <Stack direction="row" sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 0.75 }}>
                   <KindTag kind={m.kind} />
                   <Typography sx={{ fontWeight: 600 }}>for {m.recipientName}</Typography>

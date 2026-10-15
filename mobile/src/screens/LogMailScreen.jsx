@@ -15,7 +15,7 @@ import { Banner } from '../components/Layout';
 import { mailFromLine } from '../components/MailCard';
 import { PhotoTile } from '../components/PhotoTile';
 import { SelectField } from '../components/SelectField';
-import { Thumb } from '../components/Thumb';
+import { NoBackPhoto, Thumb } from '../components/Thumb';
 import { RecipientPicker } from '../components/RecipientPicker';
 import { fonts, MIN_TOUCH, radius, typo, useTheme } from '../theme';
 import { CARRIERS } from '../types';
@@ -32,6 +32,22 @@ import {
 } from '../store/draftsSlice';
 import { useSettings, useToast } from '../store/hooks';
 
+/** Draft key per photo kind (also the server's multipart field / error `field`). */
+const PHOTO_DRAFT_KEY = {
+  cover: 'coverUri',
+  coverBack: 'coverBackUri',
+  person: 'personUri',
+};
+
+/** All three photos are required: returns `{ cover?, coverBack?, person? }` for the missing ones. */
+export function missingPhotos({ coverUri, coverBackUri, personUri }) {
+  const e = {};
+  if (!coverUri) e.cover = true;
+  if (!coverBackUri) e.coverBack = true;
+  if (!personUri) e.person = true;
+  return e;
+}
+
 /** "Item logged" confirmation after a successful create. */
 function ItemLogged({ item, onNext, onPostRoom }) {
   const { c } = useTheme();
@@ -46,12 +62,30 @@ function ItemLogged({ item, onNext, onPostRoom }) {
           { backgroundColor: c.surface, borderColor: c.line },
         ]}
       >
-        <Thumb
-          url={item.coverPhotoUrl}
-          name={item.kind}
-          fill
-          style={{ aspectRatio: 4 / 3 }}
-        />
+        <View style={styles.photos}>
+          <View style={styles.photoHalf}>
+            <Thumb
+              url={item.coverPhotoUrl}
+              name={item.kind}
+              fill
+              style={{ aspectRatio: 4 / 3 }}
+            />
+            <Text style={[typo.tiny, { color: c.muted }]}>Front</Text>
+          </View>
+          <View style={styles.photoHalf}>
+            {item.coverBackPhotoUrl ? (
+              <Thumb
+                url={item.coverBackPhotoUrl}
+                name={item.kind}
+                fill
+                style={{ aspectRatio: 4 / 3 }}
+              />
+            ) : (
+              <NoBackPhoto />
+            )}
+            <Text style={[typo.tiny, { color: c.muted }]}>Back</Text>
+          </View>
+        </View>
         <View
           style={{
             flexDirection: 'row',
@@ -123,7 +157,7 @@ export function LogMailScreen({ navigation }) {
   const dispatch = useDispatch();
   const canAct = useSelector(selectCanHandleMail);
   // The half-filled form lives in the drafts slice: it survives gate changes, navigation and live updates.
-  const { form, recipient, coverUri, personUri } =
+  const { form, recipient, coverUri, coverBackUri, personUri } =
     useSelector(selectLogMailDraft);
   const [createMail] = useCreateMailMutation();
   const [carrierFocused, setCarrierFocused] = useState(false);
@@ -175,11 +209,7 @@ export function LogMailScreen({ navigation }) {
     try {
       const uri = await captureImage(kind);
       if (!uri) return;
-      dispatch(
-        logMailPatched(
-          kind === 'cover' ? { coverUri: uri } : { personUri: uri },
-        ),
-      );
+      dispatch(logMailPatched({ [PHOTO_DRAFT_KEY[kind]]: uri }));
       setErrors(e => ({ ...e, [kind]: false }));
     } catch (e) {
       toast.show(errorMessage(e), 'error');
@@ -195,9 +225,8 @@ export function LogMailScreen({ navigation }) {
 
   const submit = async () => {
     setServerError(null);
-    const e = {};
-    if (!coverUri) e.cover = true;
-    if (!personUri) e.person = true;
+    const e = missingPhotos({ coverUri, coverBackUri, personUri });
+    const photosMissing = Object.keys(e).length > 0;
     if (!form.kind) e.kind = true;
     if (!form.sender.trim()) e.sender = true;
     if (!form.broughtBy.trim()) e.broughtBy = true;
@@ -206,7 +235,13 @@ export function LogMailScreen({ navigation }) {
     if (!Number.isFinite(pieces) || pieces < 1 || pieces > 99) e.pieces = true;
     setErrors(e);
     if (Object.keys(e).length) {
-      setFormError('Fill the highlighted fields and take both photos.');
+      setFormError(
+        photosMissing && Object.keys(e).every(k => k in PHOTO_DRAFT_KEY)
+          ? 'Take all three photos.'
+          : photosMissing
+          ? 'Fill the highlighted fields and take all three photos.'
+          : 'Fill the highlighted fields.',
+      );
       return;
     }
     setFormError(null);
@@ -225,6 +260,7 @@ export function LogMailScreen({ navigation }) {
         dept: form.dept,
         notes: form.notes.trim(),
         coverUri,
+        coverBackUri,
         personUri,
       }).unwrap();
       toast.show(
@@ -240,6 +276,7 @@ export function LogMailScreen({ navigation }) {
         recipientId: 'recipient',
         recipientName: 'recipient',
         cover: 'cover',
+        coverBack: 'coverBack',
         person: 'person',
       };
       if (err && err.field)
@@ -292,24 +329,35 @@ export function LogMailScreen({ navigation }) {
         keyboardDismissMode="on-drag"
         contentContainerStyle={styles.content}
       >
-        <View style={styles.photos}>
-          <View style={{ flex: 1.25 }}>
+        {/* Left column: cover front over cover back (4:3 each). Right column: delivery person,
+            stretched to the height of the two covers. */}
+        <View style={styles.photoGrid}>
+          <View style={styles.photoCol}>
             <PhotoTile
-              label="Photo of the cover"
-              sub="Show the address label and tracking number"
+              label="Cover — front"
+              sub="Address label side"
               uri={coverUri}
               aspect={4 / 3}
               required
               error={errors.cover}
               onPress={() => take('cover')}
             />
-          </View>
-          <View style={{ flex: 1 }}>
             <PhotoTile
-              label="Photo of delivery person"
+              label="Cover — back"
+              sub="Turn the item over"
+              uri={coverBackUri}
+              aspect={4 / 3}
+              required
+              error={errors.coverBack}
+              onPress={() => take('coverBack')}
+            />
+          </View>
+          <View style={styles.photoCol}>
+            <PhotoTile
+              label="Delivery person"
               sub="Front camera"
               uri={personUri}
-              aspect={3 / 4}
+              fill
               required
               error={errors.person}
               onPress={() => take('person')}
@@ -475,6 +523,10 @@ export function LogMailScreen({ navigation }) {
 const styles = ScaledSheet.create({
   content: { padding: '16@ms', gap: '14@ms', paddingBottom: '48@vs' },
   photos: { flexDirection: 'row', gap: '12@ms', alignItems: 'flex-start' },
+  photoHalf: { flex: 1, minWidth: 0 },
+  // Two columns of equal width; `stretch` lets the person tile match the stacked covers' height.
+  photoGrid: { flexDirection: 'row', gap: '12@ms', alignItems: 'stretch' },
+  photoCol: { flex: 1, minWidth: 0, gap: '12@ms' },
   row2: { flexDirection: 'row', gap: '12@ms', alignItems: 'flex-start' },
   actions: { flexDirection: 'row', gap: '12@ms', marginTop: '6@vs' },
   card: {

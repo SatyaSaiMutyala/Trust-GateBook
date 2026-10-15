@@ -13,7 +13,25 @@ export function badgeLabel(count) {
 }
 
 /**
- * 🔔 in the app bar with an amber unread badge. The count comes from GET /api/notifications/unread-count,
+ * Bell drawn with Views (dome + rim + clapper), like the app's other icons — no emoji/font dependency,
+ * so it renders the same on every iOS / Android device.
+ */
+function BellIcon({ color }) {
+  return (
+    <View
+      style={styles.iconBox}
+      accessibilityElementsHidden
+      importantForAccessibility="no"
+    >
+      <View style={[styles.dome, { borderColor: color }]} />
+      <View style={[styles.rim, { backgroundColor: color }]} />
+      <View style={[styles.clapper, { backgroundColor: color }]} />
+    </View>
+  );
+}
+
+/**
+ * Bell in the app bar with an amber unread badge. The count comes from GET /api/notifications/unread-count,
  * kept live by `notification:new` / `notification:read` and refreshed when the app returns to the foreground.
  */
 export function NotificationBell() {
@@ -46,7 +64,7 @@ export function NotificationBell() {
         { backgroundColor: pressed ? 'rgba(255,255,255,0.10)' : 'transparent' },
       ]}
     >
-      <Text style={styles.icon}>🔔</Text>
+      <BellIcon color={c.railInk} />
       {count > 0 ? (
         <View
           style={[
@@ -71,7 +89,24 @@ const styles = ScaledSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  icon: { includeFontPadding: false, fontSize: '18@ms', lineHeight: '22@ms' },
+  iconBox: { width: '20@ms', height: '20@ms', alignItems: 'center' },
+  dome: {
+    marginTop: '1@ms',
+    width: '14@ms',
+    height: '13@ms',
+    borderWidth: 2,
+    borderBottomWidth: 0,
+    borderTopLeftRadius: '7@ms',
+    borderTopRightRadius: '7@ms',
+  },
+  rim: { width: '18@ms', height: 2, borderRadius: 1 },
+  clapper: {
+    marginTop: '1@ms',
+    width: '5@ms',
+    height: '3@ms',
+    borderBottomLeftRadius: '3@ms',
+    borderBottomRightRadius: '3@ms',
+  },
   badge: {
     position: 'absolute',
     top: '-2@ms',

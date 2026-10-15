@@ -19,18 +19,22 @@ let jpeg;
 /** @type {Record<string, { token: string, id: string }>} */
 const u = {};
 
+/** The MailItem model (registered once the app is imported). */
+const MailItem = () => mongoose.model('MailItem');
+
 /** @param {string} t */
 const auth = (t) => ({ Authorization: `Bearer ${t}` });
 
 /**
  * @param {string} who key in `u`
  * @param {Record<string, string>} fields
- * @param {{ cover?: boolean, person?: boolean }} [photos]
+ * @param {{ cover?: boolean, coverBack?: boolean, person?: boolean }} [photos]
  */
 function logMail(who, fields, photos = {}) {
   let r = request(app).post('/api/mail').set(auth(u[who].token));
   for (const [k, v] of Object.entries(fields)) r = r.field(k, v);
   if (photos.cover !== false) r = r.attach('cover', jpeg, { filename: 'c.jpg', contentType: 'image/jpeg' });
+  if (photos.coverBack !== false) r = r.attach('coverBack', jpeg, { filename: 'b.jpg', contentType: 'image/jpeg' });
   if (photos.person !== false) r = r.attach('person', jpeg, { filename: 'p.jpg', contentType: 'image/jpeg' });
   return r;
 }
@@ -182,8 +186,53 @@ describe('post room', () => {
     expect(item.notifiedAt).toBeTypeOf('string');
     const cover = await request(app).get(item.coverPhotoUrl).expect(200);
     expect((await sharp(cover.body).metadata()).width).toBe(1100);
+    const back = await request(app).get(item.coverBackPhotoUrl).expect(200);
+    expect((await sharp(back.body).metadata()).width).toBe(1100);
+    expect(item.coverBackPhotoUrl).not.toBe(item.coverPhotoUrl);
     const person = await request(app).get(item.personPhotoUrl).expect(200);
     expect((await sharp(person.body).metadata()).width).toBe(640);
+  });
+
+  it('requires all three photos, checked in order cover → coverBack → person', async () => {
+    const fields = { ...base, recipientName: 'Walk-in' };
+    const none = await logMail('security', fields, { cover: false, coverBack: false, person: false }).expect(400);
+    expect(none.body.error).toMatchObject({ code: 'validation', field: 'cover' });
+    const noBack = await logMail('security', fields, { coverBack: false, person: false }).expect(400);
+    expect(noBack.body.error).toEqual({ code: 'validation', field: 'coverBack', message: 'Take a photo of the back of the cover.' });
+    const noPerson = await logMail('security', fields, { person: false }).expect(400);
+    expect(noPerson.body.error).toMatchObject({ code: 'validation', field: 'person' });
+  });
+
+  it('removes already-saved local photos when a later one fails', async () => {
+    const before = (await fs.readdir(uploadDir)).length;
+    const items = await MailItem().countDocuments();
+    const r = await request(app)
+      .post('/api/mail')
+      .set(auth(u.security.token))
+      .field('kind', 'Courier')
+      .field('sender', 'Broken')
+      .field('broughtBy', 'Ramu')
+      .field('recipientName', 'Walk-in')
+      .attach('cover', jpeg, { filename: 'c.jpg', contentType: 'image/jpeg' })
+      .attach('coverBack', jpeg, { filename: 'b.jpg', contentType: 'image/jpeg' })
+      .attach('person', Buffer.from('not an image'), { filename: 'p.jpg', contentType: 'image/jpeg' })
+      .expect(400);
+    expect(r.body.error.field).toBe('person');
+    expect((await fs.readdir(uploadDir)).length).toBe(before);
+    expect(await MailItem().countDocuments()).toBe(items);
+  });
+
+  it('serializes coverBackPhotoUrl: null for items logged before the back photo existed', async () => {
+    const legacy = await MailItem().collection.insertOne({
+      code: 'ML-261001-OLD1', kind: 'Letter', refNo: '', sender: 'Old Sender', carrier: '', broughtBy: 'Postman',
+      broughtPhone: '', recipient: null, recipientName: 'Someone', dept: '', pieces: 1, notes: '', site: 'Main Gate',
+      receivedAt: new Date(), receivedBy: { id: u.security.id, name: 'Gate Guard' },
+      cover: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.jpg', person: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.jpg', status: 'lodged',
+    });
+    const r = await get('viewer', '/api/mail/ML-261001-OLD1').expect(200);
+    expect(r.body.item.coverBackPhotoUrl).toBeNull();
+    expect(r.body.item.coverPhotoUrl).toMatch(/^\/api\/files\//);
+    await MailItem().collection.deleteOne({ _id: legacy.insertedId });
   });
 
   it('runs lodged → remind → handed → confirmed', async () => {

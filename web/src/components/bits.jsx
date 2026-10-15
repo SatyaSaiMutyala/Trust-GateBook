@@ -281,3 +281,27 @@ export function TimelineItem({ kind, last, children }) {
     </Stack>
   );
 }
+
+/** Neutral, non-clickable placeholder for a missing photo (e.g. "No back photo" on older post items). */
+export function PhotoPlaceholder({ text }) {
+  return (
+    <Box
+      sx={{
+        height: '100%',
+        borderRadius: 1,
+        border: '1px dashed',
+        borderColor: 'divider',
+        bgcolor: 'gb.sunk',
+        color: 'text.secondary',
+        display: 'grid',
+        placeItems: 'center',
+        textAlign: 'center',
+        fontWeight: 600,
+        fontSize: 13,
+        p: 1,
+      }}
+    >
+      {text}
+    </Box>
+  );
+}

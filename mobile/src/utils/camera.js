@@ -10,6 +10,7 @@ const PRESETS = {
   photo: { camera: 'front', maxEdge: 520 },
   id: { camera: 'back', maxEdge: 900 },
   cover: { camera: 'back', maxEdge: 1100 },
+  coverBack: { camera: 'back', maxEdge: 1100 },
   person: { camera: 'front', maxEdge: 640 },
 };
 

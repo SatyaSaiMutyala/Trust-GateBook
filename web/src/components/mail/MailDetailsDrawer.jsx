@@ -18,7 +18,7 @@ import { useMailUi } from '../../state/context';
 import { fonts } from '../../theme/tokens';
 import { fmtDateTime, fmtMinutes, fmtTime } from '../../utils/format';
 import { firstWord, hasRecipientUser, offlineReceiverLabel } from '../../utils/mail';
-import { FieldLabel, FillThumb, TimelineItem } from '../bits';
+import { FieldLabel, FillThumb, PhotoPlaceholder, TimelineItem } from '../bits';
 import { ImagePreview } from '../ImagePreview';
 import { KindTag, MailStatusChip } from './MailBits';
 
@@ -68,7 +68,7 @@ function Mono({ children }) {
   );
 }
 
-function PhotoBox({ label, src, alt, contain, aspect, onOpen }) {
+function PhotoBox({ label, src, alt, contain, aspect, onOpen, empty }) {
   return (
     <>
       <FieldLabel>{label}</FieldLabel>
@@ -76,15 +76,7 @@ function PhotoBox({ label, src, alt, contain, aspect, onOpen }) {
         {src ? (
           <FillThumb src={src} name={alt} contain={contain} onOpen={onOpen} />
         ) : (
-          <Box
-            sx={{
-              height: '100%',
-              borderRadius: 1,
-              border: '1px dashed',
-              borderColor: 'divider',
-              bgcolor: 'gb.sunk',
-            }}
-          />
+          <PhotoPlaceholder text={empty ?? ''} />
         )}
       </Box>
     </>
@@ -103,6 +95,19 @@ function Details({ item: m, onClose }) {
   const [busy, setBusy] = useState(false);
   // Full-screen photo viewer: index into the photos, or null when closed.
   const [preview, setPreview] = useState(null);
+  // Lightbox order: Front · Back · Delivery person (missing ones skipped).
+  const photos = [
+    { src: m.coverPhotoUrl, label: `Cover, front · ${m.kind}` },
+    { src: m.coverBackPhotoUrl, label: `Cover, back · ${m.kind}` },
+    { src: m.personPhotoUrl, label: `Delivery person${m.broughtBy ? ` · ${m.broughtBy}` : ''}` },
+  ].filter((p) => p.src);
+  const openPreview = (src) =>
+    setPreview(
+      Math.max(
+        0,
+        photos.findIndex((p) => p.src === src),
+      ),
+    );
 
   const answer = async (ok) => {
     setBusy(true);
@@ -178,23 +183,34 @@ function Details({ item: m, onClose }) {
 
       <Box sx={{ p: { xs: 2, md: 3 }, flex: 1 }}>
         <Grid container spacing={1.5} sx={{ mb: 3 }}>
-          <Grid size={6}>
+          <Grid size={4}>
             <PhotoBox
-              label="Cover"
+              label="Front"
               src={m.coverPhotoUrl}
-              alt="Cover"
+              alt="Cover, front"
               contain
               aspect="4 / 3"
-              onOpen={() => setPreview(0)}
+              onOpen={() => openPreview(m.coverPhotoUrl)}
             />
           </Grid>
-          <Grid size={6}>
+          <Grid size={4}>
+            <PhotoBox
+              label="Back"
+              src={m.coverBackPhotoUrl}
+              alt="Cover, back"
+              contain
+              aspect="4 / 3"
+              empty="No back photo"
+              onOpen={() => openPreview(m.coverBackPhotoUrl)}
+            />
+          </Grid>
+          <Grid size={4}>
             <PhotoBox
               label="Delivery person"
               src={m.personPhotoUrl}
               alt="Delivery person"
               aspect="4 / 3"
-              onOpen={() => setPreview(m.coverPhotoUrl ? 1 : 0)}
+              onOpen={() => openPreview(m.personPhotoUrl)}
             />
           </Grid>
         </Grid>
@@ -380,20 +396,7 @@ function Details({ item: m, onClose }) {
           ) : null}
         </Box>
       ) : null}
-      {preview !== null ? (
-        <ImagePreview
-          open
-          index={preview}
-          onClose={() => setPreview(null)}
-          images={[
-            { src: m.coverPhotoUrl, label: `Cover · ${m.kind}` },
-            {
-              src: m.personPhotoUrl,
-              label: `Delivery person${m.broughtBy ? ` · ${m.broughtBy}` : ''}`,
-            },
-          ]}
-        />
-      ) : null}
+      {preview !== null ? <ImagePreview open index={preview} onClose={() => setPreview(null)} images={photos} /> : null}
     </Stack>
   );
 }

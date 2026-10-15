@@ -16,7 +16,7 @@ import { Field } from '../components/Field';
 import { KindTag } from '../components/KindTag';
 import { ListError } from '../components/ListFooter';
 import { StatusChip } from '../components/StatusChip';
-import { Thumb } from '../components/Thumb';
+import { NoBackPhoto, Thumb } from '../components/Thumb';
 import { ImagePreview, ZoomBadge } from '../components/ImagePreview';
 import { useNow } from '../state/useNow';
 import { fonts, MIN_TOUCH, radius, typo, useTheme } from '../theme';
@@ -89,11 +89,12 @@ function Step({ dot, children }) {
   );
 }
 
-function Photo({ url, label, contain, aspect, onPress }) {
+/** A labelled photo: fixed `aspect`, or `fill` to stretch to the column height. */
+function Photo({ url, label, contain, aspect, onPress, fill = false }) {
   const { c } = useTheme();
   const src = fileUrl(url);
   return (
-    <View style={{ flex: 1, gap: moderateScale(4) }}>
+    <View style={[{ gap: moderateScale(4) }, fill && { flex: 1 }]}>
       <Text
         style={[typo.eyebrow, { color: c.muted, fontSize: moderateScale(11) }]}
       >
@@ -108,7 +109,7 @@ function Photo({ url, label, contain, aspect, onPress }) {
           style={({ pressed }) => [
             styles.photo,
             {
-              aspectRatio: aspect,
+              ...(fill ? { flex: 1 } : { aspectRatio: aspect }),
               backgroundColor: c.sunk,
               borderColor: c.line,
               opacity: pressed ? 0.85 : 1,
@@ -123,9 +124,46 @@ function Photo({ url, label, contain, aspect, onPress }) {
           <ZoomBadge />
         </Pressable>
       ) : (
-        <Thumb url={null} name={label} fill style={{ aspectRatio: aspect }} />
+        <Thumb
+          url={null}
+          name={label}
+          fill
+          style={fill ? { flex: 1 } : { aspectRatio: aspect }}
+        />
       )}
     </View>
+  );
+}
+
+/**
+ * Photos for the full-screen preview, in order Front · Back · Delivery person, skipping missing ones
+ * (items logged before back photos were required have no back).
+ */
+export function mailPhotos(item) {
+  return [
+    {
+      key: 'front',
+      url: item.coverPhotoUrl,
+      label: `Cover — front · ${item.kind}`,
+    },
+    {
+      key: 'back',
+      url: item.coverBackPhotoUrl,
+      label: `Cover — back · ${item.kind}`,
+    },
+    {
+      key: 'person',
+      url: item.personPhotoUrl,
+      label: `Delivery person${item.broughtBy ? ` · ${item.broughtBy}` : ''}`,
+    },
+  ].filter(p => !!p.url);
+}
+
+/** Preview index for a tapped photo (0 if it isn't in the list). */
+export function photoIndex(item, key) {
+  return Math.max(
+    0,
+    mailPhotos(item).findIndex(p => p.key === key),
   );
 }
 
@@ -242,20 +280,47 @@ export function MailDetailsScreen({ navigation, route }) {
           { paddingBottom: insets.bottom + verticalScale(24) },
         ]}
       >
-        <View style={styles.photos}>
-          <Photo
-            url={item.coverPhotoUrl}
-            label="Cover"
-            contain
-            aspect={4 / 3}
-            onPress={() => setPreview(0)}
-          />
-          <Photo
-            url={item.personPhotoUrl}
-            label="Delivery person"
-            aspect={3 / 4}
-            onPress={() => setPreview(item.coverPhotoUrl ? 1 : 0)}
-          />
+        {/* Same arrangement as when logging: front over back on the left, delivery person on the right
+            stretched to the height of the two covers. */}
+        <View style={styles.photoGrid}>
+          <View style={styles.photoCol}>
+            <Photo
+              url={item.coverPhotoUrl}
+              label="Front"
+              contain
+              aspect={4 / 3}
+              onPress={() => setPreview(photoIndex(item, 'front'))}
+            />
+            {item.coverBackPhotoUrl ? (
+              <Photo
+                url={item.coverBackPhotoUrl}
+                label="Back"
+                contain
+                aspect={4 / 3}
+                onPress={() => setPreview(photoIndex(item, 'back'))}
+              />
+            ) : (
+              <View style={{ gap: moderateScale(4) }}>
+                <Text
+                  style={[
+                    typo.eyebrow,
+                    { color: c.muted, fontSize: moderateScale(11) },
+                  ]}
+                >
+                  Back
+                </Text>
+                <NoBackPhoto />
+              </View>
+            )}
+          </View>
+          <View style={styles.photoCol}>
+            <Photo
+              url={item.personPhotoUrl}
+              label="Delivery person"
+              fill
+              onPress={() => setPreview(photoIndex(item, 'person'))}
+            />
+          </View>
         </View>
 
         <View
@@ -417,15 +482,7 @@ export function MailDetailsScreen({ navigation, route }) {
         visible={preview !== null}
         index={preview ?? 0}
         onClose={() => setPreview(null)}
-        images={[
-          { url: item.coverPhotoUrl, label: `Cover · ${item.kind}` },
-          {
-            url: item.personPhotoUrl,
-            label: `Delivery person${
-              item.broughtBy ? ` · ${item.broughtBy}` : ''
-            }`,
-          },
-        ]}
+        images={mailPhotos(item)}
       />
     </View>
   );
@@ -451,6 +508,9 @@ const styles = ScaledSheet.create({
   },
   content: { padding: '16@ms', gap: '14@ms' },
   photos: { flexDirection: 'row', gap: '12@ms', alignItems: 'flex-start' },
+  // Two equal columns; `stretch` lets the person photo match the stacked covers' height.
+  photoGrid: { flexDirection: 'row', gap: '12@ms', alignItems: 'stretch' },
+  photoCol: { flex: 1, minWidth: 0, gap: '12@ms' },
   photo: { borderRadius: radius.control, borderWidth: 1, overflow: 'hidden' },
   card: {
     borderWidth: 1,

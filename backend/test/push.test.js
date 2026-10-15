@@ -59,6 +59,7 @@ function logMail(fields) {
   }
   return r
     .attach('cover', jpeg, { filename: 'c.jpg', contentType: 'image/jpeg' })
+    .attach('coverBack', jpeg, { filename: 'b.jpg', contentType: 'image/jpeg' })
     .attach('person', jpeg, { filename: 'p.jpg', contentType: 'image/jpeg' });
 }
 

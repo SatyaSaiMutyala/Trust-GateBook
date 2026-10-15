@@ -64,7 +64,8 @@ export function disconnectUser(userId) {
 async function emitVisit(event, visit) {
   if (!io) return;
   const { overstayHours } = await getSettings();
-  io.to(GATE_ROOM).emit(event, { visit: serializeVisit(visit, overstayHours) });
+  const payload = { visit: await serializeVisit(visit, overstayHours) };
+  io?.to(GATE_ROOM).emit(event, payload);
 }
 
 /** @param {any} visit Visit document */
@@ -87,22 +88,31 @@ export function emitSettingsUpdated(settings) {
  * @param {'mail:created' | 'mail:updated'} event
  * @param {any} item MailItem document
  */
-function emitMail(event, item) {
+async function emitMail(event, item) {
+  if (!io) return;
+  const payload = { item: await serializeMail(item) };
   if (!io) return;
   const recipientId = item.recipient?.id;
   const target = recipientId ? io.to(GATE_ROOM).to(userRoom(recipientId)) : io.to(GATE_ROOM);
-  target.emit(event, { item: serializeMail(item) });
+  target.emit(event, payload);
 }
 
 /** @param {any} item */
-export const emitMailCreated = (item) => emitMail('mail:created', item);
+export const emitMailCreated = (item) => {
+  emitMail('mail:created', item).catch((e) => console.error('[realtime]', e));
+};
 /** @param {any} item */
-export const emitMailUpdated = (item) => emitMail('mail:updated', item);
+export const emitMailUpdated = (item) => {
+  emitMail('mail:updated', item).catch((e) => console.error('[realtime]', e));
+};
 
 /** mail:reminder → only the recipient. @param {any} item */
 export function emitMailReminder(item) {
   if (!io || !item.recipient?.id) return;
-  io.to(userRoom(item.recipient.id)).emit('mail:reminder', { item: serializeMail(item) });
+  const room = userRoom(item.recipient.id);
+  serializeMail(item)
+    .then((payload) => io?.to(room).emit('mail:reminder', { item: payload }))
+    .catch((e) => console.error('[realtime]', e));
 }
 
 /**

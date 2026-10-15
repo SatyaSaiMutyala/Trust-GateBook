@@ -34,7 +34,8 @@ export const EMPTY_LOG_MAIL = {
     notes: '',
   },
   recipient: null, // picked Host { id, name, dept, location }
-  coverUri: null,
+  coverUri: null, // cover — front (address label side)
+  coverBackUri: null, // cover — back
   personUri: null,
 };
 
@@ -68,7 +69,7 @@ const draftsSlice = createSlice({
     },
     logMailPatched(state, action) {
       Object.assign(state.logMail.form, action.payload.form ?? {});
-      ['recipient', 'coverUri', 'personUri'].forEach(k => {
+      ['recipient', 'coverUri', 'coverBackUri', 'personUri'].forEach(k => {
         if (k in action.payload) state.logMail[k] = action.payload[k];
       });
     },

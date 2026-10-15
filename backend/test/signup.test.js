@@ -212,6 +212,7 @@ describe('sign-up', () => {
       .field('broughtBy', 'Y')
       .field('recipientId', nehaId)
       .attach('cover', jpeg, { filename: 'c.jpg', contentType: 'image/jpeg' })
+      .attach('coverBack', jpeg, { filename: 'b.jpg', contentType: 'image/jpeg' })
       .attach('person', jpeg, { filename: 'p.jpg', contentType: 'image/jpeg' })
       .expect(400);
     expect(m.body.error.field).toBe('recipientId');

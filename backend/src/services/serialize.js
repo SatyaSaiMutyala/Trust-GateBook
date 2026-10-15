@@ -1,4 +1,4 @@
-import { signFileUrl } from './signing.js';
+import { url as photoUrl } from './storage.js';
 
 /**
  * @typedef {{ id: string, name: string }} GuardRef
@@ -21,12 +21,13 @@ function guard(g) {
 }
 
 /**
- * Visit document (or lean object) → API `Visit`, with fresh signed photo URLs.
+ * Visit → API `Visit` fields without the photo URLs (sync; used as-is by the CSV export).
  * @param {any} v
  * @param {number} overstayHours
  * @param {number} [nowMs]
+ * @param {{ photoUrl: string, idPhotoUrl: string | null }} [urls]
  */
-export function serializeVisit(v, overstayHours, nowMs = Date.now()) {
+export function visitFields(v, overstayHours, nowMs = Date.now(), urls = { photoUrl: '', idPhotoUrl: null }) {
   return {
     id: v.pass,
     pass: v.pass,
@@ -47,11 +48,22 @@ export function serializeVisit(v, overstayHours, nowMs = Date.now()) {
     site: v.site,
     inAt: v.inAt.toISOString(),
     outAt: v.outAt ? v.outAt.toISOString() : null,
-    photoUrl: signFileUrl(v.photo, nowMs),
-    idPhotoUrl: v.idPhoto ? signFileUrl(v.idPhoto, nowMs) : null,
+    photoUrl: urls.photoUrl,
+    idPhotoUrl: urls.idPhotoUrl,
     guardIn: guard(v.guardIn),
     guardOut: guard(v.guardOut),
     exitNote: v.exitNote ?? '',
     overstay: isOverstay(v, overstayHours, nowMs),
   };
+}
+
+/**
+ * Visit document (or lean object) → API `Visit`, with fresh signed photo URLs (local /api/files or S3 pre-signed).
+ * @param {any} v
+ * @param {number} overstayHours
+ * @param {number} [nowMs]
+ */
+export async function serializeVisit(v, overstayHours, nowMs = Date.now()) {
+  const [p, idp] = await Promise.all([photoUrl(v.photo, nowMs), v.idPhoto ? photoUrl(v.idPhoto, nowMs) : null]);
+  return visitFields(v, overstayHours, nowMs, { photoUrl: p, idPhotoUrl: idp });
 }

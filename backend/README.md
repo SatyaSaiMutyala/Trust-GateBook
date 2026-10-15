@@ -56,6 +56,11 @@ Scripts: `dev`, `start` (`node src/index.js`), `build` (syntax check of `src/` w
 | `FIREBASE_SERVICE_ACCOUNT` | `secrets/firebase-service-account.json` | Firebase Admin service account (relative to `backend/`, git-ignored, never commit). Missing = push disabled (one log line) |
 | `SIGNUP_ENABLED` | `false` | `true`/`1`/`yes`: self sign-up (`POST /api/auth/signup`), accounts wait for admin approval |
 | `ACCOUNT_DELETION_ENABLED` | `false` | in-app account deletion (`DELETE /api/auth/me`); **forced on when sign-up is on** (Apple guideline 5.1.1(v)) |
+| `STORAGE` | `local` | `local` (UPLOAD_DIR, `/api/files` signed URLs) or `s3` (private bucket, pre-signed URLs) |
+| `AWS_BUCKET` / `AWS_DEFAULT_REGION` (or `AWS_REGION`) | empty | required when `STORAGE=s3` (and for the photo migration) |
+| `AWS_S3_PREFIX` | `gatebook/` | key prefix inside the bucket |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | — | read by the AWS SDK itself; **prefer an EC2 instance role** and leave them unset |
+| `AWS_ENDPOINT` / `AWS_USE_PATH_STYLE_ENDPOINT` | — | testing / S3-compatible stores only |
 | `NODE_ENV` | `development` | `production` enforces secrets and the CORS default |
 
 ## Layout
@@ -75,6 +80,7 @@ src/
 test/api.test.js     visitor register integration tests
 test/mail.test.js    post room, roles, hosts directory, profile, settings migration
 test/notifications.test.js  in-app inbox: triggers, pagination, read / read-all, socket rooms, notificationId in pushes
+test/s3.test.js      S3 storage (aws-sdk-client-mock, no AWS calls), presigned URLs, old local photos, migration
 test/signup.test.js  feature switches, sign-up + approval, rate limit, account deletion
 test/push.test.js    device tokens, FCM pushes (fake sender, no network), invalid-token cleanup
 test/pace.test.js    Pace directory (fetch mocked: no network), Pace recipients, sign-in rules
@@ -175,3 +181,45 @@ A switched-off endpoint returns `404 { code: 'feature_disabled' }`.
   `status: 'deleted'`), deletes its devices and notifications and disconnects its sockets. Gate-register records are
   kept. The last active admin can't delete themselves. Deleted users are hidden from `/api/hosts` and the default
   users list (`status=deleted` shows them) and log in like unknown emails.
+
+## Photo storage (local disk or Amazon S3)
+
+All photo reads and writes go through `src/services/storage.js`:
+
+- `STORAGE=local` (default): JPEGs in `UPLOAD_DIR`, served by `GET /api/files/<name>?exp=&sig=` (HMAC, ~1 h).
+- `STORAGE=s3`: `PutObject` to the private bucket as `<AWS_S3_PREFIX>visits/<random>.jpg` /
+  `<AWS_S3_PREFIX>mail/<random>.jpg` (`image/jpeg`, `Cache-Control: private, max-age=3600`); responses carry
+  pre-signed `GetObject` https URLs valid for at least 1 hour. The bucket stays private (Block Public Access on,
+  no CORS needed: the apps only load the images).
+
+Records remember where each photo lives: a plain `<32 hex>.jpg` is a local file, `s3:<key>` is an S3 object. So after
+switching to S3, old photos keep working from local disk until they are migrated. The API shape is unchanged
+(`photoUrl`, `idPhotoUrl`, `coverPhotoUrl`, `personPhotoUrl`); with S3 they are absolute https URLs, which web and
+mobile already use as-is.
+
+**Credentials:** never put AWS keys in the repo. Prefer attaching an **IAM role to the EC2 instance** (the SDK picks it
+up automatically). Minimal policy for that role / user:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    { "Effect": "Allow", "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
+      "Resource": "arn:aws:s3:::trustlab-gatebook/*" }
+  ]
+}
+```
+
+The server never lists or HEADs objects, so `s3:ListBucket` is not needed.
+
+**Server `.env`:**
+
+```
+STORAGE=s3
+AWS_BUCKET=trustlab-gatebook
+AWS_DEFAULT_REGION=ap-south-1
+AWS_S3_PREFIX=gatebook/
+```
+
+**Existing photos stay where they are.** Photos saved before switching to `STORAGE=s3` remain on the server's disk
+(`UPLOAD_DIR`) and keep showing in the apps through `/api/files`; only new photos go to S3. They are not moved.

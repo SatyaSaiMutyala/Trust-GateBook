@@ -117,6 +117,31 @@ function multipart(fields, files) {
   return form;
 }
 
+/**
+ * Multipart body for POST /api/mail: fields plus the three required photos —
+ * `cover` (front), `coverBack` (back) and `person` (delivery person).
+ */
+export function mailFormData(input) {
+  const fields = {
+    kind: input.kind,
+    sender: input.sender,
+    refNo: input.refNo,
+    carrier: input.carrier,
+    broughtBy: input.broughtBy,
+    broughtPhone: input.broughtPhone,
+    pieces: input.pieces,
+    dept: input.dept,
+    notes: input.notes,
+  };
+  if (input.recipientId) fields.recipientId = input.recipientId;
+  else fields.recipientName = input.recipientName;
+  return multipart(fields, [
+    ['cover', input.coverUri, 'cover.jpg'],
+    ['coverBack', input.coverBackUri, 'cover-back.jpg'],
+    ['person', input.personUri, 'person.jpg'],
+  ]);
+}
+
 export const api = createApi({
   reducerPath: 'api',
   baseQuery,
@@ -409,29 +434,11 @@ export const api = createApi({
       providesTags: (_r, _e, id) => [{ type: 'Mail', id }],
     }),
     createMail: build.mutation({
-      query: input => {
-        const fields = {
-          kind: input.kind,
-          sender: input.sender,
-          refNo: input.refNo,
-          carrier: input.carrier,
-          broughtBy: input.broughtBy,
-          broughtPhone: input.broughtPhone,
-          pieces: input.pieces,
-          dept: input.dept,
-          notes: input.notes,
-        };
-        if (input.recipientId) fields.recipientId = input.recipientId;
-        else fields.recipientName = input.recipientName;
-        return {
-          url: '/api/mail',
-          method: 'POST',
-          body: multipart(fields, [
-            ['cover', input.coverUri, 'cover.jpg'],
-            ['person', input.personUri, 'person.jpg'],
-          ]),
-        };
-      },
+      query: input => ({
+        url: '/api/mail',
+        method: 'POST',
+        body: mailFormData(input),
+      }),
       invalidatesTags: ['Mail', 'MailCounts'],
     }),
     remindMail: build.mutation({

@@ -1,4 +1,4 @@
-import { signFileUrl } from './signing.js';
+import { url as photoUrl } from './storage.js';
 
 /** @param {Date | null | undefined} d */
 const iso = (d) => (d ? d.toISOString() : null);
@@ -6,11 +6,14 @@ const iso = (d) => (d ? d.toISOString() : null);
 const guard = (g) => (g ? { id: g.id, name: g.name } : null);
 
 /**
- * MailItem document → API `MailItem` with fresh signed photo URLs.
+ * MailItem → API `MailItem` fields without the photo URLs (sync; used as-is by the CSV export).
+ * @param {any} m
+ * @param {number} [nowMs]
+ * @param {{ coverPhotoUrl: string, coverBackPhotoUrl: string | null, personPhotoUrl: string }} [urls]
  * @param {any} m
  * @param {number} [nowMs]
  */
-export function serializeMail(m, nowMs = Date.now()) {
+export function mailFields(m, _nowMs = Date.now(), urls = { coverPhotoUrl: '', coverBackPhotoUrl: null, personPhotoUrl: '' }) {
   return {
     id: m.code,
     kind: m.kind,
@@ -29,8 +32,9 @@ export function serializeMail(m, nowMs = Date.now()) {
     site: m.site,
     receivedAt: m.receivedAt.toISOString(),
     receivedBy: guard(m.receivedBy),
-    coverPhotoUrl: signFileUrl(m.cover, nowMs),
-    personPhotoUrl: signFileUrl(m.person, nowMs),
+    coverPhotoUrl: urls.coverPhotoUrl,
+    coverBackPhotoUrl: urls.coverBackPhotoUrl,
+    personPhotoUrl: urls.personPhotoUrl,
     status: m.status,
     notifiedAt: iso(m.notifiedAt),
     remindedAt: iso(m.remindedAt),
@@ -44,4 +48,18 @@ export function serializeMail(m, nowMs = Date.now()) {
     resolvedBy: guard(m.resolvedBy),
     resolveNote: m.resolveNote ?? '',
   };
+}
+
+/**
+ * MailItem document → API `MailItem` with fresh signed photo URLs (local /api/files or S3 pre-signed).
+ * @param {any} m
+ * @param {number} [nowMs]
+ */
+export async function serializeMail(m, nowMs = Date.now()) {
+  const [coverPhotoUrl, coverBackPhotoUrl, personPhotoUrl] = await Promise.all([
+    photoUrl(m.cover, nowMs),
+    m.coverBack ? photoUrl(m.coverBack, nowMs) : null, // null on items logged before the back photo existed
+    photoUrl(m.person, nowMs),
+  ]);
+  return mailFields(m, nowMs, { coverPhotoUrl, coverBackPhotoUrl, personPhotoUrl });
 }

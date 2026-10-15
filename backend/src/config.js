@@ -53,6 +53,13 @@ function flag(name) {
 
 const signupEnabled = flag('SIGNUP_ENABLED');
 
+/** S3 key prefix: '' or ending in '/'. Default 'gatebook/'. */
+function s3Prefix() {
+  const raw = env.AWS_S3_PREFIX;
+  const p = (raw === undefined ? 'gatebook/' : raw.trim()).replace(/^\/+/, '');
+  return p === '' || p.endsWith('/') ? p : `${p}/`;
+}
+
 export const config = {
   nodeEnv,
   isProd,
@@ -86,6 +93,20 @@ export const config = {
     accountDeletion: signupEnabled || flag('ACCOUNT_DELETION_ENABLED'),
   },
   signupRateLimit: { max: 5, windowMs: 60 * 60 * 1000 },
+  /** Where new photos go: 'local' (UPLOAD_DIR, served by /api/files) or 's3'. Validated at start-up. */
+  storage: (env.STORAGE ?? 'local').trim().toLowerCase() || 'local',
+  /**
+   * S3 settings. Credentials are NOT read here: the AWS SDK's default provider chain picks them up
+   * (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY env vars, or preferably the EC2 instance role).
+   */
+  s3: {
+    bucket: env.AWS_BUCKET?.trim() || '',
+    region: env.AWS_DEFAULT_REGION?.trim() || env.AWS_REGION?.trim() || '',
+    prefix: s3Prefix(),
+    endpoint: env.AWS_ENDPOINT?.trim() || '',
+    forcePathStyle: flag('AWS_USE_PATH_STYLE_ENDPOINT'),
+    urlTtlSeconds: 60 * 60,
+  },
   paceTimeoutMs: 8_000,
   paceCacheMs: 60_000,
 };

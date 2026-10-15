@@ -15,7 +15,7 @@ import { PACE_ID_PREFIX, upsertPaceRecipient } from '../services/pace.js';
 import { notify } from '../services/notify.js';
 import { paginate, parseListQuery, queryString, searchFilter } from '../services/pagination.js';
 import { generatePassNumber } from '../services/passNumber.js';
-import { serializeMail } from '../services/serializeMail.js';
+import { mailFields, serializeMail } from '../services/serializeMail.js';
 import { getSettings } from '../services/settings.js';
 
 export const mailRouter = Router();
@@ -32,9 +32,10 @@ const NOT_YOURS = 'This item is not addressed to you';
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: config.maxUploadBytes, files: 2, fields: 40, fieldSize: 16 * 1024 },
+  limits: { fileSize: config.maxUploadBytes, files: 3, fields: 40, fieldSize: 16 * 1024 },
 }).fields([
   { name: 'cover', maxCount: 1 },
+  { name: 'coverBack', maxCount: 1 },
   { name: 'person', maxCount: 1 },
 ]);
 
@@ -202,7 +203,7 @@ mailRouter.get('/export.csv', requireGate, async (req, res) => {
   const lq = parseListQuery(rest, LIST_OPTS);
   const filter = listFilter(req.query, scopeFilter(req.query, user), lq.q);
   const items = await MailItem.find(filter).sort(lq.sort).limit(EXPORT_CAP);
-  const csv = mailToCsv(items.map((m) => serializeMail(m, now)), MAIL_STATUS_LABELS);
+  const csv = mailToCsv(items.map((m) => mailFields(m, now)), MAIL_STATUS_LABELS);
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="post-register-${isoDay(new Date(now))}.csv"`);
   res.setHeader('Cache-Control', 'no-store');
@@ -213,7 +214,7 @@ mailRouter.get('/:id', async (req, res) => {
   const user = currentUser(req);
   const item = await findItem(String(req.params.id));
   if (isHostRole(user) && item.recipient?.id !== user._id.toString()) throw forbidden(NOT_YOURS);
-  res.json({ item: serializeMail(item) });
+  res.json({ item: await serializeMail(item) });
 });
 
 // ---------------------------------------------------------------- create
@@ -243,6 +244,7 @@ mailRouter.post('/', canWrite, upload, async (req, res) => {
   const recipientId = text('recipientId');
   if (!recipientId && !text('recipientName')) throw badRequest('Choose who it is for, or type their name.', 'recipientName');
   if (!files.cover?.[0]) throw badRequest('Take a photo of the cover.', 'cover');
+  if (!files.coverBack?.[0]) throw badRequest('Take a photo of the back of the cover.', 'coverBack');
   if (!files.person?.[0]) throw badRequest('Take a photo of the delivery person.', 'person');
 
   for (const [k, max] of Object.entries(MAX_LEN)) {
@@ -284,12 +286,20 @@ mailRouter.post('/', canWrite, upload, async (req, res) => {
     notifyRecipient = canSignIn(user);
   }
 
-  const cover = await storeImage(files.cover[0].buffer, COVER_MAX_EDGE, 'cover');
-  let person;
+  // Store the three photos; if any save fails, remove the ones already saved.
+  /** @type {string[]} */
+  const saved = [];
+  const removeSaved = () => Promise.all(saved.map((ref) => deleteImage(ref)));
+  let cover, coverBack, person;
   try {
+    cover = await storeImage(files.cover[0].buffer, COVER_MAX_EDGE, 'cover');
+    saved.push(cover);
+    coverBack = await storeImage(files.coverBack[0].buffer, COVER_MAX_EDGE, 'coverBack');
+    saved.push(coverBack);
     person = await storeImage(files.person[0].buffer, PERSON_MAX_EDGE, 'person');
+    saved.push(person);
   } catch (e) {
-    await deleteImage(cover);
+    await removeSaved();
     throw e;
   }
 
@@ -316,24 +326,25 @@ mailRouter.post('/', canWrite, upload, async (req, res) => {
         receivedAt: now,
         receivedBy: guardRef(guard),
         cover,
+        coverBack,
         person,
         status: 'lodged',
         notifiedAt: notifyRecipient ? now : null,
       });
     } catch (e) {
       if (/** @type {any} */ (e)?.code === 11000) continue; // id collision: retry
-      await Promise.all([deleteImage(cover), deleteImage(person)]);
+      await removeSaved();
       throw e;
     }
   }
   if (!item) {
-    await Promise.all([deleteImage(cover), deleteImage(person)]);
+    await removeSaved();
     throw new ApiError(500, 'internal', 'Could not allocate an entry number. Try again.');
   }
 
   emitMailCreated(item);
   if (notifyRecipient && item.recipient?.id) await notifyMail.logged(item);
-  res.status(201).json({ item: serializeMail(item) });
+  res.status(201).json({ item: await serializeMail(item) });
 });
 
 // ---------------------------------------------------------------- state machine
@@ -361,7 +372,7 @@ mailRouter.post('/:id/remind', canWrite, async (req, res) => {
   emitMailReminder(updated);
   emitMailUpdated(updated);
   await notifyMail.reminder(updated);
-  res.json({ item: serializeMail(updated) });
+  res.json({ item: await serializeMail(updated) });
 });
 
 const handoverSchema = z.object({
@@ -389,7 +400,7 @@ mailRouter.post('/:id/handover', canWrite, async (req, res) => {
   if (!updated) throw conflict('Already handed over');
   emitMailUpdated(updated);
   if (updated.status === 'handed') await notifyMail.handed(updated);
-  res.json({ item: serializeMail(updated) });
+  res.json({ item: await serializeMail(updated) });
 });
 
 const confirmSchema = z.object({
@@ -404,13 +415,13 @@ mailRouter.post('/:id/confirm', async (req, res) => {
   if (!isRecipient && user.role !== 'admin') throw forbidden(NOT_YOURS);
   const body = confirmSchema.parse(req.body ?? {});
 
-  const notHanded = () =>
-    conflict(
+  if (item.status !== 'handed') {
+    throw conflict(
       item.status === 'lodged' ? 'Security has not handed this over yet' : 'This item has already been answered for.',
       undefined,
-      { item: serializeMail(item) },
+      { item: await serializeMail(item) },
     );
-  if (item.status !== 'handed') throw notHanded();
+  }
 
   const set = body.ok
     ? { status: 'confirmed', confirmedAt: new Date() }
@@ -418,11 +429,11 @@ mailRouter.post('/:id/confirm', async (req, res) => {
   const updated = await transition(item, 'handed', set);
   if (!updated) {
     const fresh = await findItem(item.code);
-    throw conflict('This item has already been answered for.', undefined, { item: serializeMail(fresh) });
+    throw conflict('This item has already been answered for.', undefined, { item: await serializeMail(fresh) });
   }
   emitMailUpdated(updated);
   if (updated.status === 'disputed') await notifyMail.disputed(updated);
-  res.json({ item: serializeMail(updated) });
+  res.json({ item: await serializeMail(updated) });
 });
 
 const resolveSchema = z.object({
@@ -446,5 +457,5 @@ mailRouter.post('/:id/resolve', canWrite, async (req, res) => {
   });
   if (!updated) throw conflict('Only items the receiver disputed can be resolved.');
   emitMailUpdated(updated);
-  res.json({ item: serializeMail(updated) });
+  res.json({ item: await serializeMail(updated) });
 });

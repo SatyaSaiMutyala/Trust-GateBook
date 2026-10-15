@@ -288,3 +288,12 @@ to the foreground / window focus, and hide the options when off.
   "This permanently removes your name, contact details and login from Gatebook. Gate-register records stay for the
   audit trail. This can't be undone.", a password field, buttons Cancel / **Delete account** → success message
   "Your account has been deleted." → signed out (mobile also unregisters push first).
+
+
+## Post: front and back cover photos (web + mobile)
+Logging post needs **three photos, all required**: **Cover — front** (address label side, 4:3, back camera),
+**Cover — back** (4:3, back camera) and **Delivery person** (3:4, front camera). Error when any is missing:
+"Take all three photos." with the missing tiles outlined red. Item details (mobile screen / web drawer), the full-screen
+photo preview (swipe/arrows through Front · Back · Delivery person) and the Item logged confirmation show the back
+cover next to the front. Items logged before this existed have no back photo: show a neutral "No back photo"
+placeholder (not tappable) — existing data is never changed.
