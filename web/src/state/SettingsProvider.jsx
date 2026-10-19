@@ -31,6 +31,7 @@ export function SettingsProvider({ children }) {
     setSettings(saved);
     return saved;
   }, []);
-  const value = useMemo(() => ({ settings, error, reload, save }), [settings, error, reload, save]);
+  /** Replace with a settings object the server returned (e.g. after a logo upload). */
+  const value = useMemo(() => ({ settings, error, reload, save, setSettings }), [settings, error, reload, save]);
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
 }

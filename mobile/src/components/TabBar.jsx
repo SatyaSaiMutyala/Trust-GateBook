@@ -5,24 +5,34 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fonts, useTheme } from '../theme';
 import { useSelector } from 'react-redux';
-import { useInsideCountQuery, useMailCountsQuery } from '../store/api';
+import {
+  useInsideCountQuery,
+  useExpectedTodayCountQuery,
+  useMailCountsQuery,
+  useMyWaitingCountQuery,
+  useTrackQuery,
+} from '../store/api';
 import { selectIsEmployee, selectIsGateUser } from '../store/authSlice';
 import { TabIcon } from './TabIcons';
 import { ScaledSheet, verticalScale } from 'react-native-size-matters/extend';
 
 const META = {
+  Track: { label: 'TRACK', icon: 'today' },
   Inside: { label: 'Inside now', icon: 'inside' },
   Post: { label: 'Post', icon: 'mail' },
   CheckIn: { label: 'Check in', icon: 'plus' },
   Log: { label: 'Log', icon: 'log' },
+  MyVisitors: { label: 'Visitors', icon: 'inside' },
+  Expected: { label: 'Expected', icon: 'calendar' },
+  GatePasses: { label: 'Gate passes', icon: 'box' },
   MyPost: { label: 'My post', icon: 'mail' },
   Account: { label: 'Account', icon: 'settings' },
 };
 
 /**
  * Bottom tabs. Gate users: Inside now · Post · raised amber Check in · Log · Account.
- * Employees: My post · Account. Badges: Inside (green count), Post (lodged count, amber when there are disputes),
- * My post (lodged + handed, amber).
+ * Employees: Visitors · Expected · My post · Account. Badges: Inside (green count), Post (lodged count, amber when there are
+ * disputes), Visitors (waiting for my answer, amber), My post (lodged + handed, amber).
  */
 export function TabBar({ state, navigation }) {
   const { c } = useTheme();
@@ -31,15 +41,62 @@ export function TabBar({ state, navigation }) {
   const employee = useSelector(selectIsEmployee);
   // Employees have no visitor access, so the inside count is only fetched for gate users.
   const { data: inside = 0 } = useInsideCountQuery(undefined, {
-    skip: !gateUser,
+    skip: !gateUser || !state.routes.some(r => r.name === 'Inside'),
   });
   const scope = useMemo(
     () => (employee ? { recipient: 'me' } : {}),
     [employee],
   );
-  const { data: counts = ZERO_COUNTS } = useMailCountsQuery(scope);
+  // Only with a post tab (module Post room).
+  const { data: counts = ZERO_COUNTS } = useMailCountsQuery(scope, {
+    skip: !state.routes.some(r => r.name === 'Post' || r.name === 'MyPost'),
+  });
+  const hasVisitorsTab = state.routes.some(r => r.name === 'MyVisitors');
+  const { data: myWaiting = 0 } = useMyWaitingCountQuery(undefined, {
+    skip: !hasVisitorsTab,
+  });
+
+  const hasExpectedTab = state.routes.some(r => r.name === 'Expected');
+  const { data: expectedToday = 0 } = useExpectedTodayCountQuery(undefined, {
+    skip: !hasExpectedTab,
+  });
+
+  // TRACK: items needing action (amber when any is urgent).
+  const { data: track } = useTrackQuery(undefined, {
+    skip: !gateUser || !state.routes.some(r => r.name === 'Track'),
+    pollingInterval: 30000,
+  });
 
   const badgeFor = name => {
+    if (name === 'Track') {
+      const n = track?.counts?.total ?? 0;
+      return n > 0
+        ? {
+            n,
+            bg: track.counts.urgent ? c.accent : c.ink,
+            fg: track.counts.urgent ? c.accentInk : c.onInk,
+            a11y: `${n} items need action`,
+          }
+        : null;
+    }
+    if (name === 'Expected')
+      return expectedToday > 0
+        ? {
+            n: expectedToday,
+            bg: c.ok,
+            fg: '#FFFFFF',
+            a11y: `${expectedToday} expected today`,
+          }
+        : null;
+    if (name === 'MyVisitors')
+      return myWaiting > 0
+        ? {
+            n: myWaiting,
+            bg: c.accent,
+            fg: c.accentInk,
+            a11y: `${myWaiting} visitors waiting for you`,
+          }
+        : null;
     if (name === 'Inside')
       return inside > 0
         ? {

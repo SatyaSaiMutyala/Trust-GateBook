@@ -56,10 +56,12 @@ const mailSchema = new Schema(
     receivedAt: { type: Date, required: true },
     receivedBy: { type: guardSchema, required: true },
     /** Stored file names in UPLOAD_DIR. */
-    cover: { type: String, required: true },
+    /** Front of the cover; '' when the cover-photo rule is off and none was taken. */
+    cover: { type: String, default: '' },
     /** Back of the cover. Required for new items by the API; absent on items logged before it existed. */
     coverBack: { type: String, default: null },
-    person: { type: String, required: true },
+    /** Delivery person; '' when that photo rule is off and none was taken. */
+    person: { type: String, default: '' },
     status: { type: String, enum: MAIL_STATUSES, required: true, default: 'lodged' },
     notifiedAt: { type: Date, default: null },
     remindedAt: { type: Date, default: null },

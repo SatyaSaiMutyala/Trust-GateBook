@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -10,7 +9,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
-import { errorMessage, useFeatures, useLoginMutation } from '../store/api';
+import {
+  errorMessage,
+  useFeatures,
+  useGetBrandQuery,
+  useLoginMutation,
+} from '../store/api';
+import { BrandMark } from '../components/BrandMark';
 import { loggedIn } from '../store/authSlice';
 import { Button } from '../components/Button';
 import { Field } from '../components/Field';
@@ -21,6 +26,8 @@ import { ScaledSheet, verticalScale } from 'react-native-size-matters/extend';
 export function LoginScreen({ navigation, route }) {
   const { c } = useTheme();
   const { signup } = useFeatures();
+  // Company name + logo (public; blank until Settings → Company is filled in).
+  const { data: brand } = useGetBrandQuery();
   const prefill = route?.params?.email;
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
@@ -67,16 +74,12 @@ export function LoginScreen({ navigation, route }) {
           },
         ]}
       >
-        <View style={styles.mark} accessibilityLabel="Gatebook logo">
-          <Image
-            source={require('../assets/logo-large.png')}
-            style={styles.markImage}
-            resizeMode="contain"
-          />
+        <View style={styles.markWrap}>
+          <BrandMark size={76} logoUrl={brand?.logoUrl} large />
         </View>
         <Text style={[styles.brand, { color: c.railInk }]}>GATEBOOK</Text>
         <Text style={[typo.body, { color: c.railMuted }]}>
-          Visitor register
+          {brand?.name || 'Visitor register'}
         </Text>
       </View>
       <KeyboardAvoidingView
@@ -162,17 +165,7 @@ export function LoginScreen({ navigation, route }) {
 
 const styles = ScaledSheet.create({
   rail: { paddingHorizontal: '24@s', paddingBottom: '28@vs', gap: '4@ms' },
-  // Logo on a white tile, like the app icon (its teal would disappear on the dark header).
-  mark: {
-    width: '76@ms',
-    height: '76@ms',
-    borderRadius: '18@ms',
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: '12@vs',
-  },
-  markImage: { width: '62@ms', height: '62@ms' },
+  markWrap: { alignSelf: 'flex-start', marginBottom: '12@vs' },
   brand: {
     fontFamily: fonts.display,
     fontSize: '32@ms',

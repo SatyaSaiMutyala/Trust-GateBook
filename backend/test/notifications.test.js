@@ -134,6 +134,7 @@ describe('mail triggers store notifications (push disabled)', () => {
         title: '📬 Registered post for you',
         body: 'From Income Tax Dept · collect it at the gate',
         data: { type: 'mail', id: item.id },
+        alarm: false,
         readAt: null,
         createdAt: expect.any(String),
       },

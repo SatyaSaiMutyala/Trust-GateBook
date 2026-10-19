@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { mailApi } from '../api/endpoints';
 import { useAuth } from '../auth/context';
-import { isEmployee } from '../auth/roles';
+import { hasModule, isEmployee } from '../auth/roles';
 import { useMailChanges } from '../realtime/context';
 import { MailCountsContext } from './context';
 
@@ -17,7 +17,9 @@ export function MailCountsProvider({ children }) {
   const [result, setResult] = useState({ key: null, counts: null });
   const [nonce, setNonce] = useState(0);
 
+  const enabled = hasModule(user, 'post');
   useEffect(() => {
+    if (!enabled) return undefined;
     const ctrl = new AbortController();
     const query = employee ? { recipient: 'me', page: 1, limit: 1 } : { page: 1, limit: 1 };
     mailApi
@@ -25,7 +27,7 @@ export function MailCountsProvider({ children }) {
       .then((r) => setResult({ key, counts: r.counts }))
       .catch(() => {});
     return () => ctrl.abort();
-  }, [key, employee, nonce]);
+  }, [key, employee, nonce, enabled]);
 
   const refresh = useCallback(() => setNonce((n) => n + 1), []);
   useMailChanges(refresh, 300);

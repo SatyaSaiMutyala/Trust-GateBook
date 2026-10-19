@@ -9,8 +9,12 @@ import { useNow } from '../state/useNow';
 import { useTheme } from '../theme';
 import { ScaledSheet, verticalScale } from 'react-native-size-matters/extend';
 import { useSelector } from 'react-redux';
-import { useInsideCountQuery, useInsideInfiniteQuery } from '../store/api';
-import { selectCanCheckIn } from '../store/authSlice';
+import {
+  useInsideCountQuery,
+  useInsideInfiniteQuery,
+  useMyWaitingCountQuery,
+} from '../store/api';
+import { selectCanCheckIn, selectIsRecipient } from '../store/authSlice';
 import { useSettings, useSheets } from '../store/hooks';
 import { useInfiniteList } from '../store/useInfiniteList';
 
@@ -33,6 +37,11 @@ export function InsideScreen({ navigation, route }) {
   );
   const list = useInfiniteList(useInsideInfiniteQuery, params);
   const { data: insideTotal } = useInsideCountQuery(undefined);
+  // Gate users who also receive visitors reach their own visitors from here.
+  const recipient = useSelector(selectIsRecipient);
+  const { data: myWaiting = 0 } = useMyWaitingCountQuery(undefined, {
+    skip: !recipient,
+  });
 
   const openDetails = useCallback(
     v => navigation.navigate('VisitDetails', { id: v.id }),
@@ -64,6 +73,15 @@ export function InsideScreen({ navigation, route }) {
           >
             {insideTotal ?? '–'} in
           </HeaderText>
+          {recipient ? (
+            <HeaderButton
+              title={myWaiting ? `Mine · ${myWaiting}` : 'Mine'}
+              onPress={() => navigation.navigate('MyVisitors')}
+              accessibilityLabel={`My visitors${
+                myWaiting ? `, ${myWaiting} waiting for you` : ''
+              }`}
+            />
+          ) : null}
           <HeaderButton
             title="Today"
             onPress={() => navigation.navigate('Today')}
@@ -72,7 +90,7 @@ export function InsideScreen({ navigation, route }) {
         </>
       ),
     });
-  }, [navigation, insideTotal]);
+  }, [navigation, insideTotal, recipient, myWaiting]);
 
   // Pinned above the list: search, everyone / overstay tabs.
   const filters = (

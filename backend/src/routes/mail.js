@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import multer from 'multer';
 import { z } from 'zod';
 import { config } from '../config.js';
-import { currentUser, requireAuth, requireGate, requireRole } from '../middleware/auth.js';
+import { currentUser, requireAuth, requireGate, requireModule, requireRole } from '../middleware/auth.js';
 import { ApiError, badRequest, conflict, forbidden, notFound } from '../middleware/error.js';
 import { MAIL_STATUSES, MAIL_STATUS_LABELS, MailItem } from '../models/MailItem.js';
 import { RECIPIENT_FILTER, User, canSignIn } from '../models/User.js';
@@ -20,6 +20,15 @@ import { getSettings } from '../services/settings.js';
 
 export const mailRouter = Router();
 mailRouter.use(requireAuth);
+// Module access: Post room. A receiver can always confirm their own item, and an employee open it (from a
+// notification; GET /:id is scoped to their own items).
+const needPost = requireModule('post');
+mailRouter.use((req, res, next) => {
+  const confirm = req.method === 'POST' && /^\/[^/]+\/confirm$/.test(req.path);
+  const ownItem = req.method === 'GET' && /^\/(?!export\.csv$)[^/]+$/.test(req.path) && currentUser(req).role === 'host';
+  if (confirm || ownItem) return next();
+  return needPost(req, res, next);
+});
 
 const canWrite = requireRole('security', 'admin');
 
@@ -237,15 +246,17 @@ mailRouter.post('/', canWrite, upload, async (req, res) => {
     return typeof v === 'string' ? v.trim() : '';
   };
 
+  const rules = await getSettings();
   // Required fields, in form order.
   for (const f of ['kind', 'sender', 'broughtBy']) {
     if (!text(f)) throw badRequest(`${LABELS[f]} is required.`, f);
   }
   const recipientId = text('recipientId');
   if (!recipientId && !text('recipientName')) throw badRequest('Choose who it is for, or type their name.', 'recipientName');
-  if (!files.cover?.[0]) throw badRequest('Take a photo of the cover.', 'cover');
-  if (!files.coverBack?.[0]) throw badRequest('Take a photo of the back of the cover.', 'coverBack');
-  if (!files.person?.[0]) throw badRequest('Take a photo of the delivery person.', 'person');
+  // Photo rules (settings): cover front + back, delivery person.
+  if (rules.mailCoverRequired && !files.cover?.[0]) throw badRequest('Take a photo of the cover.', 'cover');
+  if (rules.mailCoverRequired && !files.coverBack?.[0]) throw badRequest('Take a photo of the back of the cover.', 'coverBack');
+  if (rules.mailPersonPhotoRequired && !files.person?.[0]) throw badRequest('Take a photo of the delivery person.', 'person');
 
   for (const [k, max] of Object.entries(MAX_LEN)) {
     if (text(k).length > max) throw badRequest(`${k} is too long (max ${max} characters).`, k);
@@ -290,14 +301,16 @@ mailRouter.post('/', canWrite, upload, async (req, res) => {
   /** @type {string[]} */
   const saved = [];
   const removeSaved = () => Promise.all(saved.map((ref) => deleteImage(ref)));
-  let cover, coverBack, person;
+  let cover = '';
+  /** @type {string | null} */
+  let coverBack = null;
+  let person = '';
   try {
-    cover = await storeImage(files.cover[0].buffer, COVER_MAX_EDGE, 'cover');
-    saved.push(cover);
-    coverBack = await storeImage(files.coverBack[0].buffer, COVER_MAX_EDGE, 'coverBack');
-    saved.push(coverBack);
-    person = await storeImage(files.person[0].buffer, PERSON_MAX_EDGE, 'person');
-    saved.push(person);
+    if (files.cover?.[0]) saved.push((cover = await storeImage(files.cover[0].buffer, COVER_MAX_EDGE, 'cover')));
+    if (files.coverBack?.[0]) {
+      saved.push((coverBack = await storeImage(files.coverBack[0].buffer, COVER_MAX_EDGE, 'coverBack')));
+    }
+    if (files.person?.[0]) saved.push((person = await storeImage(files.person[0].buffer, PERSON_MAX_EDGE, 'person')));
   } catch (e) {
     await removeSaved();
     throw e;

@@ -16,9 +16,20 @@ export function claimNotice(key, now = Date.now()) {
 
 export const mailNoticeKey = id => `mail:${id}`;
 
-/** Key for a routed item `{ type: 'mail' | 'user', id }`. */
+/** Key for a routed item `{ type: 'mail' | 'user' | 'visit' | 'expected', id }`. */
 export const routeNoticeKey = route =>
-  route.type === 'user' ? `user:${route.id}` : mailNoticeKey(route.id);
+  [
+    'user',
+    'visit',
+    'expected',
+    'material',
+    'incident',
+    'key',
+    'patrol',
+    'gen',
+  ].includes(route.type)
+    ? `${route.type}:${route.id}`
+    : mailNoticeKey(route.id);
 
 /** For tests. */
 export function resetNotices() {

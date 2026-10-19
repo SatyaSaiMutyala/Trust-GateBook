@@ -4,9 +4,9 @@ import { zonedParts } from './format.js';
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 /**
- * `<prefix>-YYMMDD-XXXX`, date in the display time zone (GB for visits, ML for post).
+ * `<prefix>-YYMMDD-XXXX`, date in the display time zone (GB for visits, ML for post, EX for expected visitors, MP for material gate passes, IN for incidents).
  * @param {Date} [now]
- * @param {'GB' | 'ML'} [prefix]
+ * @param {'GB' | 'ML' | 'EX' | 'MP' | 'IN'} [prefix]
  */
 export function generatePassNumber(now = new Date(), prefix = 'GB') {
   const { year, month, day } = zonedParts(now);

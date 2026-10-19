@@ -15,3 +15,11 @@ export const isEmployee = (u) => u?.role === 'host';
 /** Can receive post: role `host`, or any role with `isHost`. */
 export const isRecipient = (u) => !!u && (u.role === 'host' || !!u.isHost);
 export const GATE_ROLES = ['admin', 'security', 'viewer'];
+/**
+ * Module access (docs/API.md "Module access"): admins have every module; others the modules ticked for them.
+ * Accounts from a server without modules (no `modules` field) keep everything their role allows.
+ * @param {import('../types').User | null | undefined} u
+ * @param {'track' | 'visitors' | 'expected' | 'post'} key
+ */
+export const hasModule = (u, key) =>
+  !!u && (u.role === 'admin' || !Array.isArray(u.modules) || u.modules.includes(key));

@@ -39,6 +39,9 @@ const STATUSES = [
   { value: 'in', label: 'Inside' },
   { value: 'out', label: 'Exited' },
   { value: 'over', label: 'Overstay' },
+  { value: 'waiting', label: 'Waiting at gate', short: 'Waiting' },
+  { value: 'declined', label: 'Host declined', short: 'Declined' },
+  { value: 'noreply', label: 'Host did not reply', short: 'No reply' },
 ];
 
 /** [from, to) for the chosen range, local days. */

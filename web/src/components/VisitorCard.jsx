@@ -6,10 +6,16 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { fonts } from '../theme/tokens';
 import { fmtDate, fmtDuration, fmtTime } from '../utils/format';
-import { passNotReturned } from '../utils/visit';
-import { PassBadge, StatusChip, VisitorThumb } from './bits';
+import { hostStage, passNotReturned } from '../utils/visit';
+import { HostStageChip, PassBadge, StatusChip, VisitorThumb } from './bits';
+import { HostActions } from './HostActions';
+/**
+ * One visitor. Inside now: host-approval stage (waiting / accepted / no reply / declined) with the gate's next
+ * step, duration and "Mark exit". Log mode: dates, status and duration.
+ */
 export function VisitorCard({ visit: v, status, now, logMode, onOpen, onExit }) {
   const over = status === 'overstay';
+  const stage = hostStage(v);
   const meeting = [v.purpose, v.host ? `meeting ${v.host}${v.dept ? ` (${v.dept})` : ''}` : '']
     .filter(Boolean)
     .join(' · ');
@@ -80,6 +86,7 @@ export function VisitorCard({ visit: v, status, now, logMode, onOpen, onExit }) 
       </Box>
       <Stack spacing={1} sx={{ alignItems: 'flex-end', flexShrink: 0 }}>
         {logMode ? <StatusChip status={status} size="small" /> : null}
+        {stage ? <HostStageChip stage={stage} size="small" /> : null}
         <Chip
           variant={over ? 'overstay' : 'duration'}
           size="small"
@@ -87,16 +94,19 @@ export function VisitorCard({ visit: v, status, now, logMode, onOpen, onExit }) 
           sx={{ '& .MuiChip-label': { fontFamily: fonts.mono } }}
         />
         {!logMode && onExit ? (
-          <Button
-            variant="exit"
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              onExit();
-            }}
-          >
-            Mark exit
-          </Button>
+          <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <HostActions visit={v} />
+            <Button
+              variant="exit"
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                onExit();
+              }}
+            >
+              Mark exit
+            </Button>
+          </Stack>
         ) : null}
       </Stack>
     </Paper>

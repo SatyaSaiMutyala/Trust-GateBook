@@ -7,7 +7,12 @@ export const EMPTY_DRAFT = Object.freeze({
   company: '',
   persons: '1',
   purpose: '',
+  /** Text in the "Whom to meet" box (the picked employee's name, or a typed name). */
   host: '',
+  /** Employee picked from /api/hosts (asked to accept in the app), or null when the host was typed. */
+  hostPick: null,
+  /** The Expected entry this check-in comes from (pre-registered visitor), or null. */
+  expected: null,
   dept: '',
   idType: 'Aadhaar',
   idLast4: '',
@@ -15,6 +20,8 @@ export const EMPTY_DRAFT = Object.freeze({
   items: '',
   badge: '',
   notes: '',
+  /** The visitor agreed to the terms (Settings → Terms; only asked when required). */
+  terms: false,
   /** @type {{ blob: Blob, url: string } | null} */
   photo: null,
   /** @type {{ blob: Blob, url: string } | null} */

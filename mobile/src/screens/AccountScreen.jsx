@@ -39,24 +39,34 @@ import {
   useCreateUserMutation,
   useGetSettingsQuery,
   useListUsersInfiniteQuery,
+  useModuleDefsQuery,
+  useOrgUsersQuery,
   usePutSettingsMutation,
   useUpdateMeMutation,
   useUpdateUserMutation,
 } from '../store/api';
 import {
   ROLE_LABELS,
+  selectHasModule,
   selectIsAdmin,
   selectIsGateUser,
   selectIsRecipient,
   selectUser,
 } from '../store/authSlice';
 import { useSettings, useToast } from '../store/hooks';
+import { chooseSite, selectMultiGate, selectSite } from '../store/siteSlice';
 import { signOut } from '../push/push';
 import { PushHint } from '../push/PushHint';
 import { DeleteAccount } from '../auth/DeleteAccount';
 import { PendingRequests } from './account/PendingRequests';
 import { useInfiniteList } from '../store/useInfiniteList';
 import { fmtDate, initials } from '../utils/format';
+import {
+  chainText,
+  defaultsFor,
+  eligibleFor,
+  moduleText,
+} from '../utils/modules';
 import { version as APP_VERSION } from '../../package.json';
 
 const ROLE_OPTIONS = [
@@ -173,29 +183,40 @@ function ListEditor({ title, subtitle, field, editable }) {
   );
 }
 
-function OverstayPanel({ editable }) {
+/** One whole-number setting (overstay hours, host reply minutes) with its own Save. */
+function NumberPanel({
+  editable,
+  settingKey,
+  title,
+  subtitle,
+  label,
+  unit,
+  min,
+  max,
+  savedText,
+}) {
   const { c } = useTheme();
   const toast = useToast();
   const settings = useSettings();
   const [putSettings] = usePutSettingsMutation();
   const [draft, setDraft] = useState(null); // null = untouched, show the saved value
-  const value = draft ?? String(settings.overstayHours);
+  const value = draft ?? String(settings[settingKey]);
   const setValue = setDraft;
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
 
   const submit = async () => {
     const n = Number(value);
-    if (!Number.isInteger(n) || n < 1 || n > 24) {
-      setError('Enter whole hours from 1 to 24.');
+    if (!Number.isInteger(n) || n < min || n > max) {
+      setError(`Enter whole ${unit} from ${min} to ${max}.`);
       return;
     }
     setBusy(true);
     setError(null);
     try {
-      await putSettings({ ...settings, overstayHours: n }).unwrap();
+      await putSettings({ ...settings, [settingKey]: n }).unwrap();
       setDraft(null);
-      toast.show(`Overstay alert set to ${n} h`);
+      toast.show(savedText(n));
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -204,15 +225,12 @@ function OverstayPanel({ editable }) {
   };
 
   return (
-    <Panel
-      title="Overstay alert"
-      subtitle="Visitors inside longer than this are flagged amber."
-    >
+    <Panel title={title} subtitle={subtitle}>
       <View style={styles.addRow}>
         <Field
-          label="Hours (1–24)"
+          label={label}
           value={value}
-          onChangeText={t => setValue(t.replace(/\D/g, '').slice(0, 2))}
+          onChangeText={t => setValue(t.replace(/\D/g, '').slice(0, 3))}
           keyboardType="number-pad"
           mono
           editable={editable}
@@ -235,6 +253,288 @@ function OverstayPanel({ editable }) {
   );
 }
 
+/** Admin: on/off rules (Settings → Visitors / Post room). rows: [settingKey, title, explanation]. */
+function RulesPanel({ title, rows }) {
+  const { c } = useTheme();
+  const toast = useToast();
+  const settings = useSettings();
+  const [putSettings, { isLoading }] = usePutSettingsMutation();
+  const flip = async (key, on) => {
+    try {
+      await putSettings({ ...settings, [key]: on }).unwrap();
+      toast.show('Saved');
+    } catch (e) {
+      toast.show(errorMessage(e), 'error');
+    }
+  };
+  return (
+    <Panel title={title}>
+      {rows.map(([key, label, help]) => (
+        <View key={key} style={{ gap: 2 }}>
+          <Checkbox
+            checked={settings[key] !== false}
+            disabled={isLoading}
+            onChange={v => flip(key, v)}
+            label={label}
+          />
+          <Text style={[typo.small, { color: c.muted }]}>{help}</Text>
+        </View>
+      ))}
+    </Panel>
+  );
+}
+
+const MATRIX_TITLES = {
+  visitor: 'Host has not replied',
+  overstay: 'Visitor overstaying',
+  mail: 'Post not collected',
+  mpreceipt: 'Material IN not accepted',
+  mpapproval: 'Gate pass waiting for approval',
+  material: 'Returnable material overdue',
+};
+const TARGETS = {
+  guards: 'Guards on duty',
+  person: 'The person concerned',
+  l1: 'Level 1: their manager',
+  l2: "Level 2: manager's manager",
+  l3: 'Level 3',
+  supervisors: 'Gate supervisors',
+  admins: 'Admins',
+};
+/** "AT ONCE" / "+15 min" / "+4 h" / "+3 d". */
+const fmtAfter = min =>
+  !min
+    ? 'AT ONCE'
+    : min % 1440 === 0
+    ? `+${min / 1440} d`
+    : min % 60 === 0
+    ? `+${min / 60} h`
+    : `+${min} min`;
+
+/** Admin: whether visitors must agree to the terms at check-in (the wording is edited on the web). */
+function TermsRequiredPanel() {
+  const { c } = useTheme();
+  const toast = useToast();
+  const settings = useSettings();
+  const [putSettings, { isLoading }] = usePutSettingsMutation();
+  const terms = settings.terms ?? { required: false, version: 1 };
+  return (
+    <Panel
+      title="Terms & confidentiality agreement"
+      subtitle={`Version ${terms.version}. Edit the wording in Settings on the web.`}
+    >
+      <Checkbox
+        checked={!!terms.required}
+        disabled={isLoading}
+        label="Visitors must agree to the terms at check-in"
+        onChange={async v => {
+          try {
+            await putSettings({
+              ...settings,
+              terms: { ...terms, required: v },
+            }).unwrap();
+            toast.show('Saved');
+          } catch (e) {
+            toast.show(errorMessage(e), 'error');
+          }
+        }}
+      />
+      <Text style={[typo.small, { color: c.muted }]}>
+        Adds the agreement checkbox to the check-in form and creates the PDF for
+        every visit.
+      </Text>
+    </Panel>
+  );
+}
+
+/** Admin: the escalation matrices, read-only (edited in Settings on the web). */
+function EscalationSummary() {
+  const { c } = useTheme();
+  const settings = useSettings();
+  const esc = settings.esc ?? {};
+  return (
+    <Panel
+      title="Escalation matrices"
+      subtitle="Who is told, and when, while an item is still open. Edit them in Settings on the web."
+    >
+      {Object.entries(MATRIX_TITLES).map(([key, title]) => (
+        <View key={key} style={{ gap: 4 }}>
+          <Text style={[typo.bodySemi, { color: c.ink }]}>{title}</Text>
+          {(esc[key] ?? []).length === 0 ? (
+            <Text style={[typo.small, { color: c.muted }]}>
+              No steps. Nobody is alerted.
+            </Text>
+          ) : (
+            (esc[key] ?? []).map((s, i) => (
+              <Text key={i} style={[typo.small, { color: c.ink }]}>
+                <Text style={{ fontFamily: fonts.mono }}>
+                  {fmtAfter(s.after)}
+                </Text>
+                {'  '}
+                {TARGETS[s.to] ?? 'A named person'}
+                {s.alarm ? ' · alarm' : ''}
+                {s.repeat
+                  ? ` · repeats every ${fmtAfter(s.repeat).slice(1)}`
+                  : ''}
+                {s.label ? ` · ${s.label}` : ''}
+              </Text>
+            ))
+          )}
+        </View>
+      ))}
+    </Panel>
+  );
+}
+
+/** Admin: whether "Pre-approved" starts ticked when someone pre-registers a visitor. */
+function PreapprovedPanel() {
+  const { c } = useTheme();
+  const toast = useToast();
+  const settings = useSettings();
+  const [putSettings, { isLoading }] = usePutSettingsMutation();
+  const on = settings.expectedPreapproved !== false;
+  const toggle = async v => {
+    try {
+      await putSettings({ ...settings, expectedPreapproved: v }).unwrap();
+      toast.show(
+        v
+          ? 'New expected visitors start pre-approved'
+          : 'New expected visitors start not pre-approved',
+      );
+    } catch (e) {
+      toast.show(errorMessage(e), 'error');
+    }
+  };
+  return (
+    <Panel
+      title="Pre-approved visitors"
+      subtitle="A pre-approved expected visitor is accepted at check-in without asking the employee again. This sets whether “Pre-approved” starts ticked; they can still change it."
+    >
+      <Checkbox
+        checked={on}
+        disabled={isLoading}
+        onChange={toggle}
+        label="Ticked by default"
+      />
+      {!on ? (
+        <Text style={[typo.small, { color: c.muted }]}>
+          Unticked by default: the employee is asked when the visitor arrives.
+        </Text>
+      ) : null}
+    </Panel>
+  );
+}
+
+/**
+ * Reports to (escalation level 1), designation, gate supervisor and the modules this person can use.
+ * `modules` is the effective tick list (the role defaults until changed).
+ */
+function AccessFields({ form, set, modules, defs, org, selfId, designations }) {
+  const { c } = useTheme();
+  const managers = org
+    .filter(u => u.active && u.id !== selfId)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const preview = chainText(
+    selfId
+      ? org.map(u =>
+          u.id === selfId ? { ...u, reportsTo: form.reportsTo ?? null } : u,
+        )
+      : [
+          ...org,
+          {
+            id: '__new',
+            name: '',
+            active: true,
+            reportsTo: form.reportsTo ?? null,
+          },
+        ],
+    selfId ?? '__new',
+  );
+  const rows = eligibleFor(defs, form.role);
+  return (
+    <>
+      <SelectField
+        label="Reports to (escalation level 1)"
+        value={form.reportsTo ?? ''}
+        options={[
+          { value: '', label: 'Nobody (top of the chain)' },
+          ...managers.map(m => ({
+            value: m.id,
+            label: `${m.name} · ${
+              m.designation || ROLE_LABELS[m.role] || m.role
+            }`,
+          })),
+        ]}
+        onChange={v => set('reportsTo', v || null)}
+      />
+      <Text style={[typo.small, { color: c.muted, marginTop: -6 }]}>
+        {form.reportsTo
+          ? `Escalations go: ${preview}`
+          : 'Escalations for this person go straight to admin.'}
+      </Text>
+      <Field
+        label="Designation"
+        value={form.designation ?? ''}
+        onChangeText={t => set('designation', t)}
+        placeholder={
+          designations[0] ? `e.g. ${designations[0]}` : 'e.g. Security guard'
+        }
+      />
+      {form.role !== 'host' ? (
+        <Checkbox
+          checked={!!form.isSupervisor}
+          onChange={v => set('isSupervisor', v)}
+          label="Gate supervisor (gets “Gate supervisors” escalation steps)"
+        />
+      ) : null}
+      <Text style={[typo.h3, { color: c.ink }]}>
+        Modules this person can use
+      </Text>
+      {form.role === 'admin' ? (
+        <Text style={[typo.small, { color: c.muted }]}>
+          Admins have every module and Settings.
+        </Text>
+      ) : (
+        <>
+          {form.role === 'host' ? (
+            <Checkbox
+              checked
+              disabled
+              label="My visitors — always on"
+              onChange={() => {}}
+            />
+          ) : null}
+          {rows.map(d => {
+            const [name, what] = moduleText(d, form.role);
+            const on = modules.includes(d.key);
+            return (
+              <Checkbox
+                key={d.key}
+                checked={on}
+                label={`${name}: ${what}`}
+                onChange={v =>
+                  set(
+                    'modules',
+                    v
+                      ? rows
+                          .map(r => r.key)
+                          .filter(k => k === d.key || modules.includes(k))
+                      : modules.filter(k => k !== d.key),
+                  )
+                }
+              />
+            );
+          })}
+          <Text style={[typo.small, { color: c.muted }]}>
+            {rows.filter(d => modules.includes(d.key)).length} of {rows.length}{' '}
+            ticked. Unticked modules are hidden and refused by the server.
+          </Text>
+        </>
+      )}
+    </>
+  );
+}
+
 const EMPTY_USER = {
   name: '',
   email: '',
@@ -244,6 +544,10 @@ const EMPTY_USER = {
   dept: '',
   location: '',
   isHost: false,
+  canPreRegister: true,
+  reportsTo: null,
+  designation: '',
+  isSupervisor: false,
 };
 
 /** Everyone: own phone (and for recipients department + location), saved via PATCH /api/auth/me. */
@@ -365,6 +669,12 @@ function UserForm({ initial, editing, onCancel, onSaved }) {
   const [field, setField] = useState(null);
   const [busy, setBusy] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const { data: defs = [] } = useModuleDefsQuery();
+  const { data: org = [] } = useOrgUsersQuery();
+  // Ticks kept per role; untouched (undefined) = the role's defaults.
+  const modules = Array.isArray(form.modules)
+    ? form.modules
+    : defaultsFor(defs, form.role);
 
   const submit = async () => {
     if (
@@ -387,6 +697,11 @@ function UserForm({ initial, editing, onCancel, onSaved }) {
         dept: form.dept,
         location: form.location.trim(),
         isHost: form.role === 'host' ? true : !!form.isHost,
+        canPreRegister: form.canPreRegister !== false,
+        reportsTo: form.reportsTo ?? null,
+        designation: (form.designation ?? '').trim(),
+        isSupervisor: form.role !== 'host' && !!form.isSupervisor,
+        ...(form.role !== 'admin' && defs.length ? { modules } : {}),
       };
       const res = editing
         ? await updateUser({
@@ -451,7 +766,7 @@ function UserForm({ initial, editing, onCancel, onSaved }) {
         label="Role"
         value={form.role}
         options={ROLE_OPTIONS}
-        onChange={r => set('role', r)}
+        onChange={r => setForm(f => ({ ...f, role: r, modules: undefined }))}
       />
       <Field
         label="Mobile"
@@ -481,6 +796,22 @@ function UserForm({ initial, editing, onCancel, onSaved }) {
           label="Can also receive post"
         />
       ) : null}
+      {form.role === 'host' || form.role === 'security' ? (
+        <Checkbox
+          checked={form.canPreRegister !== false}
+          onChange={v => set('canPreRegister', v)}
+          label="Can pre-register visitors"
+        />
+      ) : null}
+      <AccessFields
+        form={form}
+        set={set}
+        modules={modules}
+        defs={defs}
+        org={org}
+        selfId={editing ? initial.id : null}
+        designations={settings.designations ?? []}
+      />
       {error ? (
         <Text style={[typo.bodyMedium, { color: c.bad }]}>{error}</Text>
       ) : null}
@@ -791,6 +1122,78 @@ function ProfileView() {
   );
 }
 
+/** "This gate": the gate this phone works at (gate users, several gates). */
+function GatePanel() {
+  const dispatch = useDispatch();
+  const toast = useToast();
+  const multi = useSelector(selectMultiGate);
+  const site = useSelector(selectSite);
+  const settings = useSettings();
+  if (!multi) return null;
+  return (
+    <Panel
+      title="This gate"
+      subtitle="Lists, TRACK and new entries on this phone are for this gate."
+    >
+      <SelectField
+        label="Gate"
+        value={site}
+        options={(settings?.sites ?? []).map(s => ({ value: s, label: s }))}
+        onChange={v => {
+          dispatch(chooseSite(v));
+          toast.show(`Working at ${v}`);
+        }}
+      />
+    </Panel>
+  );
+}
+
+/** Key register and Incidents, for whoever has the modules. */
+function SiteSafetyLinks() {
+  const navigation = useNavigation();
+  const keys = useSelector(selectHasModule('keys'));
+  const incidents = useSelector(selectHasModule('incidents'));
+  const patrol = useSelector(selectHasModule('patrol'));
+  const gen = useSelector(selectHasModule('gen'));
+  const gate = useSelector(selectIsGateUser);
+  if (!incidents && !(gate && (keys || patrol || gen))) return null;
+  return (
+    <Panel
+      title="Site safety"
+      subtitle="Report something unsafe, follow up incidents, keys at the gate."
+    >
+      {incidents ? (
+        <Button
+          title="Incidents"
+          variant="ghost"
+          onPress={() => navigation.navigate('Incidents')}
+        />
+      ) : null}
+      {keys && gate ? (
+        <Button
+          title="Key register"
+          variant="ghost"
+          onPress={() => navigation.navigate('Keys')}
+        />
+      ) : null}
+      {patrol && gate ? (
+        <Button
+          title="Patrols"
+          variant="ghost"
+          onPress={() => navigation.navigate('Patrol')}
+        />
+      ) : null}
+      {gen && gate ? (
+        <Button
+          title="Generator & diesel"
+          variant="ghost"
+          onPress={() => navigation.navigate('Generator')}
+        />
+      ) : null}
+    </Panel>
+  );
+}
+
 export function AccountScreen({ route } = {}) {
   const { c } = useTheme();
   const navigation = useNavigation();
@@ -850,7 +1253,115 @@ export function AccountScreen({ route } = {}) {
         editable
         subtitle="The quick-pick buttons when security logs incoming post."
       />
-      <OverstayPanel editable />
+      <NumberPanel
+        editable
+        settingKey="overstayHours"
+        title="Overstay alert"
+        subtitle="Visitors inside longer than this are flagged amber."
+        label="Hours (1–24)"
+        unit="hours"
+        min={1}
+        max={24}
+        savedText={n => `Overstay alert set to ${n} h`}
+      />
+      <NumberPanel
+        editable
+        settingKey="hostReplyMinutes"
+        title="Host reply time"
+        subtitle="If the employee being visited hasn't accepted or declined in this time, security is alerted to call them."
+        label="Minutes (1–60)"
+        unit="minutes"
+        min={1}
+        max={60}
+        savedText={n => `Host reply time set to ${n} min`}
+      />
+      <PreapprovedPanel />
+      <RulesPanel
+        title="Check-in rules"
+        rows={[
+          [
+            'visitorPhotoRequired',
+            'Visitor photo is required',
+            'Security cannot check a visitor in without a photo.',
+          ],
+          [
+            'visitorPassRequired',
+            'Pass number is required',
+            'Every visitor must be given a numbered pass card.',
+          ],
+        ]}
+      />
+      <RulesPanel
+        title="Post logging rules"
+        rows={[
+          [
+            'mailCoverRequired',
+            'Cover photos are required',
+            'Front and back of the cover.',
+          ],
+          [
+            'mailPersonPhotoRequired',
+            'Delivery person photo is required',
+            'Whoever brought it.',
+          ],
+        ]}
+      />
+      <TermsRequiredPanel />
+      <ListEditor title="Material IN purposes" field="mpPurposesIn" editable />
+      <ListEditor
+        title="Material OUT purposes"
+        field="mpPurposesOut"
+        editable
+      />
+      <ListEditor title="Challans: material IN" field="mpChallanIn" editable />
+      <ListEditor
+        title="Challans: material OUT"
+        field="mpChallanOut"
+        editable
+      />
+      <ListEditor
+        title="Units"
+        field="mpUnits"
+        editable
+        subtitle="Units offered for optional item details."
+      />
+      <RulesPanel
+        title="Material gate pass rules"
+        rows={[
+          [
+            'mpAuthRequiredOut',
+            'Material going out needs an authorising employee',
+            'Security must enter who approved the material leaving.',
+          ],
+          [
+            'mpApprovalInApp',
+            'Security-made OUT passes need the employee to approve',
+            'The employee named on the pass gets Approve / Reject.',
+          ],
+          [
+            'mpChallanPhotoRequired',
+            'Photo of the challan is required',
+            'Every pass needs a photo of the challan.',
+          ],
+          [
+            'mpCarrierPhotoRequired',
+            'Photo of a carrier who is not a visitor is required',
+            'Visitors already have their check-in photo.',
+          ],
+        ]}
+      />
+      <NumberPanel
+        editable
+        settingKey="mpReturnDays"
+        title="Default return period"
+        subtitle="Pre-fills the expected return date for returnable material."
+        label="Days (1–365)"
+        unit="days"
+        min={1}
+        max={365}
+        savedText={n => `Return period set to ${n} days`}
+      />
+      <EscalationSummary />
       {isAdmin ? (
         <View
           style={[
@@ -887,6 +1398,8 @@ export function AccountScreen({ route } = {}) {
   const footer = (
     <View style={{ gap: moderateScale(14) }}>
       {isAdmin ? <ListFooter list={users} /> : null}
+      <GatePanel />
+      <SiteSafetyLinks />
       <Panel title="Signed in">
         <Text style={[typo.body, { color: c.ink }]}>
           {user?.name} ·{' '}

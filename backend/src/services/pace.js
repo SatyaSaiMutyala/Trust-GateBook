@@ -169,12 +169,13 @@ export async function findActivePaceEmployee(empCode) {
  * by paceEmpCode, else by email (linked: paceEmpCode + isHost), else a new password-less `host`.
  * The local copy of name / phone / dept / location is refreshed from Pace every time.
  * @param {string} recipientId
+ * @param {string} [field] the input validation errors point at (`hostId` at check-in)
  */
-export async function upsertPaceRecipient(recipientId) {
+export async function upsertPaceRecipient(recipientId, field = 'recipientId') {
   const empCode = recipientId.slice(PACE_ID_PREFIX.length).trim();
-  if (!paceEnabled() || !empCode || empCode.length > 40) throw badRequest(NOT_ACTIVE, 'recipientId');
+  if (!paceEnabled() || !empCode || empCode.length > 40) throw badRequest(NOT_ACTIVE, field);
   const emp = await findActivePaceEmployee(empCode);
-  if (!emp) throw badRequest(NOT_ACTIVE, 'recipientId');
+  if (!emp) throw badRequest(NOT_ACTIVE, field);
 
   const code = emp.emp_code;
   const email = clean(emp.email).toLowerCase();
@@ -212,10 +213,10 @@ export async function upsertPaceRecipient(recipientId) {
       // A concurrent request created/linked the same employee: look again once.
       if (/** @type {any} */ (e)?.code === 11000) {
         if (attempt === 0) continue;
-        throw conflict(`Another Gatebook account already uses ${email}. Ask an admin to fix it.`, 'recipientId');
+        throw conflict(`Another Gatebook account already uses ${email}. Ask an admin to fix it.`, field);
       }
       throw e;
     }
   }
-  throw badRequest(NOT_ACTIVE, 'recipientId');
+  throw badRequest(NOT_ACTIVE, field);
 }

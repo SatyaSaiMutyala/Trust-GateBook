@@ -40,3 +40,28 @@ export const useMailUi = () => required(useContext(MailUiContext), 'useMailUi');
  */
 export const NotificationsContext = createContext(null);
 export const useNotifications = () => required(useContext(NotificationsContext), 'useNotifications');
+
+/**
+ * My visitors (the signed-in user as host): { waiting: number | null, refresh() }, from the `counts` of
+ * `GET /api/visits/mine?scope=waiting&limit=1`. `null` until loaded or when the user can't receive visitors.
+ */
+export const MyVisitorsContext = createContext(null);
+export const useMyVisitors = () => required(useContext(MyVisitorsContext), 'useMyVisitors');
+
+/**
+ * Expected visitors & deliveries: { today: number | null, refresh(), openNew(kind), openEdit(entry),
+ * checkInFrom(entry) }. `today` = still expected today (scoped to me unless I'm a gate user).
+ */
+export const ExpectedContext = createContext(null);
+export const useExpected = () => required(useContext(ExpectedContext), 'useExpected');
+
+export const MaterialUiContext = createContext(null);
+export const useMaterialUi = () => required(useContext(MaterialUiContext), 'useMaterialUi');
+
+/** The gate this device works at: { site ('' = one gate / not a gate user), sites, multi, setSite }. */
+export const SiteContext = createContext(null);
+export const useSite = () => required(useContext(SiteContext), 'useSite');
+
+/** TRACK for this gate: { data, error, refresh, quiet(id), isQuiet(id), sound, setSound }. */
+export const TrackContext = createContext(null);
+export const useTrack = () => required(useContext(TrackContext), 'useTrack');

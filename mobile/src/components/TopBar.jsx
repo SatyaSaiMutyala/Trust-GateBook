@@ -1,7 +1,8 @@
 import React from 'react';
-import { ActivityIndicator, Image, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fonts, MIN_TOUCH, radius, useTheme } from '../theme';
+import { BrandMark } from './BrandMark';
 import { NotificationBell } from './NotificationBell';
 import {
   ScaledSheet,
@@ -15,7 +16,14 @@ import {
  * (`right`, e.g. Export). Screens provide title / subtitle / actions through navigation options —
  * see RootNavigator.
  */
-export function TopBar({ onBack, title, subtitle, right, showBell = false }) {
+export function TopBar({
+  onBack,
+  title,
+  subtitle,
+  right,
+  showBell = false,
+  logoUrl = null,
+}) {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
   return (
@@ -39,14 +47,8 @@ export function TopBar({ onBack, title, subtitle, right, showBell = false }) {
           <Text style={[styles.backText, { color: c.railInk }]}>‹</Text>
         </Pressable>
       ) : (
-        // Gatebook logo on a small white tile (its teal would disappear on the dark bar).
-        <View style={styles.mark} accessibilityLabel="Gatebook">
-          <Image
-            source={require('../assets/logo.png')}
-            style={styles.markImage}
-            resizeMode="contain"
-          />
-        </View>
+        // Company logo (Settings → Company) or the Gatebook mark, on a small white tile.
+        <BrandMark size={28} logoUrl={logoUrl} />
       )}
       <View style={styles.titles}>
         <Text
@@ -163,15 +165,6 @@ const styles = ScaledSheet.create({
     fontSize: '26@ms',
     lineHeight: '28@ms',
   },
-  mark: {
-    width: '28@ms',
-    height: '28@ms',
-    borderRadius: '7@ms',
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  markImage: { width: '23@ms', height: '23@ms' },
   titles: { flex: 1, minWidth: 0 },
   title: {
     includeFontPadding: false,

@@ -2,7 +2,10 @@ import React, { memo } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { radius, typo, useTheme } from '../theme';
 import { fmtDuration, fmtShortDate, fmtTime } from '../utils/format';
+import { hostStage } from '../utils/visit';
 import { Button } from './Button';
+import { HostActions } from './HostActions';
+import { HostStageChip } from './HostStageChip';
 import { PassBadge } from './PassBadge';
 import { StatusChip } from './StatusChip';
 import { Thumb } from './Thumb';
@@ -26,6 +29,7 @@ function VisitorCardInner({
 }) {
   const { c } = useTheme();
   const state = visitState(v, now, overstayHours);
+  const stage = hostStage(v);
   const over = state === 'overstay';
   const meeting = `${v.purpose} · ${v.host}${v.dept ? ` (${v.dept})` : ''}`;
   const duration = fmtDuration(v.inAt, v.outAt, now);
@@ -80,6 +84,16 @@ function VisitorCardInner({
             ) : null}
           </View>
         ) : null}
+        {stage ? (
+          <View style={styles.logRow}>
+            <HostStageChip stage={stage} />
+          </View>
+        ) : null}
+        {!logMode && onExit && stage ? (
+          <View style={styles.hostRow}>
+            <HostActions visit={v} />
+          </View>
+        ) : null}
       </View>
       <View style={styles.right}>
         <View
@@ -127,6 +141,12 @@ const styles = ScaledSheet.create({
     alignItems: 'center',
     gap: '8@ms',
     marginTop: '4@vs',
+  },
+  hostRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: '6@ms',
+    marginTop: '6@vs',
   },
   right: { alignItems: 'flex-end', gap: '8@ms' },
   duration: {

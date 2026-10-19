@@ -4,10 +4,16 @@ import { io } from 'socket.io-client';
 import { API_URL } from '../api/config';
 import { selectToken } from '../store/authSlice';
 import {
+  expectedEvent,
+  incidentEvent,
+  keysEvent,
+  opsEvent,
   notificationNewEvent,
   notificationReadEvent,
   mailEvent,
   mailReminderEvent,
+  materialEvent,
+  meUpdatedEvent,
   reconnected,
   settingsEvent,
   visitEvent,
@@ -37,7 +43,14 @@ export function useRealtime() {
     socket.on('mail:created', p => dispatch(mailEvent('created', p.item)));
     socket.on('mail:updated', p => dispatch(mailEvent('updated', p.item)));
     socket.on('mail:reminder', p => dispatch(mailReminderEvent(p.item)));
+    socket.on('expected:changed', p => dispatch(expectedEvent(p.expected)));
     socket.on('settings:updated', p => dispatch(settingsEvent(p.settings)));
+    socket.on('me:updated', p => dispatch(meUpdatedEvent(p.user)));
+    socket.on('material:changed', p => dispatch(materialEvent(p.pass)));
+    socket.on('keys:changed', () => dispatch(keysEvent()));
+    socket.on('patrol:changed', () => dispatch(opsEvent('Patrol')));
+    socket.on('gen:changed', () => dispatch(opsEvent('Gen')));
+    socket.on('incident:changed', p => dispatch(incidentEvent(p.incident)));
     socket.on('notification:new', p => dispatch(notificationNewEvent(p)));
     socket.on('notification:read', p => dispatch(notificationReadEvent(p)));
     return () => {

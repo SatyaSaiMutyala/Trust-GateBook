@@ -4,6 +4,7 @@ import { config } from './config.js';
 import { connectDb } from './db.js';
 import { closeRealtime, initRealtime } from './realtime.js';
 import { bootstrap } from './services/bootstrap.js';
+import { startHostReplySweep } from './services/hostApproval.js';
 import { initPush } from './services/push.js';
 import { assertStorageConfig } from './services/storage.js';
 
@@ -28,6 +29,8 @@ async function main() {
     server.listen(config.port, config.host, () => resolve(undefined));
   });
   console.log(`[http] Gatebook API listening on http://localhost:${config.port} (${config.nodeEnv})`);
+  // Tells security when a host has not answered a waiting visitor in time.
+  const stopHostReplySweep = startHostReplySweep();
 
   let stopping = false;
   /** @param {string} signal */
@@ -37,6 +40,7 @@ async function main() {
     console.log(`[http] ${signal} received, shutting down`);
     setTimeout(() => process.exit(1), 10_000).unref();
     try {
+      stopHostReplySweep();
       await closeRealtime();
       server.closeAllConnections();
       await new Promise((r) => server.close(() => r(undefined)));

@@ -1,5 +1,12 @@
 import AddIcon from '@mui/icons-material/Add';
+import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import BarChartIcon from '@mui/icons-material/BarChart';
+import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
+import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
+import BoltOutlinedIcon from '@mui/icons-material/BoltOutlined';
+import KeyOutlinedIcon from '@mui/icons-material/KeyOutlined';
+import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
+import ReportProblemOutlinedIcon from '@mui/icons-material/ReportProblemOutlined';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import MailOutlineIcon from '@mui/icons-material/EmailOutlined';
 import MarkunreadMailboxOutlinedIcon from '@mui/icons-material/MarkunreadMailboxOutlined';
@@ -21,17 +28,54 @@ import ListItemText from '@mui/material/ListItemText';
 import Stack from '@mui/material/Stack';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
+import RadarIcon from '@mui/icons-material/Radar';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { useUser } from '../auth/context';
-import { isEmployee, isRecipient, ROLE_LABEL } from '../auth/roles';
+import { hasModule, isEmployee, isRecipient, ROLE_LABEL } from '../auth/roles';
 import { useIsDesktop } from '../hooks';
-import { useInside, useMailCounts, useNotifications } from '../state/context';
+import {
+  useExpected,
+  useInside,
+  useMailCounts,
+  useMyVisitors,
+  useNotifications,
+  useSettings,
+  useSite,
+  useTrack,
+} from '../state/context';
+import { PushBanner } from './PushAlerts';
+import { fileUrl } from '../api/client';
 import { fonts, RAIL_WIDTH } from '../theme/tokens';
 import { IssueAlerts, MailNotifier } from './mail/IssueAlerts';
 import { NotificationBell } from './NotificationBell';
+import { HostVisitNotifier, VisitAlerts } from './VisitAlerts';
 
-/** Gatebook logo on a white rounded tile (its teal would disappear on the dark rail). */
-export function LogoTile({ size }) {
+/**
+ * Logo on a white rounded tile (its colours would disappear on the dark rail): the company logo from Settings →
+ * Company when there is one (up to 3× as wide as tall), otherwise the Gatebook mark.
+ */
+export function LogoTile({ size, src }) {
+  if (src) {
+    return (
+      <Box
+        aria-hidden
+        sx={{
+          height: size,
+          maxWidth: size * 3,
+          px: `${Math.round(size * 0.12)}px`,
+          borderRadius: `${Math.round(size * 0.24)}px`,
+          bgcolor: '#fff',
+          display: 'grid',
+          placeItems: 'center',
+          flexShrink: 0,
+        }}
+      >
+        <Box component="img" src={fileUrl(src)} alt="" sx={{ maxWidth: '100%', height: '78%', objectFit: 'contain' }} />
+      </Box>
+    );
+  }
   return (
     <Box
       aria-hidden
@@ -51,9 +95,13 @@ export function LogoTile({ size }) {
 }
 
 function Brand({ compact = false }) {
+  const user = useUser();
+  const { settings } = useSettings();
+  const company = settings?.company;
+  const sub = company?.name || (isEmployee(user) ? 'Host desk' : 'Visitor register');
   return (
     <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 0 }}>
-      <LogoTile size={compact ? 32 : 38} />
+      <LogoTile size={compact ? 32 : 38} src={company?.logoUrl} />
       <Box sx={{ minWidth: 0 }}>
         <Typography
           sx={{
@@ -68,7 +116,9 @@ function Brand({ compact = false }) {
           GATEBOOK
         </Typography>
         {!compact ? (
-          <Typography sx={{ fontSize: 12, color: 'gb.railMuted', mt: 0.25 }}>Visitor register</Typography>
+          <Typography sx={{ fontSize: 12, color: 'gb.railMuted', mt: 0.25 }} noWrap>
+            {sub}
+          </Typography>
         ) : null}
       </Box>
     </Stack>
@@ -153,12 +203,56 @@ function useMailBadge(employee) {
   return { count: counts.lodged, tone: counts.disputed > 0 ? 'warn' : 'ok' };
 }
 
+/** TRACK count for the menu: items to act on; amber when any is urgent. */
+function useTrackBadge() {
+  const { data } = useTrack();
+  if (!data) return { count: null, tone: 'ok' };
+  return { count: data.counts.total, tone: data.counts.urgent ? 'warn' : 'ok' };
+}
+
+/** "This gate" picker (gate users, several gates). `onRail`: light text on the dark rail. */
+function GatePicker({ onRail, compact }) {
+  const { site, sites, multi, setSite } = useSite();
+  if (!multi) return null;
+  return (
+    <TextField
+      select
+      size="small"
+      label={compact ? undefined : 'This gate'}
+      value={site}
+      onChange={(e) => setSite(e.target.value)}
+      slotProps={{ htmlInput: { 'aria-label': 'This gate' } }}
+      sx={
+        onRail
+          ? {
+              '& .MuiInputBase-root': { color: 'gb.railInk', bgcolor: 'rgba(255,255,255,0.06)' },
+              '& .MuiInputLabel-root': { color: 'gb.railMuted' },
+              '& .MuiSvgIcon-root': { color: 'gb.railMuted' },
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.15)' },
+              minWidth: compact ? 130 : undefined,
+            }
+          : undefined
+      }
+      fullWidth={!compact}
+    >
+      {sites.map((s) => (
+        <MenuItem key={s} value={s}>
+          {s}
+        </MenuItem>
+      ))}
+    </TextField>
+  );
+}
+
 function DesktopRail() {
   const user = useUser();
   const employee = isEmployee(user);
   const { count } = useInside();
   const mail = useMailBadge(employee);
+  const track = useTrackBadge();
   const { unreadCount: unread } = useNotifications();
+  const { waiting: myVisitors } = useMyVisitors();
+  const { today: expectedToday } = useExpected();
   return (
     <Drawer
       variant="permanent"
@@ -184,11 +278,28 @@ function DesktopRail() {
       {employee ? (
         <List disablePadding sx={{ display: 'grid', gap: 0.5 }}>
           <RailLink
-            to="/my-post"
-            icon={<MarkunreadMailboxOutlinedIcon />}
-            label="My post"
-            right={<CountBadge count={mail.count} tone="warn" />}
+            to="/my-visitors"
+            icon={<BadgeOutlinedIcon />}
+            label="My visitors"
+            right={<CountBadge count={myVisitors} tone="warn" />}
           />
+          {hasModule(user, 'expected') ? (
+            <RailLink to="/expected" icon={<EventAvailableOutlinedIcon />} label="Expected" />
+          ) : null}
+          {hasModule(user, 'material') ? (
+            <RailLink to="/material" icon={<Inventory2OutlinedIcon />} label="Gate passes" />
+          ) : null}
+          {hasModule(user, 'incidents') ? (
+            <RailLink to="/incidents" icon={<ReportProblemOutlinedIcon />} label="Incidents" />
+          ) : null}
+          {hasModule(user, 'post') ? (
+            <RailLink
+              to="/my-post"
+              icon={<MarkunreadMailboxOutlinedIcon />}
+              label="My post"
+              right={<CountBadge count={mail.count} tone="warn" />}
+            />
+          ) : null}
           <RailLink
             to="/notifications"
             icon={<NotificationsNoneOutlinedIcon />}
@@ -199,30 +310,71 @@ function DesktopRail() {
         </List>
       ) : (
         <>
-          <Button
-            component={NavLink}
-            to="/check-in"
-            variant="contained"
-            color="primary"
-            size="large"
-            startIcon={<AddIcon />}
-            fullWidth
-          >
-            Check in
-          </Button>
+          {hasModule(user, 'visitors') ? (
+            <Button
+              component={NavLink}
+              to="/check-in"
+              variant="contained"
+              color="primary"
+              size="large"
+              startIcon={<AddIcon />}
+              fullWidth
+            >
+              Check in
+            </Button>
+          ) : null}
           <RailGroup label="Register" />
           <List disablePadding sx={{ display: 'grid', gap: 0.5 }}>
-            <RailLink to="/inside" icon={<PeopleAltIcon />} label="Inside now" right={<CountBadge count={count} />} />
-            <RailLink
-              to="/post"
-              icon={<MailOutlineIcon />}
-              label="Post room"
-              right={<CountBadge count={mail.count} tone={mail.tone} />}
-            />
-            <RailLink to="/log" icon={<ListAltIcon />} label="Visitor log" />
-            <RailLink to="/overview" icon={<BarChartIcon />} label="Overview" />
+            {hasModule(user, 'track') ? (
+              <RailLink
+                to="/track"
+                icon={<RadarIcon />}
+                label="TRACK"
+                right={<CountBadge count={track.count} tone={track.tone} />}
+              />
+            ) : null}
+            {hasModule(user, 'visitors') ? (
+              <RailLink to="/inside" icon={<PeopleAltIcon />} label="Inside now" right={<CountBadge count={count} />} />
+            ) : null}
+            {hasModule(user, 'post') ? (
+              <RailLink
+                to="/post"
+                icon={<MailOutlineIcon />}
+                label="Post room"
+                right={<CountBadge count={mail.count} tone={mail.tone} />}
+              />
+            ) : null}
+            {hasModule(user, 'expected') ? (
+              <RailLink
+                to="/expected"
+                icon={<EventAvailableOutlinedIcon />}
+                label="Expected"
+                right={<CountBadge count={expectedToday} />}
+              />
+            ) : null}
+            {hasModule(user, 'material') ? (
+              <RailLink to="/material" icon={<Inventory2OutlinedIcon />} label="Material passes" />
+            ) : null}
+            {hasModule(user, 'keys') ? <RailLink to="/keys" icon={<KeyOutlinedIcon />} label="Key register" /> : null}
+            {hasModule(user, 'incidents') ? (
+              <RailLink to="/incidents" icon={<ReportProblemOutlinedIcon />} label="Incidents" />
+            ) : null}
+            {hasModule(user, 'patrol') ? <RailLink to="/patrol" icon={<ShieldOutlinedIcon />} label="Patrols" /> : null}
+            {hasModule(user, 'gen') ? <RailLink to="/generator" icon={<BoltOutlinedIcon />} label="Generator" /> : null}
+            {hasModule(user, 'visitors') ? <RailLink to="/log" icon={<ListAltIcon />} label="Visitor log" /> : null}
+            {hasModule(user, 'track') ? <RailLink to="/overview" icon={<BarChartIcon />} label="Overview" /> : null}
             {isRecipient(user) ? (
-              <RailLink to="/my-post" icon={<MarkunreadMailboxOutlinedIcon />} label="My post" />
+              <>
+                <RailLink
+                  to="/my-visitors"
+                  icon={<BadgeOutlinedIcon />}
+                  label="My visitors"
+                  right={<CountBadge count={myVisitors} tone="warn" />}
+                />
+                {hasModule(user, 'post') ? (
+                  <RailLink to="/my-post" icon={<MarkunreadMailboxOutlinedIcon />} label="My post" />
+                ) : null}
+              </>
             ) : null}
             <RailLink
               to="/notifications"
@@ -238,6 +390,9 @@ function DesktopRail() {
         </>
       )}
       <Box sx={{ flex: 1 }} />
+      <Box sx={{ px: 0.5, pb: 1.5 }}>
+        <GatePicker onRail />
+      </Box>
       <Box sx={{ px: 0.5, pb: 1 }}>
         <Typography sx={{ fontSize: 13, color: 'gb.railMuted' }}>
           Signed in as{' '}
@@ -251,15 +406,20 @@ function DesktopRail() {
   );
 }
 
+/** Phone tabs; `module` hides a tab the person has no access to. */
 const GATE_TABS = [
-  { value: '/inside', label: 'Inside now', icon: <PeopleAltIcon /> },
-  { value: '/post', label: 'Post', icon: <MailOutlineIcon /> },
-  { value: '/check-in', label: 'Check in', icon: <AddIcon />, raised: true },
-  { value: '/log', label: 'Log', icon: <ListAltIcon /> },
+  { value: '/track', label: 'TRACK', icon: <RadarIcon />, module: 'track' },
+  { value: '/inside', label: 'Inside now', icon: <PeopleAltIcon />, module: 'visitors' },
+  { value: '/check-in', label: 'Check in', icon: <AddIcon />, raised: true, module: 'visitors' },
+  { value: '/post', label: 'Post', icon: <MailOutlineIcon />, module: 'post' },
+  { value: '/log', label: 'Log', icon: <ListAltIcon />, module: 'visitors' },
   { value: '/settings', label: 'Account', icon: <PersonOutlineIcon /> },
 ];
 const EMPLOYEE_TABS = [
-  { value: '/my-post', label: 'My post', icon: <MarkunreadMailboxOutlinedIcon /> },
+  { value: '/my-visitors', label: 'Visitors', icon: <BadgeOutlinedIcon /> },
+  { value: '/expected', label: 'Expected', icon: <EventAvailableOutlinedIcon />, module: 'expected' },
+  { value: '/my-post', label: 'My post', icon: <MarkunreadMailboxOutlinedIcon />, module: 'post' },
+  { value: '/material', label: 'Gate passes', icon: <Inventory2OutlinedIcon />, module: 'material' },
   { value: '/settings', label: 'Account', icon: <PersonOutlineIcon /> },
 ];
 
@@ -287,12 +447,20 @@ function PhoneChrome() {
   const employee = isEmployee(user);
   const { count } = useInside();
   const mail = useMailBadge(employee);
+  const track = useTrackBadge();
+  const { waiting: myVisitors } = useMyVisitors();
+  const { today: expectedToday } = useExpected();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const tabs = employee ? EMPLOYEE_TABS : GATE_TABS;
+  const tabs = (employee ? EMPLOYEE_TABS : GATE_TABS).filter(
+    (t) => !t.module || hasModule(user, /** @type {any} */ (t.module)),
+  );
   const current = tabs.find((t) => pathname === t.value || pathname.startsWith(`${t.value}/`))?.value ?? false;
   const badgeFor = (t) => {
+    if (t.value === '/track') return track;
     if (t.value === '/inside') return { count, tone: 'ok' };
+    if (t.value === '/expected') return { count: expectedToday, tone: 'ok' };
+    if (t.value === '/my-visitors') return { count: myVisitors, tone: 'warn' };
     if (t.value === '/post' || t.value === '/my-post') return mail;
     return null;
   };
@@ -301,7 +469,10 @@ function PhoneChrome() {
       <AppBar position="sticky" elevation={0} sx={{ bgcolor: 'gb.rail', color: 'gb.railInk', backgroundImage: 'none' }}>
         <Toolbar sx={{ gap: 1.5, justifyContent: 'space-between', minHeight: 60, px: 2 }}>
           <Brand compact />
-          <NotificationBell onRail />
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+            <GatePicker onRail compact />
+            <NotificationBell onRail />
+          </Stack>
         </Toolbar>
       </AppBar>
       <Box
@@ -404,8 +575,11 @@ export function AppShell() {
               <NotificationBell />
             </Stack>
           ) : null}
-          {!employee ? <IssueAlerts /> : null}
+          <PushBanner />
+          {!employee && hasModule(user, 'visitors') ? <VisitAlerts /> : null}
+          {!employee && hasModule(user, 'post') ? <IssueAlerts /> : null}
           {isRecipient(user) ? <MailNotifier /> : null}
+          {isRecipient(user) ? <HostVisitNotifier /> : null}
           <Outlet />
         </Box>
       </Box>

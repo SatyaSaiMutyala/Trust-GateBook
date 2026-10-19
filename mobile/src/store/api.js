@@ -4,6 +4,7 @@ import { cleanParams } from '../api/query';
 import { DEFAULT_PAGE_SIZE } from '../types';
 import { loggedOut, userUpdated } from './authSlice';
 import { settingsReceived } from './settingsSlice';
+import { selectSite } from './siteSlice';
 
 /** Every tag type. Socket events and mutations invalidate these. */
 export const TAGS = [
@@ -18,6 +19,14 @@ export const TAGS = [
   'Me',
   'Notifications',
   'UnreadCount',
+  'MyVisitors',
+  'Expected',
+  'Material',
+  'Keys',
+  'Incidents',
+  'Patrol',
+  'Gen',
+  'Track',
 ];
 
 const rawBaseQuery = fetchBaseQuery({
@@ -37,8 +46,54 @@ const rawBaseQuery = fetchBaseQuery({
 /** Endpoints whose 401 means "wrong password", not "session expired". */
 const PASSWORD_CHECK_ENDPOINTS = new Set(['deleteMe']);
 
+/** Gate-desk lists that follow the gate this phone works at. */
+const GATE_LISTS = new Set([
+  '/api/track',
+  '/api/visits/inside',
+  '/api/stats/overview',
+  '/api/mail',
+  '/api/material',
+  '/api/keys',
+  '/api/keymoves',
+  '/api/incidents',
+  '/api/patrol',
+  '/api/patrol/log',
+  '/api/gen',
+]);
+/** New records stamped with the gate. */
+const GATE_FORMS = new Set(['/api/visits', '/api/mail', '/api/material']);
+
+/**
+ * Adds the gate (several gates only) to gate-desk lists and to new visits / post / material. Explicit `site`
+ * params win; "My post" (`recipient`) is never filtered.
+ */
+export function withSite(args, site) {
+  if (!site) return args;
+  const a = typeof args === 'string' ? { url: args } : args;
+  const [path] = String(a.url).split('?');
+  const method = (a.method ?? 'GET').toUpperCase();
+  if (method === 'GET' && GATE_LISTS.has(path)) {
+    const params = a.params ?? {};
+    if (params.site !== undefined || params.recipient !== undefined) return a;
+    return { ...a, params: { ...params, site } };
+  }
+  if (method === 'POST' && GATE_FORMS.has(path) && a.body instanceof FormData) {
+    // React Native's FormData keeps `_parts`; the standard one has `has()`.
+    const has =
+      typeof a.body.has === 'function'
+        ? a.body.has('site')
+        : (a.body._parts ?? []).some(([k]) => k === 'site');
+    if (!has) a.body.append('site', site);
+  }
+  return a;
+}
+
 export const baseQuery = async (args, apiCtx, extra) => {
-  const result = await rawBaseQuery(args, apiCtx, extra);
+  const result = await rawBaseQuery(
+    withSite(args, selectSite(apiCtx.getState())),
+    apiCtx,
+    extra,
+  );
   if (!result.error) return result;
   const { status, data } = result.error;
   if (status === 'FETCH_ERROR' || status === 'TIMEOUT_ERROR') {
@@ -76,6 +131,8 @@ export const baseQuery = async (args, apiCtx, extra) => {
       message: body?.message ?? `Request failed (${status}).`,
       field: body?.field,
       item: body?.item,
+      // Host-approval conflicts carry the current visit (e.g. security already confirmed by phone).
+      visit: body?.visit,
     },
   };
 };
@@ -161,6 +218,11 @@ export const api = createApi({
         signup: !!res?.features?.signup,
         accountDeletion: !!res?.features?.accountDeletion,
       }),
+    }),
+    /** Public: company name + logo for the sign-in screen → `{ name, logoUrl }`. */
+    getBrand: build.query({
+      query: () => '/api/brand',
+      keepUnusedDataFor: 600,
     }),
     /** Public: `{ name, email, phone, password, dept? }` → `{ message }` (creates a pending account). */
     signup: build.mutation({
@@ -287,6 +349,18 @@ export const api = createApi({
       }),
       invalidatesTags: ['Users', 'Hosts'],
     }),
+    /** Everyone, minimal (admin): org chart, reports-to pickers. */
+    orgUsers: build.query({
+      query: () => '/api/users/org',
+      transformResponse: res => res?.users ?? [],
+      providesTags: ['Users'],
+    }),
+    /** The module registry for the person editor (admin). */
+    moduleDefs: build.query({
+      query: () => '/api/users/modules',
+      transformResponse: res => res?.modules ?? [],
+      keepUnusedDataFor: 600,
+    }),
     listHosts: build.infiniteQuery({
       query: listQuery('/api/hosts'),
       infiniteQueryOptions: pages,
@@ -368,13 +442,18 @@ export const api = createApi({
             company: input.company,
             persons: input.persons,
             purpose: input.purpose,
-            host: input.host,
+            // A picked employee is asked to accept in the app; a typed name is confirmed by phone.
+            ...(input.hostId ? { hostId: input.hostId } : { host: input.host }),
             dept: input.dept,
             idType: input.idType,
             idLast4: input.idLast4,
             vehicle: input.vehicle,
             items: input.items,
             notes: input.notes,
+            // Filled from a pre-registration: marks it arrived and may pre-approve the host.
+            expectedId: input.expectedId,
+            // Only sent when Settings → Terms requires agreement.
+            termsAccepted: input.termsAccepted,
           },
           [
             ['photo', input.photoUri, 'photo.jpg'],
@@ -382,7 +461,83 @@ export const api = createApi({
           ],
         ),
       }),
-      invalidatesTags: ['Visit', 'Inside', 'Stats'],
+      invalidatesTags: ['Visit', 'Inside', 'Stats', 'MyVisitors', 'Expected'],
+    }),
+    /**
+     * Gate alert rows: open visits security must act on now (host accepted / declined / no reply / not on
+     * Gatebook) — `/api/visits/inside?attention=true&limit=5` → `{ data, total }`.
+     */
+    attention: build.query({
+      query: () => ({
+        url: '/api/visits/inside',
+        params: { attention: 'true', limit: 5, page: 1 },
+      }),
+      transformResponse: res => ({
+        data: res?.data ?? [],
+        total: res?.pagination?.total ?? 0,
+      }),
+      providesTags: ['Inside'],
+    }),
+    /** Security lets the visitor in: after the host accepted, or `viaPhone` when confirmed by phone. */
+    allowVisit: build.mutation({
+      query: ({ id, viaPhone }) => ({
+        url: `/api/visits/${encodeURIComponent(id)}/allow`,
+        method: 'POST',
+        body: viaPhone ? { viaPhone: true } : {},
+      }),
+      // A conflict carries the current visit in error.visit, so refresh either way.
+      invalidatesTags: (_r, _e, { id }) => [
+        { type: 'Visit', id },
+        'Visit',
+        'Inside',
+        'Stats',
+        'MyVisitors',
+      ],
+    }),
+    /** My own visitors (as host). Query: scope (all | waiting | current | earlier). Response adds `counts`. */
+    myVisits: build.infiniteQuery({
+      query: listQuery('/api/visits/mine'),
+      infiniteQueryOptions: pages,
+      providesTags: ['MyVisitors'],
+    }),
+    /** Tab badge: how many of my visitors are waiting for my answer. */
+    myWaitingCount: build.query({
+      query: () => ({
+        url: '/api/visits/mine',
+        params: { scope: 'waiting', limit: 1, page: 1 },
+      }),
+      transformResponse: res => res?.counts?.waiting ?? 0,
+      providesTags: ['MyVisitors'],
+    }),
+    /** One of my own visitors (hosts can't read the gate register). */
+    getMyVisit: build.query({
+      query: id => `/api/visits/mine/${encodeURIComponent(id)}`,
+      transformResponse: res => res.visit,
+      providesTags: (_r, _e, id) => [{ type: 'Visit', id }],
+    }),
+    /** The host accepts or declines: `{ id, status: 'accepted' | 'declined', note? }`. */
+    respondVisit: build.mutation({
+      query: ({ id, ...body }) => ({
+        url: `/api/visits/${encodeURIComponent(id)}/respond`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (_r, _e, { id }) => [
+        { type: 'Visit', id },
+        'MyVisitors',
+        'Inside',
+        'Stats',
+      ],
+    }),
+    /** (Re)create the agreement PDF of a visit that accepted the terms → the visit. */
+    makeAgreement: build.mutation({
+      query: id => ({
+        url: `/api/visits/${encodeURIComponent(id)}/agreement`,
+        method: 'POST',
+        body: {},
+      }),
+      transformResponse: res => res.visit,
+      invalidatesTags: (_r, _e, id) => [{ type: 'Visit', id }, 'Visit'],
     }),
     exitVisit: build.mutation({
       query: ({ id, ...body }) => ({
@@ -396,6 +551,318 @@ export const api = createApi({
         'Inside',
         'Stats',
       ],
+    }),
+
+    // ---------------- expected visitors & deliveries ----------------
+    /** Query: when (all | today | upcoming | earlier), kind, q. Response adds `counts.today`. */
+    listExpected: build.infiniteQuery({
+      query: ({ queryArg, pageParam }) => ({
+        url: '/api/expected',
+        params: cleanParams({
+          limit: DEFAULT_PAGE_SIZE,
+          tzOffset: new Date().getTimezoneOffset(),
+          ...queryArg,
+          page: pageParam,
+        }),
+      }),
+      infiniteQueryOptions: pages,
+      providesTags: ['Expected'],
+    }),
+    /** Nav badge: entries still expected today (gate: everyone's; others: their own). */
+    expectedTodayCount: build.query({
+      query: () => ({
+        url: '/api/expected',
+        params: {
+          when: 'today',
+          limit: 1,
+          page: 1,
+          tzOffset: new Date().getTimezoneOffset(),
+        },
+      }),
+      transformResponse: res => res?.counts?.today ?? 0,
+      providesTags: ['Expected'],
+    }),
+    /** Gate: an open pre-registration for this mobile number today, or null. */
+    expectedMatch: build.query({
+      query: phone => ({ url: '/api/expected/match', params: { phone } }),
+      transformResponse: res => res?.expected ?? null,
+      providesTags: ['Expected'],
+    }),
+    getExpected: build.query({
+      query: id => `/api/expected/${encodeURIComponent(id)}`,
+      transformResponse: res => res.expected,
+      providesTags: (_r, _e, id) => [{ type: 'Expected', id }],
+    }),
+    createExpected: build.mutation({
+      query: body => ({ url: '/api/expected', method: 'POST', body }),
+      transformResponse: res => res.expected,
+      invalidatesTags: ['Expected', 'Stats'],
+    }),
+    updateExpected: build.mutation({
+      query: ({ id, ...body }) => ({
+        url: `/api/expected/${encodeURIComponent(id)}`,
+        method: 'PATCH',
+        body,
+      }),
+      transformResponse: res => res.expected,
+      invalidatesTags: ['Expected', 'Stats'],
+    }),
+    cancelExpected: build.mutation({
+      query: id => ({
+        url: `/api/expected/${encodeURIComponent(id)}/cancel`,
+        method: 'POST',
+        body: {},
+      }),
+      transformResponse: res => res.expected,
+      invalidatesTags: ['Expected', 'Stats'],
+    }),
+    /** Security: an expected delivery has come in. */
+    receivedExpected: build.mutation({
+      query: id => ({
+        url: `/api/expected/${encodeURIComponent(id)}/received`,
+        method: 'POST',
+        body: {},
+      }),
+      transformResponse: res => res.expected,
+      invalidatesTags: ['Expected', 'Stats'],
+    }),
+
+    // ---------------- material gate passes ----------------
+    /**
+     * Gate: tab today | accept | gate | open | overdue | all (+ days); employees: tab todo | sent | in | all.
+     * Both: dir, visitId, q. Response adds `counts`.
+     */
+    listMaterial: build.infiniteQuery({
+      query: ({ queryArg, pageParam }) => ({
+        url: '/api/material',
+        params: cleanParams({
+          limit: DEFAULT_PAGE_SIZE,
+          tzOffset: new Date().getTimezoneOffset(),
+          ...queryArg,
+          page: pageParam,
+        }),
+      }),
+      infiniteQueryOptions: pages,
+      providesTags: ['Material'],
+    }),
+    /** Counts only: `{ counts }` for the tabs / badges. */
+    materialCounts: build.query({
+      query: tab => ({
+        url: '/api/material',
+        params: {
+          tab,
+          limit: 1,
+          page: 1,
+          tzOffset: new Date().getTimezoneOffset(),
+        },
+      }),
+      transformResponse: res => res?.counts ?? {},
+      providesTags: ['Material'],
+    }),
+    materialVisitors: build.query({
+      query: () => '/api/material/visitors',
+      transformResponse: res => res?.data ?? [],
+      keepUnusedDataFor: 0,
+    }),
+    getMaterial: build.query({
+      query: id => `/api/material/${encodeURIComponent(id)}`,
+      transformResponse: res => res.pass,
+      providesTags: (_r, _e, id) => [{ type: 'Material', id }],
+    }),
+    /** Multipart: fields + challan[] / boxPhoto[] / carrier (local URIs). */
+    createMaterial: build.mutation({
+      query: ({ fields, challan = [], boxPhotos = [], carrier = null }) => ({
+        url: '/api/material',
+        method: 'POST',
+        body: multipart(fields, [
+          ...challan.map((u, i) => ['challan', u, `challan-${i}.jpg`]),
+          ...boxPhotos.map((u, i) => ['boxPhoto', u, `boxes-${i}.jpg`]),
+          ['carrier', carrier, 'carrier.jpg'],
+        ]),
+      }),
+      transformResponse: res => res.pass,
+      invalidatesTags: ['Material', 'Expected'],
+    }),
+    materialAction: build.mutation({
+      /** `{ id, action: receipt | decision | drop | cancel | remind, body }` */
+      query: ({ id, action, body = {} }) => ({
+        url: `/api/material/${encodeURIComponent(id)}/${action}`,
+        method: 'POST',
+        body,
+      }),
+      transformResponse: res => res.pass ?? null,
+      invalidatesTags: (_r, _e, { id }) => [
+        { type: 'Material', id },
+        'Material',
+      ],
+    }),
+    /** Multipart release / return: `{ id, action, fields, photo }` */
+    materialUpload: build.mutation({
+      query: ({ id, action, fields, photo = null }) => ({
+        url: `/api/material/${encodeURIComponent(id)}/${action}`,
+        method: 'POST',
+        body: multipart(fields, [
+          [action === 'return' ? 'returnPhoto' : 'carrier', photo, 'photo.jpg'],
+        ]),
+      }),
+      transformResponse: res => res.pass,
+      invalidatesTags: (_r, _e, { id }) => [
+        { type: 'Material', id },
+        'Material',
+      ],
+    }),
+
+    // ---------------- key register ----------------
+    /** The key board: `{ keys (each with `out`), counts { total, out, available, overdue } }`. */
+    keyBoard: build.query({
+      query: () => '/api/keys',
+      providesTags: ['Keys'],
+    }),
+    /** Key diary: period today | 7d | 30d | 90d, state all | out | overdue | returned, q. Adds `counts`. */
+    keyDiary: build.infiniteQuery({
+      query: ({ queryArg, pageParam }) => ({
+        url: '/api/keymoves',
+        params: cleanParams({
+          limit: DEFAULT_PAGE_SIZE,
+          tzOffset: new Date().getTimezoneOffset(),
+          ...queryArg,
+          page: pageParam,
+        }),
+      }),
+      infiniteQueryOptions: pages,
+      providesTags: ['Keys'],
+    }),
+    /** `{ id, body: { takerId?, takerName, takerPhone, purpose, dueAt? } }` → `{ move, key }` */
+    issueKey: build.mutation({
+      query: ({ id, body }) => ({
+        url: `/api/keys/${encodeURIComponent(id)}/issue`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Keys', 'Stats'],
+    }),
+    /** `{ moveId, body: { returnedByName, note } }` → `{ move, key }` */
+    returnKey: build.mutation({
+      query: ({ moveId, body }) => ({
+        url: `/api/keymoves/${encodeURIComponent(moveId)}/return`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Keys', 'Stats'],
+    }),
+
+    // ---------------- incidents ----------------
+    /** tab open | closed | all, severity, q. Adds `counts { open, closed, critical }`. */
+    listIncidents: build.infiniteQuery({
+      query: listQuery('/api/incidents'),
+      infiniteQueryOptions: pages,
+      providesTags: ['Incidents'],
+    }),
+    getIncident: build.query({
+      query: id => `/api/incidents/${encodeURIComponent(id)}`,
+      transformResponse: res => res.incident,
+      providesTags: (_r, _e, id) => [{ type: 'Incidents', id }],
+    }),
+    /** People an incident can be given to (security / admin). */
+    incidentAssignees: build.query({
+      query: () => '/api/incidents/assignees',
+      transformResponse: res => res?.data ?? [],
+    }),
+    /** Multipart: fields + photos (local URIs, ≤ 3). */
+    reportIncident: build.mutation({
+      query: ({ fields, photos = [] }) => ({
+        url: '/api/incidents',
+        method: 'POST',
+        body: multipart(
+          fields,
+          photos.map((u, i) => ['photos', u, `incident-${i}.jpg`]),
+        ),
+      }),
+      transformResponse: res => res.incident,
+      invalidatesTags: ['Incidents', 'Stats'],
+    }),
+    /** `{ id, action: update | close | reopen, body }` */
+    incidentAction: build.mutation({
+      query: ({ id, action, body = {} }) => ({
+        url: `/api/incidents/${encodeURIComponent(id)}/${action}`,
+        method: 'POST',
+        body,
+      }),
+      transformResponse: res => res.incident,
+      invalidatesTags: (_r, _e, { id }) => [
+        { type: 'Incidents', id },
+        'Incidents',
+        'Stats',
+      ],
+    }),
+
+    // ---------------- TRACK ----------------
+    /** `{ items, counts { total, urgent, byCat }, cats, expectedSoon, materialInProgress }` for this gate. */
+    track: build.query({
+      query: () => '/api/track',
+      providesTags: ['Track'],
+    }),
+
+    // ---------------- patrols ----------------
+    /** `{ checkpoints, rounds, slots (12 h back … 12 h ahead), now }` */
+    patrolBoard: build.query({
+      query: () => '/api/patrol',
+      providesTags: ['Patrol'],
+    }),
+    /** Late & missed log `{ data, summary }`: days 1 | 7 | 30 | 90, filter problems | all. */
+    patrolLog: build.query({
+      query: params => ({ url: '/api/patrol/log', params }),
+      providesTags: ['Patrol'],
+    }),
+    patrolScans: build.infiniteQuery({
+      query: listQuery('/api/patrol/scans'),
+      infiniteQueryOptions: pages,
+      providesTags: ['Patrol'],
+    }),
+    patrolLookup: build.query({
+      query: code => ({ url: '/api/patrol/lookup', params: { code } }),
+      keepUnusedDataFor: 0,
+    }),
+    /** Multipart `{ fields: { code, status, note, manual }, photo }` → `{ scan, checkpoint, slot, round, done, total, missing }` */
+    patrolScan: build.mutation({
+      query: ({ fields, photo = null }) => ({
+        url: '/api/patrol/scan',
+        method: 'POST',
+        body: multipart(fields, [['scanPhoto', photo, 'scan.jpg']]),
+      }),
+      invalidatesTags: ['Patrol', 'Stats'],
+    }),
+
+    // ---------------- generator & diesel ----------------
+    genStatus: build.query({
+      query: () => '/api/gen',
+      providesTags: ['Gen'],
+    }),
+    genRuns: build.infiniteQuery({
+      query: listQuery('/api/gen/runs'),
+      infiniteQueryOptions: pages,
+      providesTags: ['Gen'],
+    }),
+    /** `{ id, action: 'start', body }` or `{ runId, action: 'stop', body }` */
+    genRun: build.mutation({
+      query: ({ id, runId, action, body = {} }) => ({
+        url:
+          action === 'stop'
+            ? `/api/gen/runs/${encodeURIComponent(runId)}/stop`
+            : `/api/gen/${encodeURIComponent(id)}/start`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Gen', 'Stats'],
+    }),
+    /** Multipart diesel fill / level check: `{ id, fields, photo }` */
+    genFuel: build.mutation({
+      query: ({ id, fields, photo = null }) => ({
+        url: `/api/gen/${encodeURIComponent(id)}/fuel`,
+        method: 'POST',
+        body: multipart(fields, [['genPhoto', photo, 'gen.jpg']]),
+      }),
+      invalidatesTags: ['Gen', 'Stats'],
     }),
 
     // ---------------- stats ----------------
@@ -492,6 +959,7 @@ export const api = createApi({
 export const {
   useLoginMutation,
   useGetConfigQuery,
+  useGetBrandQuery,
   useSignupMutation,
   useDeleteMeMutation,
   useApproveUserMutation,
@@ -508,6 +976,8 @@ export const {
   useCreateUserMutation,
   useUpdateUserMutation,
   useListHostsInfiniteQuery,
+  useOrgUsersQuery,
+  useModuleDefsQuery,
   useGetSettingsQuery,
   usePutSettingsMutation,
   useListVisitsInfiniteQuery,
@@ -517,7 +987,48 @@ export const {
   useBadgeCheckQuery,
   useGetVisitQuery,
   useCheckInMutation,
+  useAttentionQuery,
+  useAllowVisitMutation,
+  useMyVisitsInfiniteQuery,
+  useMyWaitingCountQuery,
+  useGetMyVisitQuery,
+  useRespondVisitMutation,
   useExitVisitMutation,
+  useMakeAgreementMutation,
+  useListMaterialInfiniteQuery,
+  useMaterialCountsQuery,
+  useMaterialVisitorsQuery,
+  useGetMaterialQuery,
+  useCreateMaterialMutation,
+  useMaterialActionMutation,
+  useMaterialUploadMutation,
+  useKeyBoardQuery,
+  useKeyDiaryInfiniteQuery,
+  useIssueKeyMutation,
+  useReturnKeyMutation,
+  useListIncidentsInfiniteQuery,
+  useGetIncidentQuery,
+  useIncidentAssigneesQuery,
+  useReportIncidentMutation,
+  useIncidentActionMutation,
+  useTrackQuery,
+  usePatrolBoardQuery,
+  usePatrolLogQuery,
+  usePatrolScansInfiniteQuery,
+  useLazyPatrolLookupQuery,
+  usePatrolScanMutation,
+  useGenStatusQuery,
+  useGenRunsInfiniteQuery,
+  useGenRunMutation,
+  useGenFuelMutation,
+  useListExpectedInfiniteQuery,
+  useExpectedTodayCountQuery,
+  useExpectedMatchQuery,
+  useGetExpectedQuery,
+  useCreateExpectedMutation,
+  useUpdateExpectedMutation,
+  useCancelExpectedMutation,
+  useReceivedExpectedMutation,
   useOverviewQuery,
   useListMailInfiniteQuery,
   useMailCountsQuery,

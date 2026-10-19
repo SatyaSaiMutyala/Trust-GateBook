@@ -9,7 +9,9 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useState } from 'react';
 import { errorMessage } from '../api/client';
-import { visitsApi } from '../api/endpoints';
+import { materialApi, visitsApi } from '../api/endpoints';
+import { useLocalEmit } from '../realtime/context';
+import { ExitMaterial } from './material/VisitMaterial';
 import { useToast } from '../state/context';
 import { fmtDuration, fmtTime, toLocalInput } from '../utils/format';
 import { PassBadge, VisitorThumb } from './bits';
@@ -33,6 +35,7 @@ const QUICK = [
 ];
 function ExitForm({ visit, onClose, onDone }) {
   const toast = useToast();
+  const emit = useLocalEmit();
   const correcting = !!visit.outAt;
   // `null` = "now" (let the server stamp it); otherwise the datetime-local value.
   const [custom, setCustom] = useState(() => (visit.outAt ? toLocalInput(visit.outAt) : null));
@@ -42,6 +45,9 @@ function ExitForm({ visit, onClose, onDone }) {
   const [openedAt] = useState(() => minutesAgoInput(0));
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  // Material OUT going with the visitor: counted here, released after the exit.
+  const [counts, setCounts] = useState({});
+  const [readyPasses, setReadyPasses] = useState([]);
   const pickQuick = (minutes) => {
     setQuick(minutes);
     setCustom(minutes === 0 ? null : minutesAgoInput(minutes));
@@ -71,6 +77,15 @@ function ExitForm({ visit, onClose, onDone }) {
       }
       outAtIso = new Date(t).toISOString();
     }
+    if (!correcting) {
+      const wrong = readyPasses.find((p) => Number(counts[p.id]) !== p.boxes);
+      if (wrong) {
+        setError(
+          `Count the boxes for ${wrong.id}: the pass says ${wrong.boxes} boxes, you counted ${counts[wrong.id] || 0}.`,
+        );
+        return;
+      }
+    }
     setBusy(true);
     try {
       const updated = await visitsApi.exit(visit.id, {
@@ -82,6 +97,15 @@ function ExitForm({ visit, onClose, onDone }) {
         ? [`Exit time corrected · ${updated.name}`]
         : [`${updated.name} checked out`, fmtDuration(updated.inAt, updated.outAt)];
       if (updated.badge && updated.passReturned === false) parts.push('pass not returned');
+      for (const p of correcting ? [] : readyPasses) {
+        try {
+          const released = await materialApi.release(p.id, { boxes: p.boxes });
+          emit('material:changed', { pass: released });
+          parts.push(`${p.boxes} box${p.boxes === 1 ? '' : 'es'} released`);
+        } catch (err) {
+          parts.push(`${p.id} not released: ${errorMessage(err)}`);
+        }
+      }
       toast(parts.join(' · '));
       onDone(updated);
     } catch (err) {
@@ -145,6 +169,9 @@ function ExitForm({ visit, onClose, onDone }) {
               </span>
             }
           />
+        ) : null}
+        {!correcting ? (
+          <ExitMaterial visit={visit} counts={counts} setCounts={setCounts} onPasses={setReadyPasses} />
         ) : null}
         <TextField
           label="Exit remarks"

@@ -5,11 +5,13 @@ import drafts from './draftsSlice';
 import { listenerMiddleware } from './listeners';
 import push from './pushSlice';
 import settings from './settingsSlice';
+import site from './siteSlice';
 import ui from './uiSlice';
 
 export const rootReducer = combineReducers({
   auth,
   settings,
+  site,
   ui,
   drafts,
   push,

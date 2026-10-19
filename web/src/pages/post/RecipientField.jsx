@@ -12,12 +12,24 @@ import { useDebounced } from '../../hooks';
 import { fonts } from '../../theme/tokens';
 import { initials } from '../../utils/format';
 
+/** Wording for the post room ("For (receiver)"). Check-in passes its own ("Whom to meet"). */
+const POST_WORDING = {
+  label: 'For (receiver)',
+  picked: 'Gets a notification and must confirm collection',
+  typed: 'Not on Gatebook — call them to collect it.',
+  idle: 'Pick the employee it is addressed to. Not listed? Type their name.',
+  noMatch: (name) =>
+    `No one named “${name}” can receive post on Gatebook. Keep the typed name — you'll inform them by phone.`,
+  none: "No one can receive post on Gatebook yet. An admin can add Employees or tick “Can also receive post” in Settings → Users. For now, type the receiver's name — you'll inform them by phone.",
+};
+
 /**
- * "For (receiver)": pick the employee the post is addressed to (type-ahead over `GET /api/hosts?q=…&limit=8`;
- * they get notified and must confirm collection), or type a name for someone not on Gatebook (security
- * informs them by phone). The list opens on focus, so it reads as a picker, and explains itself when empty.
+ * Pick an employee (type-ahead over `GET /api/hosts?q=…&limit=8`; they get notified), or type a name for
+ * someone not on Gatebook (security phones them). The list opens on focus, so it reads as a picker, and explains
+ * itself when empty. Post room by default ("For (receiver)"); `wording` overrides the texts.
  */
-export function RecipientField({ recipient, text, onPick, onText, error }) {
+export function RecipientField({ recipient, text, onPick, onText, error, wording: custom }) {
+  const wording = { ...POST_WORDING, ...custom };
   const q = useDebounced(text.trim(), 250);
   const [result, setResult] = useState({ q: null, options: [], error: null });
   const [open, setOpen] = useState(false);
@@ -93,18 +105,12 @@ export function RecipientField({ recipient, text, onPick, onText, error }) {
             </Box>
           );
         }}
-        noOptionsText={
-          result.error
-            ? result.error
-            : text.trim()
-              ? `No one named “${text.trim()}” can receive post on Gatebook. Keep the typed name — you'll inform them by phone.`
-              : "No one can receive post on Gatebook yet. An admin can add Employees or tick “Can also receive post” in Settings → Users. For now, type the receiver's name — you'll inform them by phone."
-        }
+        noOptionsText={result.error ? result.error : text.trim() ? wording.noMatch(text.trim()) : wording.none}
         loadingText="Loading employees…"
         renderInput={(params) => (
           <TextField
             {...params}
-            label="For (receiver)"
+            label={wording.label}
             required
             error={error}
             placeholder="Search employees or type a name"
@@ -115,18 +121,18 @@ export function RecipientField({ recipient, text, onPick, onText, error }) {
         <FormHelperText component="div" sx={{ color: 'success.main' }}>
           <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
             <NotificationsActiveOutlinedIcon sx={{ fontSize: 16 }} />
-            <span>Gets a notification and must confirm collection</span>
+            <span>{wording.picked}</span>
           </Stack>
         </FormHelperText>
       ) : typedOnly ? (
         <FormHelperText component="div" sx={{ color: 'warning.main' }}>
           <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
             <PhoneOutlinedIcon sx={{ fontSize: 16 }} />
-            <span>Not on Gatebook — call them to collect it.</span>
+            <span>{wording.typed}</span>
           </Stack>
         </FormHelperText>
       ) : (
-        <FormHelperText>Pick the employee it is addressed to. Not listed? Type their name.</FormHelperText>
+        <FormHelperText>{wording.idle}</FormHelperText>
       )}
     </Box>
   );

@@ -24,11 +24,35 @@ import { usePaginatedQuery } from '../../hooks/usePaginatedQuery';
 import { PAGE_SIZES, useUrlListParams } from '../../hooks/useUrlListParams';
 import { useSettings, useToast } from '../../state/context';
 import { fonts } from '../../theme/tokens';
+import { defaultsFor } from '../../utils/modules';
+import { HierarchyFields, ModuleMatrix, ModulesChip } from './AccessFields';
+
+/** Reports to / designation / supervisor, then the module matrix. */
+function AccessSection({ form, setForm, org, defs, selfId, designations }) {
+  const setValue = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  return (
+    <>
+      <HierarchyFields form={form} setValue={setValue} org={org} selfId={selfId} designations={designations} />
+      <Grid size={12}>
+        <Typography sx={{ fontWeight: 600, mb: 0.75 }}>Modules this person can use</Typography>
+        <ModuleMatrix
+          role={form.role}
+          value={form.modules ?? []}
+          onChange={(m) => setValue('modules', m)}
+          defs={defs}
+        />
+      </Grid>
+    </>
+  );
+}
 
 const DEFAULTS = { q: '', role: '', active: '', sort: 'name', page: 1, limit: 10 };
 
-/** Admin-only user management, paginated through `u.*` URL params. */
-export function UsersPanel() {
+/**
+ * Admin-only user management, paginated through `u.*` URL params. `org` (everyone, for reports-to) and `defs` (the
+ * module registry) come from Settings → Accounts & hierarchy; `onChanged` refreshes the org chart there.
+ */
+export function UsersPanel({ org = [], defs = [], onChanged = () => {} }) {
   const me = useUser();
   const toast = useToast();
   const { params, setParams, search, setSearch, setPage, setLimit } = useUrlListParams(DEFAULTS, { prefix: 'u.' });
@@ -50,6 +74,7 @@ export function UsersPanel() {
     try {
       const updated = await usersApi.update(u.id, patch);
       list.patch(updated);
+      onChanged();
       toast(message ?? `${updated.name} updated`);
     } catch (err) {
       toast(errorMessage(err));
@@ -126,15 +151,25 @@ export function UsersPanel() {
                 {u.id === me.id ? <Chip size="small" label="You" variant="exited" /> : null}
                 {u.role === 'host' ? <Chip size="small" label="Employee" variant="pending" /> : null}
                 {u.role !== 'host' && u.isHost ? <Chip size="small" label="Receives post" variant="pending" /> : null}
+                {u.role !== 'admin' && u.role !== 'viewer' && u.canPreRegister === false ? (
+                  <Chip size="small" label="No pre-register" variant="exited" />
+                ) : null}
+                {u.isSupervisor ? <Chip size="small" label="Gate supervisor" variant="inside" /> : null}
                 {!u.active ? <Chip size="small" label="Deactivated" variant="overstay" /> : null}
+                <ModulesChip user={u} defs={defs} />
               </Stack>
               <Typography sx={{ fontFamily: fonts.mono, fontSize: 12.5, color: 'text.secondary' }} noWrap>
                 {u.email}
                 {u.phone ? ` · ${u.phone}` : ''}
               </Typography>
-              {u.dept || u.location ? (
+              {u.designation || u.dept || u.location ? (
                 <Typography variant="body2" sx={{ color: 'text.secondary' }} noWrap>
-                  {[u.dept, u.location].filter(Boolean).join(' · ')}
+                  {[u.designation, u.dept, u.location].filter(Boolean).join(' · ')}
+                </Typography>
+              ) : null}
+              {u.reportsTo ? (
+                <Typography variant="body2" sx={{ color: 'text.secondary' }} noWrap>
+                  Reports to {org.find((x) => x.id === u.reportsTo)?.name ?? '—'}
                 </Typography>
               ) : null}
             </Grid>
@@ -192,19 +227,25 @@ export function UsersPanel() {
 
       <EditUserDialog
         user={editing}
+        org={org}
+        defs={defs}
         onClose={() => setEditing(null)}
         onSaved={(u) => {
           list.patch(u);
           setEditing(null);
+          onChanged();
           toast(`${u.name} updated`);
         }}
       />
 
       <Divider sx={{ my: 2 }} />
       <AddUserForm
+        org={org}
+        defs={defs}
         onCreated={(u) => {
           toast(`${u.name} added as ${ROLE_LABEL[u.role]}`);
           list.refresh();
+          onChanged();
         }}
       />
     </Panel>
@@ -266,19 +307,34 @@ function ProfileFields({ form, set, field, departments }) {
           />
         </Grid>
       ) : null}
+      {form.role === 'host' || form.role === 'security' ? (
+        <Grid size={{ xs: 12, sm: 6 }} sx={{ display: 'flex', alignItems: 'flex-end' }}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={form.canPreRegister}
+                onChange={(e) => set('canPreRegister')({ target: { value: e.target.checked } })}
+              />
+            }
+            label="Can pre-register visitors"
+          />
+        </Grid>
+      ) : null}
     </>
   );
 }
 
-function EditUserDialog({ user, onClose, onSaved }) {
+function EditUserDialog({ user, org, defs, onClose, onSaved }) {
   return (
-    <Dialog open={!!user} onClose={onClose} fullWidth maxWidth="sm">
-      {user ? <EditUserForm key={user.id} user={user} onClose={onClose} onSaved={onSaved} /> : null}
+    <Dialog open={!!user} onClose={onClose} fullWidth maxWidth="md">
+      {user ? (
+        <EditUserForm key={user.id} user={user} org={org} defs={defs} onClose={onClose} onSaved={onSaved} />
+      ) : null}
     </Dialog>
   );
 }
 
-function EditUserForm({ user, onClose, onSaved }) {
+function EditUserForm({ user, org, defs, onClose, onSaved }) {
   const { settings } = useSettings();
   const [form, setForm] = useState({
     name: user.name,
@@ -287,7 +343,13 @@ function EditUserForm({ user, onClose, onSaved }) {
     dept: user.dept ?? '',
     location: user.location ?? '',
     isHost: !!user.isHost,
+    canPreRegister: user.canPreRegister !== false,
     password: '',
+    modules: Array.isArray(user.modules) ? user.modules : defaultsFor(defs, user.role),
+    reportsTo: user.reportsTo ?? null,
+    designation: user.designation ?? '',
+    isSupervisor: !!user.isSupervisor,
+    site: user.site ?? '',
   });
   const [error, setError] = useState(null);
   const [field, setField] = useState(null);
@@ -311,6 +373,12 @@ function EditUserForm({ user, onClose, onSaved }) {
         dept: form.dept,
         location: form.location.trim(),
         isHost: user.role === 'host' ? true : form.isHost,
+        canPreRegister: form.canPreRegister,
+        reportsTo: form.reportsTo,
+        designation: form.designation.trim(),
+        isSupervisor: user.role !== 'host' && form.isSupervisor,
+        site: form.site ?? '',
+        ...(user.role !== 'admin' ? { modules: form.modules } : {}),
       };
       if (form.password) patch.password = form.password;
       onSaved(await usersApi.update(user.id, patch));
@@ -346,6 +414,14 @@ function EditUserForm({ user, onClose, onSaved }) {
           />
         </Grid>
         <ProfileFields form={form} set={set} field={field} departments={settings?.departments ?? []} />
+        <AccessSection
+          form={form}
+          setForm={setForm}
+          org={org}
+          defs={defs}
+          selfId={user.id}
+          designations={settings?.designations ?? []}
+        />
         {error ? (
           <Grid size={12}>
             <Alert severity="error">{error}</Alert>
@@ -375,11 +451,24 @@ const EMPTY_USER = {
   dept: '',
   location: '',
   isHost: false,
+  canPreRegister: true,
+  reportsTo: null,
+  designation: '',
+  isSupervisor: false,
+  site: '',
 };
 
-function AddUserForm({ onCreated }) {
+function AddUserForm({ org, defs, onCreated }) {
   const { settings } = useSettings();
-  const [form, setForm] = useState(EMPTY_USER);
+  const empty = () => ({ ...EMPTY_USER, modules: defaultsFor(defs, EMPTY_USER.role) });
+  const [form, setForm] = useState(empty);
+  // The registry may arrive after the first render: start from the role defaults once it does.
+  const [defsSeen, setDefsSeen] = useState(defs.length);
+  if (defs.length !== defsSeen) {
+    setDefsSeen(defs.length);
+    setForm((f) => ({ ...f, modules: defaultsFor(defs, f.role) }));
+  }
+  const setRole = (e) => setForm((f) => ({ ...f, role: e.target.value, modules: defaultsFor(defs, e.target.value) }));
   const [error, setError] = useState(null);
   const [field, setField] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -406,8 +495,14 @@ function AddUserForm({ onCreated }) {
         dept: form.dept || undefined,
         location: form.location.trim() || undefined,
         isHost: form.role === 'host' ? true : form.isHost,
+        canPreRegister: form.canPreRegister,
+        reportsTo: form.reportsTo,
+        designation: form.designation.trim() || undefined,
+        isSupervisor: form.role !== 'host' && form.isSupervisor,
+        site: form.site || undefined,
+        ...(form.role !== 'admin' ? { modules: form.modules } : {}),
       });
-      setForm(EMPTY_USER);
+      setForm(empty());
       onCreated(u);
     } catch (err) {
       setError(errorMessage(err));
@@ -440,7 +535,7 @@ function AddUserForm({ onCreated }) {
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField select label="Role" value={form.role} onChange={set('role')} error={field === 'role'}>
+          <TextField select label="Role" value={form.role} onChange={setRole} error={field === 'role'}>
             {ROLES.map((r) => (
               <MenuItem key={r} value={r}>
                 {ROLE_LABEL[r]}
@@ -449,6 +544,14 @@ function AddUserForm({ onCreated }) {
           </TextField>
         </Grid>
         <ProfileFields form={form} set={set} field={field} departments={settings?.departments ?? []} />
+        <AccessSection
+          form={form}
+          setForm={setForm}
+          org={org}
+          defs={defs}
+          selfId={null}
+          designations={settings?.designations ?? []}
+        />
         {error ? (
           <Grid size={12}>
             <Alert severity="error">{error}</Alert>

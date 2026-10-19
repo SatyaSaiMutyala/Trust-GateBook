@@ -1,5 +1,5 @@
 /**
- * Photo storage behind one interface, with two drivers:
+ * Photo (and agreement PDF) storage behind one interface, with two drivers:
  * - local: files in UPLOAD_DIR, served by GET /api/files/<name> with an HMAC-signed URL (dev default)
  * - s3:    a private S3 bucket, served with pre-signed GetObject URLs
  *
@@ -19,16 +19,21 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { config } from '../config.js';
 import { signFileUrl } from './signing.js';
 
-/** @typedef {'visits' | 'mail'} PhotoKind */
-export const PHOTO_KINDS = /** @type {const} */ (['visits', 'mail']);
+/** @typedef {'visits' | 'mail' | 'agreements' | 'material' | 'incidents' | 'patrol' | 'gen'} PhotoKind */
+export const PHOTO_KINDS = /** @type {const} */ (['visits', 'mail', 'agreements', 'material', 'incidents', 'patrol', 'gen']);
 
 export const S3_REF_PREFIX = 's3:';
-/** A local stored file name. */
-export const LOCAL_NAME_RE = /^[a-f0-9]{32}\.jpg$/;
+/** A local stored file name: a JPEG photo, or a PDF (visitor agreements). */
+export const LOCAL_NAME_RE = /^[a-f0-9]{32}\.(?:jpg|pdf)$/;
 /** An S3 key we wrote: optional prefix, then kind / random name. */
-const S3_KEY_RE = /^(?:[A-Za-z0-9._-]+\/)*(?:visits|mail)\/[a-f0-9]{32}\.jpg$/;
+const S3_KEY_RE = /^(?:[A-Za-z0-9._-]+\/)*(?:visits|mail|agreements|material|incidents|patrol|gen)\/[a-f0-9]{32}\.(?:jpg|pdf)$/;
 
-const randomName = () => `${crypto.randomBytes(16).toString('hex')}.jpg`;
+/** @param {string} [contentType] */
+const randomName = (contentType) =>
+  `${crypto.randomBytes(16).toString('hex')}.${contentType === 'application/pdf' ? 'pdf' : 'jpg'}`;
+
+/** Content type of a stored name. @param {string} name */
+export const contentTypeOf = (name) => (name.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg');
 
 /** @param {string | null | undefined} ref */
 export const isS3Ref = (ref) => typeof ref === 'string' && ref.startsWith(S3_REF_PREFIX);
@@ -102,7 +107,7 @@ export async function putS3(buffer, kind, name) {
       Bucket: config.s3.bucket,
       Key: key,
       Body: buffer,
-      ContentType: 'image/jpeg',
+      ContentType: contentTypeOf(name),
       CacheControl: 'private, max-age=3600',
     }),
   );
@@ -110,14 +115,14 @@ export async function putS3(buffer, kind, name) {
 }
 
 /**
- * Store a (already processed) JPEG with the configured driver.
+ * Store a (already processed) JPEG, or a PDF (`contentType: 'application/pdf'`), with the configured driver.
  * @param {Buffer} buffer
  * @param {{ kind: PhotoKind, contentType?: string }} opts
  * @returns {Promise<string>} ref to keep on the record
  */
-export async function save(buffer, { kind }) {
+export async function save(buffer, { kind, contentType }) {
   if (!PHOTO_KINDS.includes(kind)) throw new Error(`unknown photo kind ${kind}`);
-  const name = randomName();
+  const name = randomName(contentType);
   if (config.storage === 's3') return putS3(buffer, kind, name);
   await fs.writeFile(path.join(config.uploadDir, name), buffer, { flag: 'wx' });
   return name;
@@ -132,6 +137,7 @@ export async function save(buffer, { kind }) {
  * @returns {Promise<string>}
  */
 export async function url(ref, nowMs = Date.now()) {
+  if (!ref) return ''; // no photo (optional by a settings rule)
   if (!isS3Ref(ref)) return signFileUrl(ref, nowMs);
   if (!config.s3.bucket) {
     console.error('[storage] a record points at S3 but AWS_BUCKET is not set; cannot sign', ref);
@@ -143,6 +149,28 @@ export async function url(ref, nowMs = Date.now()) {
     expiresIn: config.s3.urlTtlSeconds + step / 1000,
     signingDate,
   });
+}
+
+/**
+ * The bytes of a stored file (to place a visitor photo on an agreement PDF), or null if it is gone.
+ * @param {string | null | undefined} ref
+ * @returns {Promise<Buffer | null>}
+ */
+export async function read(ref) {
+  if (!ref) return null;
+  try {
+    if (isS3Ref(ref)) {
+      if (!config.s3.bucket) return null;
+      const out = await s3Client().send(new GetObjectCommand({ Bucket: config.s3.bucket, Key: s3KeyOf(ref) }));
+      const bytes = await /** @type {any} */ (out.Body)?.transformToByteArray?.();
+      return bytes ? Buffer.from(bytes) : null;
+    }
+    const full = localPath(ref);
+    return full ? await fs.readFile(full) : null;
+  } catch (e) {
+    console.error('[storage] could not read', ref, e instanceof Error ? e.message : e);
+    return null;
+  }
 }
 
 /**

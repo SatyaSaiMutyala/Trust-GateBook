@@ -17,15 +17,30 @@ import { ImagePreview, ZoomBadge } from '../components/ImagePreview';
 import { visitState } from '../components/VisitorCard';
 import { useNow } from '../state/useNow';
 import { fonts, MIN_TOUCH, radius, typo, useTheme } from '../theme';
-import { fmtDateTime, fmtDuration } from '../utils/format';
+import { fmtDateTime, fmtDuration, fmtTime } from '../utils/format';
+import { hostStage, isLegacyVisit } from '../utils/visit';
+import { HostActions } from '../components/HostActions';
+import { HostRespond } from '../components/HostRespond';
+import { HostStageChip } from '../components/HostStageChip';
+import { AgreementButton } from '../components/Terms';
+import { VisitMaterial } from '../components/material/VisitMaterial';
 import {
   ScaledSheet,
   moderateScale,
   verticalScale,
 } from 'react-native-size-matters/extend';
 import { useSelector } from 'react-redux';
-import { errorMessage, useGetVisitQuery } from '../store/api';
-import { selectCanCheckIn, selectIsAdmin } from '../store/authSlice';
+import {
+  errorMessage,
+  useGetMyVisitQuery,
+  useGetVisitQuery,
+} from '../store/api';
+import {
+  selectCanCheckIn,
+  selectIsAdmin,
+  selectIsGateUser,
+  selectUser,
+} from '../store/authSlice';
 import { useSettings, useSheets } from '../store/hooks';
 
 function Detail({ label, value, mono }) {
@@ -56,6 +71,8 @@ function TimelineItem({ dot, children }) {
       ? { backgroundColor: c.ok, borderColor: c.ok }
       : dot === 'out'
       ? { backgroundColor: c.ink, borderColor: c.ink }
+      : dot === 'bad'
+      ? { backgroundColor: c.bad, borderColor: c.bad }
       : {
           backgroundColor: 'transparent',
           borderColor: c.muted,
@@ -69,20 +86,89 @@ function TimelineItem({ dot, children }) {
   );
 }
 
+/** Timeline rows between "In" and "Out": the host's answer, then when security let the visitor in. */
+function HostSteps({ visit: v, now }) {
+  const open = !v.outAt;
+  let answer;
+  if (v.hostStatus === 'waiting') {
+    answer = (
+      <TimelineItem dot="still">
+        <Text style={{ fontFamily: fonts.bodySemi }}>Waiting for {v.host}</Text>{' '}
+        · asked {fmtDuration(v.inAt, null, now)} ago
+        {v.escalatedAt
+          ? ` · no reply, security alerted at ${fmtTime(v.escalatedAt)}`
+          : ''}
+      </TimelineItem>
+    );
+  } else if (v.hostStatus === 'manual') {
+    answer = (
+      <TimelineItem dot="still">
+        <Text style={{ fontFamily: fonts.bodySemi }}>
+          Confirm with {v.host} by phone
+        </Text>{' '}
+        · not on Gatebook
+      </TimelineItem>
+    );
+  } else {
+    const accepted = v.hostStatus === 'accepted';
+    const by =
+      v.hostVia === 'phone'
+        ? `confirmed by phone${v.hostBy ? ` by ${v.hostBy.name}` : ''}`
+        : `by ${v.host} in ${fmtDuration(v.inAt, v.hostAt)}`;
+    answer = (
+      <TimelineItem dot={accepted ? 'in' : 'bad'}>
+        <Text style={{ fontFamily: fonts.bodySemi }}>
+          {accepted ? 'Accepted ' : 'Declined '}
+        </Text>
+        <Text style={{ fontFamily: fonts.mono }}>{fmtTime(v.hostAt)}</Text> ·{' '}
+        {by}
+        {v.hostNote ? ` · “${v.hostNote}”` : ''}
+      </TimelineItem>
+    );
+  }
+  let allowed = null;
+  if (v.allowedAt) {
+    allowed = (
+      <TimelineItem dot="in">
+        <Text style={{ fontFamily: fonts.bodySemi }}>Let in </Text>
+        <Text style={{ fontFamily: fonts.mono }}>{fmtTime(v.allowedAt)}</Text>
+        {v.allowedBy ? ` · by ${v.allowedBy.name}` : ''}
+      </TimelineItem>
+    );
+  } else if (open && v.hostStatus !== 'declined') {
+    allowed = (
+      <TimelineItem dot="still">
+        <Text style={{ fontFamily: fonts.bodySemi }}>Not let in yet</Text>
+      </TimelineItem>
+    );
+  }
+  return (
+    <>
+      {answer}
+      {allowed}
+    </>
+  );
+}
+
 export function VisitDetailsScreen({ navigation, route }) {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
   const canCheckIn = useSelector(selectCanCheckIn);
   const isAdmin = useSelector(selectIsAdmin);
+  const gate = useSelector(selectIsGateUser);
+  const me = useSelector(selectUser);
   const settings = useSettings();
   const { openExit } = useSheets();
   const now = useNow(30000);
   const id = route.params.id;
+  // Gate users read the register; a host reads their own visitor (the register is 403 for them).
+  const gateQuery = useGetVisitQuery(id, { skip: !gate });
+  const mineQuery = useGetMyVisitQuery(id, { skip: gate });
   const {
     data: visit = null,
     error: loadError,
     refetch: load,
-  } = useGetVisitQuery(id);
+  } = gate ? gateQuery : mineQuery;
   const error = loadError ? errorMessage(loadError) : null;
 
   const close = () =>
@@ -116,7 +202,12 @@ export function VisitDetailsScreen({ navigation, route }) {
           {visit ? visit.name : 'Visitor'}
         </Text>
         {visit ? (
-          <StatusChip state={visitState(visit, now, settings.overstayHours)} />
+          <View style={styles.row}>
+            <StatusChip
+              state={visitState(visit, now, settings.overstayHours)}
+            />
+            <HostStageChip stage={hostStage(visit)} />
+          </View>
         ) : null}
       </View>
       <Pressable
@@ -158,6 +249,9 @@ export function VisitDetailsScreen({ navigation, route }) {
   }
 
   const inside = !visit.outAt;
+  // The visited host looking at their own visitor who is still waiting for their answer.
+  const myWaiting =
+    inside && visit.hostStatus === 'waiting' && !!me && visit.hostId === me.id;
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
@@ -248,6 +342,7 @@ export function VisitDetailsScreen({ navigation, route }) {
             </Text>
             {visit.guardIn ? ` · logged by ${visit.guardIn.name}` : ''}
           </TimelineItem>
+          {isLegacyVisit(visit) ? null : <HostSteps visit={visit} now={now} />}
           {visit.outAt ? (
             <TimelineItem dot="out">
               <Text style={{ fontFamily: fonts.bodySemi }}>Out </Text>
@@ -278,6 +373,31 @@ export function VisitDetailsScreen({ navigation, route }) {
           )}
         </View>
 
+        <VisitMaterial visit={visit} />
+
+        {visit.termsAt ? (
+          <View
+            style={[
+              styles.card,
+              { backgroundColor: c.surface, borderColor: c.line, gap: 6 },
+            ]}
+          >
+            <Text style={[typo.bodySemi, { color: c.ink }]}>
+              Terms & confidentiality agreement
+            </Text>
+            <Text style={[typo.small, { color: c.muted }]}>
+              Accepted with photo at {fmtDateTime(visit.termsAt)} · terms
+              version {visit.termsVersion}
+            </Text>
+            {gate ? (
+              <AgreementButton
+                visit={visit}
+                style={{ alignSelf: 'flex-start' }}
+              />
+            ) : null}
+          </View>
+        ) : null}
+
         <View
           style={[
             styles.card,
@@ -289,8 +409,14 @@ export function VisitDetailsScreen({ navigation, route }) {
           <Detail label="Coming from" value={visit.company} />
           <Detail label="Purpose" value={visit.purpose} />
           <Detail label="Persons" value={String(visit.persons)} mono />
-          <Detail label="Whom to meet" value={visit.host} />
+          <Detail
+            label="Whom to meet"
+            value={[visit.host, visit.hostLocation].filter(Boolean).join(' · ')}
+          />
           <Detail label="Department" value={visit.dept} />
+          {gate && visit.hostPhone ? (
+            <Detail label="Host's mobile" value={visit.hostPhone} mono />
+          ) : null}
           <Detail
             label="ID shown"
             value={
@@ -304,8 +430,17 @@ export function VisitDetailsScreen({ navigation, route }) {
           <Detail label="Vehicle" value={visit.vehicle} mono />
           <Detail label="Items carried" value={visit.items} />
           <Detail label="Remarks" value={visit.notes} />
+          {visit.hostNote ? (
+            <Detail label="Host's message" value={`“${visit.hostNote}”`} />
+          ) : null}
         </View>
 
+        {myWaiting ? <HostRespond visit={visit} /> : null}
+        {inside && canCheckIn ? (
+          <View style={styles.hostActions}>
+            <HostActions visit={visit} size="lg" style={{ flexGrow: 1 }} />
+          </View>
+        ) : null}
         {inside && canCheckIn ? (
           <Button
             title="Mark exit"
@@ -348,7 +483,13 @@ const styles = ScaledSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     alignItems: 'flex-start',
   },
-  row: { flexDirection: 'row', alignItems: 'center', gap: '8@ms' },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: '8@ms',
+    flexWrap: 'wrap',
+  },
+  hostActions: { flexDirection: 'row', flexWrap: 'wrap', gap: '10@ms' },
   close: {
     width: MIN_TOUCH,
     height: MIN_TOUCH,

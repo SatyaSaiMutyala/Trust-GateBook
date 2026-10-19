@@ -44,6 +44,20 @@ export function StatusChip({ status, size }) {
     />
   );
 }
+const STAGE_VARIANT = { wait: 'pending', go: 'inside', bad: 'issue', neutral: 'exited' };
+/** Host approval stage of an open visit (see utils/visit `hostStage`): amber / green / red with a dot. */
+export function HostStageChip({ stage, size }) {
+  if (!stage) return null;
+  return (
+    <Chip
+      variant={STAGE_VARIANT[stage.tone]}
+      size={size}
+      label={stage.label}
+      icon={<Dot />}
+      sx={{ '& .MuiChip-icon': { color: 'inherit', mr: '-4px' } }}
+    />
+  );
+}
 /** Photo, or initials on a sunk square. */
 export function VisitorThumb({ src, name, size = 64, width, height, radius = 1 }) {
   const [failed, setFailed] = useState(null);

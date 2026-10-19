@@ -1,6 +1,8 @@
 import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { ScaledSheet, verticalScale } from 'react-native-size-matters/extend';
+import { useSelector } from 'react-redux';
+import { openExpected } from '../push/push';
 import { FilterBar, FilterTabs } from '../components/FilterBar';
 import { EmptyState } from '../components/Layout';
 import { ListError, ListFooter, ListLoading } from '../components/ListFooter';
@@ -13,6 +15,7 @@ import {
   useMarkNotificationReadMutation,
   useUnreadCountQuery,
 } from '../store/api';
+import { selectIsGateUser } from '../store/authSlice';
 import { useToast } from '../store/hooks';
 import { useInfiniteList } from '../store/useInfiniteList';
 import { fonts, radius, typo, useTheme } from '../theme';
@@ -25,6 +28,29 @@ export const EVENT_ICONS = {
   mail_confirm: '✅',
   mail_disputed: '⚠️',
   signup_request: '🙋',
+  visit_arrived: '🚪',
+  visit_reply: '✅',
+  visit_no_reply: '⏰',
+  expected_new: '📅',
+  expected_arrived: '✅',
+  expected_cancelled: '🚫',
+  escalation: '⏰',
+  material_in: '📦',
+  material_approval: '📦',
+  material_decision: '✅',
+  material_disputed: '⚠️',
+  key_issued: '🔑',
+  incident_assigned: '⚠️',
+  incident_update: '📝',
+  incident_closed: '✅',
+};
+
+const HINTS = {
+  user: 'Opens pending account requests',
+  visit: 'Opens the visitor',
+  expected: 'Opens the expected visitor',
+  mail: 'Opens the post item',
+  incident: 'Opens the incident',
 };
 
 const EMPTY = {
@@ -41,11 +67,7 @@ function NotificationRow({ item: n, now, onPress }) {
       accessibilityLabel={`${unread ? 'Unread. ' : ''}${n.title}. ${
         n.body
       }. ${fmtRelative(n.createdAt, now)}`}
-      accessibilityHint={
-        n.data?.type === 'user'
-          ? 'Opens pending account requests'
-          : 'Opens the post item'
-      }
+      accessibilityHint={HINTS[n.data?.type] ?? HINTS.mail}
       onPress={() => onPress(n)}
       testID={`notification-${n.id}`}
       style={({ pressed }) => [
@@ -90,6 +112,7 @@ function NotificationRow({ item: n, now, onPress }) {
 export function NotificationsScreen({ navigation }) {
   const { c } = useTheme();
   const toast = useToast();
+  const gate = useSelector(selectIsGateUser);
   const now = useNow(30000);
   const [tab, setTab] = useState('all');
   const params = useMemo(
@@ -135,6 +158,22 @@ export function NotificationsScreen({ navigation }) {
       if (!n.readAt) markRead(n.id);
       if (n.data?.type === 'mail' && n.data.id) {
         navigation.navigate('MailDetails', { id: n.data.id });
+      } else if (n.data?.type === 'visit' && n.data.id) {
+        navigation.navigate('VisitDetails', { id: n.data.id });
+      } else if (n.data?.type === 'material' && n.data.id) {
+        navigation.navigate('MaterialDetails', { id: n.data.id });
+      } else if (n.data?.type === 'incident' && n.data.id) {
+        navigation.navigate('IncidentDetails', { id: n.data.id });
+      } else if (n.data?.type === 'test') {
+        // 🔔 test alert: nothing to open.
+      } else if (n.data?.type === 'patrol' && gate) {
+        navigation.navigate('Patrol');
+      } else if (n.data?.type === 'gen' && gate) {
+        navigation.navigate('Generator');
+      } else if (n.data?.type === 'key' && gate) {
+        navigation.navigate('Keys');
+      } else if (n.data?.type === 'expected' && n.data.id) {
+        openExpected(navigation, gate, n.data.id);
       } else if (n.data?.type === 'user') {
         // 🙋 sign-up request (admins): Account → Pending requests.
         navigation.navigate('Main', {
@@ -143,7 +182,7 @@ export function NotificationsScreen({ navigation }) {
         });
       }
     },
-    [markRead, navigation],
+    [markRead, navigation, gate],
   );
 
   const renderItem = useCallback(

@@ -53,6 +53,8 @@ Scripts: `dev`, `start` (`node src/index.js`), `build` (syntax check of `src/` w
 | `TZ_DISPLAY` | `Asia/Kolkata` | CSV dates, pass-number date, times in guard messages |
 | `EMBEDDED_MONGO_PORT` | `27018` | embedded dev DB only |
 | `PACE_EMPLOYEES_URL` | `https://pace.mytrustlab.co.in/api/v1/employees` | Pace HR employee API behind `GET /api/hosts`; set it to an empty value to use local `host` / `isHost` users instead |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | made once, kept in the database | Web push (browser alerts) key pair, from `npx web-push generate-vapid-keys`. Optional |
+| `VAPID_SUBJECT` | `mailto:admin@gatebook.local` | Contact the browser push services can reach |
 | `FIREBASE_SERVICE_ACCOUNT` | `secrets/firebase-service-account.json` | Firebase Admin service account (relative to `backend/`, git-ignored, never commit). Missing = push disabled (one log line) |
 | `SIGNUP_ENABLED` | `false` | `true`/`1`/`yes`: self sign-up (`POST /api/auth/signup`), accounts wait for admin approval |
 | `ACCOUNT_DELETION_ENABLED` | `false` | in-app account deletion (`DELETE /api/auth/me`); **forced on when sign-up is on** (Apple guideline 5.1.1(v)) |
@@ -79,6 +81,14 @@ src/
   services/          pace (Pace HR directory proxy + recipient upsert), pagination, pass/entry numbers, image storage (sharp), URL signing, serialization, CSV, formatting
 test/api.test.js     visitor register integration tests
 test/mail.test.js    post room, roles, hosts directory, profile, settings migration
+test/hostApproval.test.js  host accepts / declines visitors, allow in, no-reply sweep, attention list, stats, CSV
+test/expected.test.js  pre-registration: rights, scope, phone match, check-in from an entry (pre-approved), deliveries, cancel
+test/platform.test.js  module access, reporting hierarchy, escalation engine + log, branding (logo), photo / pass rules
+test/terms.test.js     terms versions, public terms page, agreement at check-in (PDF stored with the visit), sample PDF
+test/material.test.js  material gate passes: IN accept / dispute, OUT approval, pickup, release counts, returns, rules, PDF, CSV
+test/track-gates-push.test.js  TRACK items per category / gate / module, user gates, escalations to the gate's guards, web push (subscribe, test, every notification, dead subscriptions)
+test/patrol-gen.test.js  patrol slot maths (time zone, midnight), checkpoints / rounds, scans, late / missed escalation, log; generator runs, diesel estimate, low diesel and level check escalations
+test/keys-incidents.test.js  key register (copies, atomic issue, return, diary, CSV, overdue escalation) and incidents (rights, assign, close, reopen, severity matrices)
 test/notifications.test.js  in-app inbox: triggers, pagination, read / read-all, socket rooms, notificationId in pushes
 test/s3.test.js      S3 storage (aws-sdk-client-mock, no AWS calls), presigned URLs, old local photos, migration
 test/signup.test.js  feature switches, sign-up + approval, rate limit, account deletion

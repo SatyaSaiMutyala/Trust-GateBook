@@ -7,9 +7,10 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { errorMessage } from '../api/client';
+import { brandApi } from '../api/endpoints';
 import { useAuth } from '../auth/context';
 import { fonts } from '../theme/tokens';
 
@@ -20,6 +21,14 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  // Company name + logo (public; blank until Settings → Company is filled in).
+  const [brand, setBrand] = useState(null);
+  useEffect(() => {
+    brandApi
+      .get()
+      .then(setBrand)
+      .catch(() => {});
+  }, []);
 
   if (status === 'signedIn') {
     const from = location.state?.from;
@@ -50,7 +59,7 @@ export function LoginPage() {
           <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
             <Box sx={{ bgcolor: 'gb.rail', color: 'gb.railInk', px: 3, py: 3 }}>
               <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-                <LogoTile size={56} />
+                <LogoTile size={56} src={brand?.logoUrl} />
                 <Box>
                   <Typography
                     sx={{
@@ -63,7 +72,9 @@ export function LoginPage() {
                   >
                     GATEBOOK
                   </Typography>
-                  <Typography sx={{ color: 'gb.railMuted', fontSize: 13, mt: 0.5 }}>Visitor register</Typography>
+                  <Typography sx={{ color: 'gb.railMuted', fontSize: 13, mt: 0.5 }}>
+                    {brand?.name || 'Visitor register'}
+                  </Typography>
                 </Box>
               </Stack>
             </Box>

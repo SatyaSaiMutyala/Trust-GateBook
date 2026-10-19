@@ -1,6 +1,10 @@
 import AlarmOutlinedIcon from '@mui/icons-material/AlarmOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlined';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
+import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
+import KeyOutlinedIcon from '@mui/icons-material/KeyOutlined';
+import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
+import EventBusyOutlinedIcon from '@mui/icons-material/EventBusyOutlined';
 import MarkunreadMailboxOutlinedIcon from '@mui/icons-material/MarkunreadMailboxOutlined';
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
 import ReportProblemOutlinedIcon from '@mui/icons-material/ReportProblemOutlined';
@@ -15,14 +19,17 @@ import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { errorMessage } from '../api/client';
-import { mailApi, notificationsApi } from '../api/endpoints';
+import { mailApi, notificationsApi, visitsApi } from '../api/endpoints';
+import { useUser } from '../auth/context';
+import { isGateUser } from '../auth/roles';
 import { EmptyState, PageHeader } from '../components/bits';
 import { useNow } from '../hooks';
 import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
 import { useUrlListParams } from '../hooks/useUrlListParams';
 import { useRealtimeEvent } from '../realtime/context';
-import { useMailUi, useNotifications, useToast } from '../state/context';
+import { useMailUi, useMaterialUi, useNotifications, useToast, useVisitUi } from '../state/context';
 import { fonts } from '../theme/tokens';
 import { fmtRelative } from '../utils/format';
 
@@ -35,6 +42,21 @@ const EVENT = {
   mail_confirm: { Icon: CheckCircleOutlineIcon, fg: 'gb.ok', bg: 'gb.okSoft' },
   mail_disputed: { Icon: ReportProblemOutlinedIcon, fg: 'gb.bad', bg: 'gb.badSoft' },
   signup_request: { emoji: '🙋', fg: 'gb.ink', bg: 'gb.accentSoft' },
+  visit_arrived: { emoji: '🚪', fg: 'gb.ink', bg: 'gb.accentSoft' },
+  visit_reply: { Icon: CheckCircleOutlineIcon, fg: 'gb.ok', bg: 'gb.okSoft' },
+  visit_no_reply: { Icon: AlarmOutlinedIcon, fg: 'gb.warn', bg: 'gb.warnSoft' },
+  expected_new: { Icon: EventAvailableOutlinedIcon, fg: 'gb.accentInk', bg: 'gb.accent' },
+  expected_arrived: { Icon: CheckCircleOutlineIcon, fg: 'gb.ok', bg: 'gb.okSoft' },
+  expected_cancelled: { Icon: EventBusyOutlinedIcon, fg: 'gb.muted', bg: 'gb.sunk' },
+  escalation: { Icon: AlarmOutlinedIcon, fg: 'gb.bad', bg: 'gb.badSoft' },
+  material_in: { Icon: Inventory2OutlinedIcon, fg: 'gb.ok', bg: 'gb.okSoft' },
+  material_approval: { Icon: Inventory2OutlinedIcon, fg: 'gb.accentInk', bg: 'gb.accent' },
+  material_decision: { Icon: CheckCircleOutlineIcon, fg: 'gb.ok', bg: 'gb.okSoft' },
+  material_disputed: { Icon: ReportProblemOutlinedIcon, fg: 'gb.bad', bg: 'gb.badSoft' },
+  key_issued: { Icon: KeyOutlinedIcon, fg: 'gb.accentInk', bg: 'gb.accent' },
+  incident_assigned: { Icon: ReportProblemOutlinedIcon, fg: 'gb.accentInk', bg: 'gb.accent' },
+  incident_update: { Icon: ReportProblemOutlinedIcon, fg: 'gb.warn', bg: 'gb.warnSoft' },
+  incident_closed: { Icon: CheckCircleOutlineIcon, fg: 'gb.ok', bg: 'gb.okSoft' },
 };
 const FALLBACK = { Icon: NotificationsNoneOutlinedIcon, fg: 'gb.muted', bg: 'gb.sunk' };
 
@@ -107,7 +129,11 @@ function NotificationRow({ n, now, onOpen }) {
 export function NotificationsPage() {
   const now = useNow();
   const toast = useToast();
+  const user = useUser();
   const { openDetails } = useMailUi();
+  const { openDetails: openVisit } = useVisitUi();
+  const navigate = useNavigate();
+  const { openDetail: openMaterial } = useMaterialUi();
   const { unreadCount, markRead, markAllRead } = useNotifications();
   const { params, setParams } = useUrlListParams(DEFAULTS);
   const unreadTab = params.tab === 'unread';
@@ -131,10 +157,37 @@ export function NotificationsPage() {
 
   const open = async (n) => {
     if (!n.readAt) markRead(n.id); // optimistic; also flips the row via the local notification:read event
-    if (n.data?.type !== 'mail' || !n.data.id) return;
+    const { type, id } = n.data ?? {};
+    if (type === 'expected' && id) {
+      navigate(`/expected?q=${encodeURIComponent(id)}`);
+      return;
+    }
+    if (type === 'material' && id) {
+      openMaterial(id);
+      return;
+    }
+    if (type === 'incident' && id) {
+      navigate(`/incidents?open=${encodeURIComponent(id)}`);
+      return;
+    }
+    if (type === 'patrol') {
+      navigate('/patrol');
+      return;
+    }
+    if (type === 'gen') {
+      navigate('/generator');
+      return;
+    }
+    if (type === 'key') {
+      if (isGateUser(user)) navigate('/keys?tab=diary');
+      return;
+    }
+    if ((type !== 'mail' && type !== 'visit') || !id) return;
     setOpening(n.id);
     try {
-      openDetails(await mailApi.get(n.data.id));
+      if (type === 'mail') openDetails(await mailApi.get(id));
+      // Gate users open the visit; a host opens their own visitor (the gate endpoints are 403 for them).
+      else openVisit(isGateUser(user) ? await visitsApi.get(id) : await visitsApi.getMine(id));
     } catch (err) {
       toast(errorMessage(err));
     } finally {

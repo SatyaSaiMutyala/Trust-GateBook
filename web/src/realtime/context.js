@@ -83,3 +83,78 @@ export function useMailChanges(refetch, delayMs = 400) {
   useRealtimeEvent('mail:updated', schedule);
   useRealtimeEvent('reconnect', schedule);
 }
+
+/** Run `refetch` (debounced) whenever a pre-registration changes or the socket reconnects. */
+export function useExpectedChanges(refetch, delayMs = 400) {
+  const timer = useRef(null);
+  const ref = useRef(refetch);
+  useEffect(() => {
+    ref.current = refetch;
+  });
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
+  const schedule = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => ref.current(), delayMs);
+  };
+  useRealtimeEvent('expected:changed', schedule);
+  useRealtimeEvent('reconnect', schedule);
+}
+
+/** Refetch (debounced) when a material gate pass changes anywhere, or after a reconnect. */
+export function useMaterialChanges(refetch, delayMs = 400) {
+  const timer = useRef(null);
+  const ref = useRef(refetch);
+  useEffect(() => {
+    ref.current = refetch;
+  });
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
+  const schedule = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => ref.current(), delayMs);
+  };
+  useRealtimeEvent('material:changed', schedule);
+  useRealtimeEvent('reconnect', schedule);
+}
+
+/** Refetch (debounced) on `event`, or after a reconnect. @param {string} event */
+function useChanges(event, refetch, delayMs) {
+  const timer = useRef(null);
+  const ref = useRef(refetch);
+  useEffect(() => {
+    ref.current = refetch;
+  });
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
+  const schedule = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => ref.current(), delayMs);
+  };
+  useRealtimeEvent(event, schedule);
+  useRealtimeEvent('reconnect', schedule);
+}
+
+/** Refetch (debounced) when a key is issued, returned or edited, or after a reconnect. */
+export const useKeysChanges = (refetch, delayMs = 300) => useChanges('keys:changed', refetch, delayMs);
+
+/** Refetch (debounced) when an incident changes, or after a reconnect. */
+export const useIncidentChanges = (refetch, delayMs = 300) => useChanges('incident:changed', refetch, delayMs);
+
+/** Refetch (debounced) after a patrol scan or set-up change, or after a reconnect. */
+export const usePatrolChanges = (refetch, delayMs = 300) => useChanges('patrol:changed', refetch, delayMs);
+
+/** Refetch (debounced) after a generator run, diesel entry or set-up change, or after a reconnect. */
+export const useGenChanges = (refetch, delayMs = 300) => useChanges('gen:changed', refetch, delayMs);

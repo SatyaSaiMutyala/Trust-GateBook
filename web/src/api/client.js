@@ -31,6 +31,14 @@ let unauthorizedHandler = null;
 export function onUnauthorized(handler) {
   unauthorizedHandler = handler;
 }
+/**
+ * The gate this device is working at (gate users with several gates; '' = not chosen / one gate). Set by
+ * SiteProvider; gate-desk lists and new records use it.
+ */
+export const gate = { site: '' };
+/** Adds `site` to a query when a gate is chosen and the query has none. @param {Record<string, unknown>} [q] */
+export const withGate = (q = {}) => (gate.site && q.site === undefined ? { ...q, site: gate.site } : q);
+
 export function fileUrl(path) {
   if (!path) return path;
   if (/^(https?:|blob:|data:)/i.test(path)) return path;

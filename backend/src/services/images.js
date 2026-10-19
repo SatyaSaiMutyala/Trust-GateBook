@@ -2,7 +2,7 @@ import sharp from 'sharp';
 import { ApiError } from '../middleware/error.js';
 import * as storage from './storage.js';
 
-/** Local stored file names are always 32 hex chars + .jpg; anything else is rejected. */
+/** Local stored file names are always 32 hex chars + .jpg (photos) or .pdf (agreements); anything else is rejected. */
 export const FILE_NAME_RE = storage.LOCAL_NAME_RE;
 
 export const PHOTO_MAX_EDGE = 520;
@@ -11,7 +11,23 @@ export const COVER_MAX_EDGE = 1100;
 export const PERSON_MAX_EDGE = 640;
 
 /** Which storage folder a form field's photo belongs to. @type {Record<string, import('./storage.js').PhotoKind>} */
-const KIND_BY_FIELD = { photo: 'visits', idPhoto: 'visits', cover: 'mail', coverBack: 'mail', person: 'mail' };
+const KIND_BY_FIELD = {
+  photo: 'visits',
+  idPhoto: 'visits',
+  cover: 'mail',
+  coverBack: 'mail',
+  person: 'mail',
+  // material gate passes
+  challan: 'material',
+  boxPhoto: 'material',
+  carrier: 'material',
+  returnPhoto: 'material',
+  // incidents
+  photos: 'incidents',
+  // patrols, generator
+  scanPhoto: 'patrol',
+  genPhoto: 'gen',
+};
 
 /** The local upload dir is always created: older photos may live there even with STORAGE=s3. */
 export const ensureUploadDir = () => storage.ensureLocalDir();

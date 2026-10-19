@@ -1,10 +1,11 @@
 /**
- * In-app notifications: store one per user, tell their open sockets, then push to their phones.
+ * In-app notifications: store one per user, tell their open sockets, then push to their phones and browsers.
  * Used by every mail trigger. Never throws into the request.
  */
 import { Notification, serializeNotification } from '../models/Notification.js';
 import { emitToUser } from '../realtime.js';
 import { sendToUsers } from './push.js';
+import { sendWebPush } from './webpush.js';
 
 /**
  * @typedef {object} NotifyMessage
@@ -12,6 +13,7 @@ import { sendToUsers } from './push.js';
  * @property {string} title
  * @property {string} body
  * @property {{ type: string, id: string }} data
+ * @property {boolean} [alarm]  ring longer (escalation alarm steps)
  */
 
 /** Total unread for a user. @param {string} userId */
@@ -31,7 +33,7 @@ export async function notify(userIds, msg) {
     if (ids.length === 0) return [];
     const now = new Date();
     const docs = await Notification.insertMany(
-      ids.map((user) => ({ user, event: msg.event, title: msg.title, body: msg.body, data: msg.data, createdAt: now })),
+      ids.map((user) => ({ user, event: msg.event, title: msg.title, body: msg.body, data: msg.data, alarm: msg.alarm === true, createdAt: now })),
     );
     for (const doc of docs) {
       const userId = doc.user.toString();
@@ -42,7 +44,13 @@ export async function notify(userIds, msg) {
       void sendToUsers([userId], {
         title: msg.title,
         body: msg.body,
+        data: { ...msg.data, notificationId: notification.id, ...(msg.alarm ? { alarm: '1' } : {}) },
+      });
+      void sendWebPush([userId], {
+        title: msg.title,
+        body: msg.body,
         data: { ...msg.data, notificationId: notification.id },
+        alarm: msg.alarm === true,
       });
     }
     return docs;

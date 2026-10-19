@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { io } from 'socket.io-client';
 import { API_BASE } from '../api/client';
-import { normalizeMail, normalizeVisit } from '../api/endpoints';
+import { normalizeIncident, normalizeMail, normalizeMaterial, normalizeVisit } from '../api/endpoints';
 import { useAuth } from '../auth/context';
 import { RealtimeBus, RealtimeContext } from './context';
 export function RealtimeProvider({ children }) {
@@ -25,9 +25,16 @@ export function RealtimeProvider({ children }) {
     socket.on('visit:created', (p) => bus.emit('visit:created', { visit: normalizeVisit(p.visit) }));
     socket.on('visit:updated', (p) => bus.emit('visit:updated', { visit: normalizeVisit(p.visit) }));
     socket.on('settings:updated', (p) => bus.emit('settings:updated', p));
+    socket.on('me:updated', (p) => bus.emit('me:updated', p));
+    socket.on('material:changed', (p) => bus.emit('material:changed', { pass: normalizeMaterial(p.pass) }));
+    socket.on('keys:changed', (p) => bus.emit('keys:changed', p));
+    socket.on('patrol:changed', (p) => bus.emit('patrol:changed', p));
+    socket.on('gen:changed', (p) => bus.emit('gen:changed', p));
+    socket.on('incident:changed', (p) => bus.emit('incident:changed', { incident: normalizeIncident(p.incident) }));
     socket.on('mail:created', (p) => bus.emit('mail:created', { item: normalizeMail(p.item) }));
     socket.on('mail:updated', (p) => bus.emit('mail:updated', { item: normalizeMail(p.item) }));
     socket.on('mail:reminder', (p) => bus.emit('mail:reminder', { item: normalizeMail(p.item) }));
+    socket.on('expected:changed', (p) => bus.emit('expected:changed', p));
     socket.on('notification:new', (p) => bus.emit('notification:new', p));
     socket.on('notification:read', (p) => bus.emit('notification:read', p));
     return () => {

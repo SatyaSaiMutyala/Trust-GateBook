@@ -3,7 +3,7 @@ import { Animated, Pressable, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import { useListMailInfiniteQuery } from '../store/api';
-import { selectCanHandleMail } from '../store/authSlice';
+import { selectCanHandleMail, selectHasModule } from '../store/authSlice';
 import { useSheets } from '../store/hooks';
 import { selectIssuePulse } from '../store/uiSlice';
 import { useInfiniteList } from '../store/useInfiniteList';
@@ -27,7 +27,10 @@ export function IssueAlerts() {
     () => ({ status: 'disputed', limit: 5, sort: '-receivedAt' }),
     [],
   );
-  const list = useInfiniteList(useListMailInfiniteQuery, params);
+  const post = useSelector(selectHasModule('post'));
+  const list = useInfiniteList(useListMailInfiniteQuery, params, {
+    skip: !post,
+  });
   const [flash] = useState(() => new Animated.Value(0));
   const first = useRef(true);
 

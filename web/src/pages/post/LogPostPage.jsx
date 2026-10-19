@@ -87,8 +87,14 @@ function LogPostForm({ draft, update, reset, onIssued }) {
   const submit = async (e) => {
     e.preventDefault();
     setFormError(null);
+    // Photo rules from Settings → Post room.
+    const optional = new Set([
+      ...(settings?.mailCoverRequired === false ? ['cover', 'coverBack'] : []),
+      ...(settings?.mailPersonPhotoRequired === false ? ['person'] : []),
+    ]);
     const missing = new Set(
       REQUIRED.filter((f) => {
+        if (optional.has(f)) return false;
         if (f === 'recipient') return !draft.recipient && !draft.recipientText.trim();
         const v = draft[f];
         return !v || (typeof v === 'string' && !v.trim());
@@ -123,9 +129,9 @@ function LogPostForm({ draft, update, reset, onIssued }) {
           dept: draft.dept,
           notes: draft.notes.trim(),
         },
-        draft.cover.blob,
-        draft.coverBack.blob,
-        draft.person.blob,
+        draft.cover?.blob ?? null,
+        draft.coverBack?.blob ?? null,
+        draft.person?.blob ?? null,
       );
       emit('mail:created', { item });
       toast(item.notifiedAt ? `Logged · ${item.recipientName} notified` : `Logged · call ${item.recipientName}`);
@@ -169,7 +175,7 @@ function LogPostForm({ draft, update, reset, onIssued }) {
                   facing="environment"
                   icon={MailOutlineIcon}
                   maxEdge={1800}
-                  required
+                  required={settings?.mailCoverRequired !== false}
                   error={err('cover')}
                   value={draft.cover}
                   onChange={(cover) => setField('cover', cover)}
@@ -184,7 +190,7 @@ function LogPostForm({ draft, update, reset, onIssued }) {
                   facing="environment"
                   icon={MailOutlineIcon}
                   maxEdge={1800}
-                  required
+                  required={settings?.mailCoverRequired !== false}
                   error={err('coverBack')}
                   value={draft.coverBack}
                   onChange={(coverBack) => setField('coverBack', coverBack)}
@@ -198,7 +204,7 @@ function LogPostForm({ draft, update, reset, onIssued }) {
                   aspect="3 / 4"
                   facing="user"
                   icon={LocalShippingOutlinedIcon}
-                  required
+                  required={settings?.mailPersonPhotoRequired !== false}
                   error={err('person')}
                   value={draft.person}
                   onChange={(person) => setField('person', person)}

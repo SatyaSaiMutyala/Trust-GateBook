@@ -47,12 +47,24 @@ function Note({ children, first }) {
   );
 }
 
+/** Post room wording ("For (receiver)"). Check-in passes its own ("Whom to meet"). */
+const POST_WORDING = {
+  label: 'For (receiver)',
+  picked: '🔔 Gets a notification and must confirm collection',
+  typed: '📞 Not on Gatebook — call them to collect it',
+  idle: 'Pick the employee it is addressed to. Not listed? Type their name.',
+  noMatch: name => `No one named “${name}” can receive post on Gatebook.`,
+  useTyped: name => `Use “${name}” — I'll inform them by phone`,
+  none: "No one can receive post on Gatebook yet. An admin can add Employees or tick “Can also receive post” in Users. For now, type the receiver's name — you'll inform them by phone.",
+  changeLabel: name => `Change receiver, currently ${name}`,
+};
+
 /**
- * "For (receiver)": pick the employee the post is addressed to (they get notified and must confirm
- * collection), or type a name for someone not on Gatebook (security informs them by phone).
- * The list is Gatebook's own users who can receive post (Employee role or "Can also receive post"), via `/api/hosts`.
- * Focusing the field opens the employee list straight away (no typing needed); typing filters it.
+ * Pick an employee (they get notified), or type a name for someone not on Gatebook (security phones them).
+ * The list is Gatebook's own users who can receive post / visitors (Employee role or "Can also receive post"),
+ * via `/api/hosts`. Focusing the field opens the employee list straight away (no typing needed); typing filters it.
  * Once someone is picked the field turns into a card with a Change button.
+ * Post room wording by default ("For (receiver)"); `wording` overrides the texts.
  */
 export function RecipientPicker({
   text,
@@ -61,7 +73,9 @@ export function RecipientPicker({
   onText,
   onPick,
   onClear,
+  wording: custom,
 }) {
+  const wording = { ...POST_WORDING, ...custom };
   const { c } = useTheme();
   const inputRef = useRef(null);
   const [focused, setFocused] = useState(false);
@@ -82,11 +96,7 @@ export function RecipientPicker({
       .filter(Boolean)
       .join(' · ');
     return (
-      <FieldShell
-        label="For (receiver)"
-        required
-        hint="🔔 Gets a notification and must confirm collection"
-      >
+      <FieldShell label={wording.label} required hint={wording.picked}>
         <View
           style={[
             styles.card,
@@ -106,7 +116,7 @@ export function RecipientPicker({
             title="Change"
             variant="ghost"
             size="sm"
-            accessibilityLabel={`Change receiver, currently ${recipient.name}`}
+            accessibilityLabel={wording.changeLabel(recipient.name)}
             onPress={() => {
               onClear();
               setTimeout(() => inputRef.current?.focus(), 50);
@@ -132,29 +142,28 @@ export function RecipientPicker({
   } else if (!hosts.items.length) {
     rows = query ? (
       <>
-        <Note first>No one named “{query}” can receive post on Gatebook.</Note>
-        <Pressable
-          accessibilityRole="button"
-          onPress={close}
-          style={({ pressed }) => [
-            styles.row,
-            {
-              borderTopColor: c.line,
-              backgroundColor: pressed ? c.sunk : 'transparent',
-            },
-          ]}
-        >
-          <Text style={[typo.bodySemi, { color: c.ink, flex: 1 }]}>
-            Use “{query}” — I'll inform them by phone
-          </Text>
-        </Pressable>
+        <Note first>{wording.noMatch(query)}</Note>
+        {/* `useTyped: null` = only employees from the list (e.g. pre-registration). */}
+        {wording.useTyped ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={close}
+            style={({ pressed }) => [
+              styles.row,
+              {
+                borderTopColor: c.line,
+                backgroundColor: pressed ? c.sunk : 'transparent',
+              },
+            ]}
+          >
+            <Text style={[typo.bodySemi, { color: c.ink, flex: 1 }]}>
+              {wording.useTyped(query)}
+            </Text>
+          </Pressable>
+        ) : null}
       </>
     ) : (
-      <Note first>
-        No one can receive post on Gatebook yet. An admin can add Employees or
-        tick “Can also receive post” in Users. For now, type the receiver's name
-        — you'll inform them by phone.
-      </Note>
+      <Note first>{wording.none}</Note>
     );
   } else {
     rows = (
@@ -211,16 +220,12 @@ export function RecipientPicker({
     );
   }
 
-  const hint = focused
-    ? null
-    : query
-    ? '📞 Not on Gatebook — call them to collect it'
-    : 'Pick the employee it is addressed to. Not listed? Type their name.';
+  const hint = focused ? null : query ? wording.typed : wording.idle;
 
   return (
     <Field
       ref={inputRef}
-      label="For (receiver)"
+      label={wording.label}
       required
       value={text}
       onChangeText={onText}

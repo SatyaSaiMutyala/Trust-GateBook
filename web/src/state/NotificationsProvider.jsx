@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { notificationsApi } from '../api/endpoints';
 import { useLocalEmit, useRealtimeEvent } from '../realtime/context';
-import { NotificationsContext } from './context';
+import { NotificationsContext, useToast } from './context';
 
 /**
  * Unread count for the bell. Fetched on sign-in, when the window regains focus / becomes visible, and on socket
@@ -11,6 +11,7 @@ export function NotificationsProvider({ children }) {
   const [unreadCount, setUnreadCount] = useState(null);
   const [nonce, setNonce] = useState(0);
   const emit = useLocalEmit();
+  const toast = useToast();
   const seq = useRef(0);
 
   useEffect(() => {
@@ -43,6 +44,16 @@ export function NotificationsProvider({ children }) {
   useRealtimeEvent('notification:new', (p) => {
     if (typeof p?.unreadCount === 'number') setUnreadCount(p.unreadCount);
     else setUnreadCount((n) => (n ?? 0) + 1);
+    // Escalation steps (reminders, manager alerts): toast them; alarm steps also vibrate longer.
+    const n = p?.notification;
+    if (n?.event === 'escalation') {
+      toast([n.title, n.body].filter(Boolean).join(' · '));
+      try {
+        navigator.vibrate?.(n.alarm ? [400, 150, 400, 150, 400] : [200]);
+      } catch {
+        /* ignore */
+      }
+    }
   });
   useRealtimeEvent('notification:read', (p) => {
     if (typeof p?.unreadCount === 'number') setUnreadCount(p.unreadCount);

@@ -15,7 +15,14 @@ export const EMPTY_CHECK_IN = {
     items: '',
     notes: '',
     badge: '',
+    // The visitor agreed to the terms (asked only when Settings → Terms requires it).
+    terms: false,
   },
+  // Employee picked from /api/hosts { id, name, dept, location } — asked to accept in the app.
+  // null when "Whom to meet" was typed (security confirms by phone).
+  hostPick: null,
+  // The pre-registration this check-in was filled from (sent as expectedId), or null.
+  expected: null,
   photoUri: null,
   idPhotoUri: null,
 };
@@ -60,6 +67,10 @@ const draftsSlice = createSlice({
         state.checkIn.photoUri = action.payload.photoUri;
       if ('idPhotoUri' in action.payload)
         state.checkIn.idPhotoUri = action.payload.idPhotoUri;
+      if ('hostPick' in action.payload)
+        state.checkIn.hostPick = action.payload.hostPick;
+      if ('expected' in action.payload)
+        state.checkIn.expected = action.payload.expected;
     },
     checkInCleared(state) {
       state.checkIn = EMPTY_CHECK_IN;

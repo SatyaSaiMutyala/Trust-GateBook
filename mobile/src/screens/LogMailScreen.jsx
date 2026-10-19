@@ -39,12 +39,19 @@ const PHOTO_DRAFT_KEY = {
   person: 'personUri',
 };
 
-/** All three photos are required: returns `{ cover?, coverBack?, person? }` for the missing ones. */
-export function missingPhotos({ coverUri, coverBackUri, personUri }) {
+/**
+ * The required photos that are missing: `{ cover?, coverBack?, person? }`. All three are required unless
+ * Settings → Post room switches them off (`rules` = settings).
+ */
+export function missingPhotos(
+  { coverUri, coverBackUri, personUri },
+  rules = {},
+) {
   const e = {};
-  if (!coverUri) e.cover = true;
-  if (!coverBackUri) e.coverBack = true;
-  if (!personUri) e.person = true;
+  const covers = rules.mailCoverRequired !== false;
+  if (covers && !coverUri) e.cover = true;
+  if (covers && !coverBackUri) e.coverBack = true;
+  if (rules.mailPersonPhotoRequired !== false && !personUri) e.person = true;
   return e;
 }
 
@@ -225,7 +232,7 @@ export function LogMailScreen({ navigation }) {
 
   const submit = async () => {
     setServerError(null);
-    const e = missingPhotos({ coverUri, coverBackUri, personUri });
+    const e = missingPhotos({ coverUri, coverBackUri, personUri }, settings);
     const photosMissing = Object.keys(e).length > 0;
     if (!form.kind) e.kind = true;
     if (!form.sender.trim()) e.sender = true;
@@ -338,7 +345,7 @@ export function LogMailScreen({ navigation }) {
               sub="Address label side"
               uri={coverUri}
               aspect={4 / 3}
-              required
+              required={settings.mailCoverRequired !== false}
               error={errors.cover}
               onPress={() => take('cover')}
             />
@@ -347,7 +354,7 @@ export function LogMailScreen({ navigation }) {
               sub="Turn the item over"
               uri={coverBackUri}
               aspect={4 / 3}
-              required
+              required={settings.mailCoverRequired !== false}
               error={errors.coverBack}
               onPress={() => take('coverBack')}
             />
@@ -358,7 +365,7 @@ export function LogMailScreen({ navigation }) {
               sub="Front camera"
               uri={personUri}
               fill
-              required
+              required={settings.mailPersonPhotoRequired !== false}
               error={errors.person}
               onPress={() => take('person')}
             />

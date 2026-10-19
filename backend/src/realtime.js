@@ -5,6 +5,9 @@ const require = createRequire(import.meta.url);
 const { Server } = require('socket.io');
 import { config } from './config.js';
 import { isGateUser, userFromToken } from './middleware/auth.js';
+import { serializeExpected } from './services/serializeExpected.js';
+import { serializeMaterial } from './services/serializeMaterial.js';
+import { serializeIncident } from './services/serializeOps.js';
 import { serializeMail } from './services/serializeMail.js';
 import { serializeVisit } from './services/serialize.js';
 import { getSettings } from './services/settings.js';
@@ -15,7 +18,8 @@ let io = null;
 /**
  * Rooms:
  * - `role:gate`  admin / security / viewer sockets: all visit:* and mail:* events
- * - `user:<id>`  every socket of that user: mail events for items addressed to them, and disconnects
+ * - `user:<id>`  every socket of that user: mail events for items addressed to them, visit events for their
+ *                 own visitors, notifications, and disconnects
  */
 const GATE_ROOM = 'role:gate';
 /** @param {string} id */
@@ -60,12 +64,18 @@ export function disconnectUser(userId) {
   io?.in(userRoom(userId)).disconnectSockets(true);
 }
 
-/** @param {'visit:created' | 'visit:updated'} event @param {any} visit */
+/**
+ * visit:created / visit:updated → gate users + the visited host's own sockets (one delivery per socket).
+ * @param {'visit:created' | 'visit:updated'} event
+ * @param {any} visit
+ */
 async function emitVisit(event, visit) {
   if (!io) return;
   const { overstayHours } = await getSettings();
   const payload = { visit: await serializeVisit(visit, overstayHours) };
-  io?.to(GATE_ROOM).emit(event, payload);
+  if (!io) return;
+  const target = visit.hostId ? io.to(GATE_ROOM).to(userRoom(visit.hostId)) : io.to(GATE_ROOM);
+  target.emit(event, payload);
 }
 
 /** @param {any} visit Visit document */
@@ -123,4 +133,53 @@ export function emitMailReminder(item) {
  */
 export function emitToUser(userId, event, payload) {
   io?.to(userRoom(userId)).emit(event, payload);
+}
+
+/** People concerned with a pre-registration: who registered it, the host, the receiving contact, the "also" list. */
+export const expectedPeople = (/** @type {any} */ e) =>
+  [...new Set([e.createdBy?.id, e.host?.id, e.contact?.id, ...(e.also ?? []).map((/** @type {any} */ a) => a.id)].filter(Boolean))];
+
+/**
+ * expected:changed → gate users + everyone concerned (one delivery per socket).
+ * @param {any} expected Expected document
+ */
+export function emitExpectedChanged(expected) {
+  if (!io) return;
+  let target = io.to(GATE_ROOM);
+  for (const id of expectedPeople(expected)) target = target.to(userRoom(id));
+  target.emit('expected:changed', { expected: serializeExpected(expected) });
+}
+
+/**
+ * `material:changed { pass }` to the gate and the employees on the pass (authorising / requesting).
+ * @param {any} pass MaterialPass document
+ */
+export async function emitMaterialChanged(pass) {
+  if (!io) return;
+  let target = io.to(GATE_ROOM);
+  for (const id of new Set([pass.authorisedBy?.id, pass.requestedBy?.id].filter(Boolean))) target = target.to(userRoom(id));
+  target.emit('material:changed', { pass: await serializeMaterial(pass) });
+}
+
+/** `keys:changed { key }` to the gate (the key with its open moves). @param {any} key serialized key */
+export function emitKeysChanged(key) {
+  if (!io) return;
+  io.to(GATE_ROOM).emit('keys:changed', { key });
+}
+
+/** `patrol:changed {}` / `gen:changed {}` to the gate: something moved, refetch. @param {'patrol' | 'gen'} what */
+export function emitOpsChanged(what) {
+  if (!io) return;
+  io.to(GATE_ROOM).emit(`${what}:changed`, {});
+}
+
+/**
+ * `incident:changed { incident }` to the gate, the reporter and the assigned person.
+ * @param {any} incident Incident document
+ */
+export async function emitIncidentChanged(incident) {
+  if (!io) return;
+  let target = io.to(GATE_ROOM);
+  for (const id of new Set([incident.reportedBy?.id, incident.assignedTo?.id].filter(Boolean))) target = target.to(userRoom(id));
+  target.emit('incident:changed', { incident: await serializeIncident(incident) });
 }

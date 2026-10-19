@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import { Router } from 'express';
 import { forbidden, notFound } from '../middleware/error.js';
 import { resolveStoredFile } from '../services/images.js';
+import { contentTypeOf } from '../services/storage.js';
 import { verifyFileSignature } from '../services/signing.js';
 
 export const filesRouter = Router();
@@ -10,7 +11,7 @@ export const filesRouter = Router();
 filesRouter.get('/:name', async (req, res) => {
   const name = String(req.params.name);
   if (!verifyFileSignature(name, req.query.exp, req.query.sig)) {
-    throw forbidden('This photo link is invalid or has expired. Reload to get a fresh one.');
+    throw forbidden('This link is invalid or has expired. Reload to get a fresh one.');
   }
   // Only well-formed stored names resolve to a path inside UPLOAD_DIR (no traversal).
   const full = resolveStoredFile(name);
@@ -22,7 +23,8 @@ filesRouter.get('/:name', async (req, res) => {
     throw notFound('File not found.');
   }
   const maxAge = Math.max(0, Number(req.query.exp) - Math.floor(Date.now() / 1000));
-  res.setHeader('Content-Type', 'image/jpeg');
+  res.setHeader('Content-Type', contentTypeOf(name));
+  if (name.endsWith('.pdf')) res.setHeader('Content-Disposition', 'inline; filename="gatebook-agreement.pdf"');
   res.setHeader('Cache-Control', `private, max-age=${maxAge}, immutable`);
   res.send(data);
 });

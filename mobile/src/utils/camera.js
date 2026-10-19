@@ -12,6 +12,8 @@ const PRESETS = {
   cover: { camera: 'back', maxEdge: 1100 },
   coverBack: { camera: 'back', maxEdge: 1100 },
   person: { camera: 'front', maxEdge: 640 },
+  challan: { camera: 'back', maxEdge: 1400 },
+  boxes: { camera: 'back', maxEdge: 1100 },
 };
 
 async function ensureCameraPermission() {
@@ -31,7 +33,7 @@ async function ensureCameraPermission() {
 
 /**
  * Opens the camera and returns a resized JPEG's local URI, or null if cancelled.
- * @param {'photo' | 'id' | 'cover' | 'person'} kind
+ * @param {'photo' | 'id' | 'cover' | 'coverBack' | 'person' | 'challan' | 'boxes'} kind
  * @returns {Promise<string | null>}
  */
 export async function captureImage(kind) {

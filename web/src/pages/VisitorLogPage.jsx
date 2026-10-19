@@ -41,7 +41,7 @@ import {
   startOfLocalDay,
   toLocalDateInput,
 } from '../utils/format';
-import { passNotReturned, visitStatus } from '../utils/visit';
+import { hostReplyText, passNotReturned, visitStatus } from '../utils/visit';
 
 const RANGES = [
   { value: 'today', label: 'Today' },
@@ -55,6 +55,9 @@ const STATUSES = [
   { value: 'in', label: 'Inside' },
   { value: 'out', label: 'Exited' },
   { value: 'over', label: 'Overstay' },
+  { value: 'waiting', label: 'Waiting at gate' },
+  { value: 'declined', label: 'Host declined' },
+  { value: 'noreply', label: 'Host did not reply' },
 ];
 
 const DEFAULTS = { range: 'today', from: '', to: '', status: 'all', q: '', sort: '-inAt', page: 1, limit: 20 };
@@ -318,6 +321,18 @@ export function VisitorLogPage() {
                           {v.dept}
                         </Typography>
                       ) : null}
+                      {v.hostStatus === 'manual' && v.allowedAt ? null : (
+                        <Typography
+                          sx={{
+                            fontSize: 12,
+                            color: v.hostStatus === 'declined' || v.escalatedAt ? 'error.main' : 'text.secondary',
+                          }}
+                          noWrap
+                        >
+                          {hostReplyText(v)}
+                          {v.hostVia === 'app' && v.hostAt ? ` in ${fmtDuration(v.inAt, v.hostAt)}` : ''}
+                        </Typography>
+                      )}
                     </TableCell>
 
                     <TableCell sx={{ whiteSpace: 'nowrap' }}>

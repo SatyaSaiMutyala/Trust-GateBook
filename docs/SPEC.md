@@ -297,3 +297,271 @@ Logging post needs **three photos, all required**: **Cover — front** (address 
 photo preview (swipe/arrows through Front · Back · Delivery person) and the Item logged confirmation show the back
 cover next to the front. Items logged before this existed have no back photo: show a neutral "No back photo"
 placeholder (not tappable) — existing data is never changed.
+
+
+## Host approval (web + mobile)
+
+The employee being visited is asked to accept the visitor; security lets them in only after that (API.md "Host approval").
+
+- **Check in → "Whom to meet"** is an employee picker over `GET /api/hosts` (same control as the post room's receiver).
+  Picked employee → hint "🔔 Gets a notification and accepts or declines in Gatebook"; typed name → "📞 Not on Gatebook —
+  call them before letting the visitor in". Returning-visitor "Fill details" re-picks the same employee.
+  Toast "Checked in · Ravi Kumar notified" / "Checked in · call Front office to confirm".
+- **Pass issued** shows a live note under the ticket: notified (info: "If there is no reply in N minutes, you'll get an alert
+  to call them") · accepted (green, "Send Anil in" + **Allowed in**) · declined (red, collect the pass) · not on Gatebook
+  (amber, **Call host** + **Confirmed by phone**).
+- **Stage chip** on open visits not yet let in: amber "Waiting for host" / "Confirm by phone", green "Accepted · send in",
+  red "No reply · call host" / "Host declined". Inside-now cards and the details screen show it next to the status chip,
+  with the gate's next step: **Allowed in** (after the host accepted), **Call host** (`tel:`) and **Confirmed by phone**.
+- **Visitor alerts** (gate users, above every gate screen, before the post-issue rows): one row per visit from
+  `GET /api/visits/inside?attention=true&limit=5` — green "Send Anil in" / red "Ravi declined Anil" (+ Mark exit) /
+  red "No reply from Ravi: call them" / amber "Call Ravi to confirm Anil", with View and the actions above; "N more" → Inside now.
+  A host's answer or a no-reply alert arriving live gets a toast (web: plus a pulse; mobile: from the stored notification).
+- **Details timeline**: In → "Waiting for Ravi · asked 3m ago · no reply, security alerted at 10:47 am" / "Accepted 10:45 am ·
+  by Ravi in 3m · “Send to my office”" / "Declined …" / "Confirm with Ravi by phone · not on Gatebook" → "Let in 10:46 am · by
+  Suresh" or dashed "Not let in yet" → Out. Visits from before host approval show no host rows.
+- **My visitors** (anyone who can receive visitors; employees open on it — web `/my-visitors`, mobile first tab "Visitors";
+  gate users who are also hosts: web rail link, mobile "Mine" on the Inside now app bar). Sections from
+  `GET /api/visits/mine?scope=…`: **Waiting at the gate** (big amber cards: photo, company · purpose, pass, arrived time,
+  amber "waiting 4m", "Security has been asked to call you." after a no-reply alert; message field + quick replies "Send to my
+  office", "I'll come to the gate", "Ask them to wait 10 minutes", "Send to the meeting room", "Not available today", "Not
+  expecting this visitor", "Please reschedule"; **Decline** / green **Accept, let them in**), **Visiting you now**,
+  **Earlier visitors**. Nav badge = waiting count (amber).
+- **Overview / Today**: tiles "Waiting at gate" (amber when > 0) and "Average host reply" (label becomes "Host reply · N no
+  reply" when some hosts didn't answer). **Visitor log** status filter adds Waiting at gate · Host declined · Host did not
+  reply; the web log shows the host's answer under the host's name.
+- **Settings** (admin): "Host reply time" minutes (1–60, default 5) next to the overstay alert.
+- **Notifications**: 🚪 visitor at the gate (host), ✅ host answered and ⏰ no reply (security); tapping opens the visit.
+
+## Expected visitors & deliveries (web + mobile)
+
+Employees register visitors and deliveries before they come; the gate checks them in from the entry
+(API.md "Expected visitors & deliveries"). Everyone may pre-register except viewers and users an admin has unticked
+**Can pre-register visitors** (Users; default on).
+
+- **Expected list**: web `/expected` (rail link with today's count for gate users; employees: rail link and phone tab),
+  mobile gate stack screen "Expected" (from the Check in strip and the Today tile) and the employee tab **Expected**
+  (green badge = still expected today). Gate users: tabs **Today · Upcoming · Earlier** (everything at the gate);
+  others: **Upcoming · Earlier** (what they registered, host, receive or are told about). A search covers every tab;
+  a notification opens the list searched for the entry's code (`EX-…`).
+- **Card**: time ("TODAY 3:00 pm", "to 4:00 pm"), name (deliveries: 📦 "Delivery from Reagent Co" with a green edge), state
+  chip — amber Expected / Delivery expected, red Late (window passed today), grey Did not come / Cancelled, green Arrived /
+  Received — and green "Pre-approved"; company · purpose · persons, boxes + challan, "To meet Dr Meera" / "Received by Lab
+  in-charge · for Dr Meera" / "To be received by …", "registered by …", items / vehicle, the note for security in quotes,
+  mobile · code · arrived/received time and guard. Actions: **Check in** (security/admin, visitors), **Received**
+  (security/admin, deliveries), **Edit** / **Cancel** (security, admin, whoever registered it, the host; confirm dialog).
+- **Expect a visitor / delivery** form (web dialog, mobile full screen; buttons on the list): Visitor | Delivery toggle.
+  Visitor: name*, mobile, coming from, persons, purpose chips, **Visiting*** (employee picker, defaults to me when I can
+  receive visitors), **Received at the location by** (optional second employee who meets them), **Also meeting** (up to 10,
+  told on arrival). Delivery: from*, boxes*, challan type + number, brought by + mobile, **Received by***. Both: expected
+  date + time, optional end time, vehicle, items (visitors), note for security, and for visitors **Pre-approved: send them
+  in when they arrive** (default from Settings). Only employees from the list (no typed names). Save → "Saved. Security at
+  the gate has been notified."
+- **Check in**: a strip "📅 N expected today · View" above the form; typing a mobile number that matches someone expected
+  today shows "Expected today. Anil Rao at 3:00 pm for Lab in-charge · Fill details". Check in from the list or Fill details
+  fills name, mobile, company, persons, purpose (when still in settings), vehicle, items and **Whom to meet** = the contact,
+  else the host, and shows a banner "Expected visitor. To meet … · Today, 3:00 pm · pre-approved, no need to wait" with the
+  note, boxes, code and **Not this visitor** (unlinks). Submitting sends `expectedId`: the entry turns Arrived and, when
+  pre-approved and the picked employee is the host or contact, the visit starts accepted (toast "pre-approved for …, send
+  them in"; alert row "Expected visitor, pre-approved for …"; timeline "Accepted · pre-approved when registered by … (EX-…)";
+  log "Pre-approved").
+- **Overview / Today**: tile "Expected today" (mobile: opens the list).
+- **Settings** (admin): **Pre-approved visitors** — whether "Pre-approved" starts ticked. **Users**: "Can pre-register
+  visitors" on Employees and Security (chip "No pre-register" when off).
+- **Notifications**: 📅 expected visitor / delivery (gate, plus the people concerned when someone else registered it),
+  ✅ arrived / received (the people concerned), 🚫 cancelled (gate and the people concerned).
+
+## Platform: modules, hierarchy, escalations, branding, rules (web + mobile)
+
+- **Modules.** Admins tick, per person, the modules they can use (Settings → Accounts & hierarchy → person editor:
+  "Modules this person can use" — Area · Module · What they can do · Access, with Tick all / Role defaults / Untick
+  all; employees always keep "My visitors"; admins "have every module and Settings"). The users list shows a chip
+  "All N modules" / "x of N modules" (tooltip "Not: …"). Unticked modules disappear from the rail / tabs, their pages
+  redirect home, and the server refuses them. An admin's change reaches the person's open apps at once.
+- **Hierarchy.** Person editor: **Reports to (escalation level 1)** ("Nobody (top of the chain)", then "Name ·
+  Designation"; hint "Escalations go: A → B → admin"), **Designation** (suggestions from Settings → General), **Gate
+  supervisor**. Settings → Accounts & hierarchy: "How escalation follows the hierarchy" (levels strip; warning for
+  guards with no supervisor), **Reporting hierarchy** (indented org tree; tap a person to find them in Users),
+  **Escalation chain per person** ("Ravi → Anil → admin").
+- **Escalation matrices** (web Settings → Visitors: "Host has not replied", "Visitor overstaying"; → Post room: "Post
+  not collected"): a timeline of steps (AT ONCE / +15 min / +4 h / +1 d · target · Alarm chip · label · repeats ·
+  "Now: names" or red "Nobody set up: goes to admin") and **Edit matrix** (After · Notify · Repeat every · Message ·
+  Alarm · remove; Add step; Save matrix). The no-reply step to guards replaces "Host reply time". Mobile shows the
+  matrices read-only ("Edit them in Settings on the web").
+- **Escalation log** (web Settings tab): Today / 7 days / 30 days, module filter, Export CSV; columns When · Module ·
+  Item · Escalation (Alarm chip, "Repeat n") · Sent to (target, people, amber note).
+- **Branding** (web Settings → Company): logo upload (PNG/JPG < 1.5 MB, light + dark preview, Replace / Remove) and
+  company details (short name, registered name, address, phone, email, website, GSTIN, CIN). The logo replaces the
+  Gatebook mark in the rail / app bar and on the sign-in screen; the short name is the rail sub-line, the sign-in
+  sub-line and the pass header ("TrustLab · Main Gate").
+- **Rules**: web Settings → Visitors "Check-in rules" (Visitor photo is required · Pass number is required) and →
+  Post room "Logging rules" (Cover photos · Delivery person photo); mobile Account has the same switches. Optional
+  fields lose their asterisk; a pass without a number shows "No pass card".
+- **Escalation notifications** (⏰): a toast with title · body; alarm steps vibrate longer. Tapping opens the visit or
+  post item (a manager can open a visitor of someone who reports to them).
+- **Settings tabs (web, admins)**: General · Company · Accounts & hierarchy · Visitors · Post room · Escalation log ·
+  My account.
+
+## Terms & confidentiality agreement (web + mobile)
+
+- **Settings → Terms & confidentiality** (web, admins): "Visitors must agree to the terms at check-in" (saves at
+  once), Company name on the agreement (empty = the registered name), Title, Terms text (plain text; "1. Heading" on its
+  own line, a blank line between sections) with a live preview, **Save as version N** ("Current: version N. Agreements
+  already signed keep the wording the visitor agreed to."), earlier versions as links, **Open terms page**, **Sample
+  agreement PDF**. Settings → Visitors shows "Terms & confidentiality agreement · Version N · visitors must agree at
+  check-in / not required" with **Edit terms**. Mobile Account: the "must agree" switch only.
+- **Check in** (when required): a box under Remarks — checkbox "Visitor agrees to the **Terms & conditions**,
+  including confidentiality *" with the hint "Show or read the terms to the visitor…"; the link (mobile: "Read the
+  terms & conditions") opens the terms with **Visitor agrees**. Not ticked → red box and "The visitor must agree to the
+  terms before check-in."
+- **Pass issued**: "Terms accepted. Confidentiality agreement saved with the visitor's photo" + **Agreement PDF**
+  ("(the PDF is being made)" for the first second or two).
+- **Visitor details**: card "Terms & confidentiality agreement · Accepted with photo at {time} · terms version N" with
+  **Agreement PDF** (gate users) or **Create agreement PDF** when missing.
+- **Public page** `/terms` (web, no sign-in; `?v=N` for an earlier version, with a note that it is not current).
+- **Visitor log CSV**: "Terms accepted" column.
+
+## Key register (web + mobile)
+
+- **Key register** (web rail "Key register", `/keys`; mobile: Today → "Key register", Account → Site safety; gate
+  users with the `keys` module). Tabs **Key board** and **Key diary**.
+- **Key board**: counts (keys · out now · overdue), gate filter (several gates), search; a tile per key: number tag
+  (green "In" / "2 of 3 in", amber "Out"), what it opens 🔒 (restricted), location · gate, **Issue** while a copy is
+  free; under it each copy out: who (phone), out since, due / "was due" (red when overdue), purpose, status chip,
+  **Return**.
+- **Issue sheet**: restricted banner ("Restricted key. Only: IT team."), taken by (pick an employee — they get a
+  reminder — or type anyone's name), phone, purpose, **Return by** chips "1 hour", "2 hours", "6 pm today" (while
+  ahead), "Tomorrow 10 am", "No return time", plus a date-time field (default now + `keyReturnHours`).
+- **Return sheet**: returned by (defaults to the taker), note → "Key SRV-1 is back".
+- **Key diary**: period Today · Last 7 days (default) · 30 · 90 days, status All · Out now · Overdue · Returned,
+  search; rows: key no., what · who, issued (by), due, back (received by), purpose, note, status (Out · Overdue ·
+  Returned · Returned late), Return. **Export CSV** (`key-diary.csv`).
+- **Settings → Keys** (web, admin): list with Add / Edit (number, what it opens, location, gate, copies, restricted +
+  who may take it, in use); default return time; the "Key not returned" escalation matrix.
+- **Overview / Today**: "Keys out" tile (with "N overdue").
+
+## Incidents (web + mobile)
+
+- **Incidents** (web rail "Incidents", `/incidents`; mobile: Today → "Incidents", Account → Site safety). Tabs
+  **Open (n)** · Closed · All, severity filter, search; **+ Report incident** for everyone except viewers; gate users
+  also **Export CSV** (`incident-log.csv`). Employees see what they reported and what was given to them.
+- **Report**: type chips (Settings list), how serious (Low · Medium · High · Critical, hint "High and Critical also
+  alert security on duty, not just admin."), gate, where, when (default now), what happened, people involved, action
+  taken, up to 3 photos → opens the incident.
+- **Incident details**: type, severity + status, description, happened / reported / where / people / action / given to /
+  resolution, photos, **Updates** timeline (who · when · status / given to · text). Update form: text, status (security
+  and the assignee), **Give to** (security / admin). **Close incident** → "How was it resolved?" (security, admin,
+  assignee). **Reopen** (admin).
+- **Notifications**: given to you, updates, closed, escalations; tapping opens the incident (`?open=IN-…` on web).
+- **Settings → Incidents** (web, admin): incident types; the four escalation matrices (critical · high · medium · low).
+- **Overview / Today**: "Open incidents" tile.
+
+## TRACK (web + mobile)
+
+- **TRACK** (web rail "TRACK" with the count — amber when urgent — opening page on desktop for gate users; phone web and
+  the mobile app: the first tab, with the count). Eyebrow "{gate} · live", "N items need action" / "All clear". Chips
+  per category (All · Visitors at the gate · Material · Keys · Patrols · Incidents · Generator · Post room), sections in
+  that order. Cards coloured by tone (green send in, red problems, amber calls / due, solid red pulsing for a late round).
+- **Buttons**: Allowed in · Mark exit · Call host · Confirmed by phone · Confirmed, allow in · Exit (visitors); View /
+  Resolve (post); View (material, incidents); Call · Key board (keys); Silence 5 min · Scan now / Scan (patrols); Log
+  fill · Check now (generator).
+- Below: "Material in progress · N" and "Expected in the next 2 hours".
+- **Alarm**: while a round is late, the web app plays three tones and vibrates every 12 s for security and supervisors
+  (page visible), until scanned or "Silence 5 min". "In-app sound on / off" in My account. Phones ring from the push.
+- Refreshes on every live change and every 30 s. Empty: "All clear · Nothing needs action right now. …"
+
+## Gates (web + mobile)
+
+- **This gate** picker for gate users when there are several gates (web: bottom of the rail, phone top bar; app:
+  Account → This gate). Starts on the person's own gate (Settings → Accounts: "Gate", or All gates). Switching reloads
+  the screens for that gate: TRACK, Overview, Inside now, Post room, Material, Keys, Incidents, Patrols, Generator; new
+  check-ins, post and material are recorded at that gate; set-up forms (keys, checkpoints, rounds, generators) start on
+  it. Escalations to guards / supervisors go to that gate's people (and those at all gates).
+
+## Alerts on this device (web push)
+
+- Banner under the top bar until alerts are on: "Turn on alerts on this device · Get a notification when …, even when
+  Gatebook is closed." [Turn on alerts] [Later] (hidden for a day). iPhone in Safari: "Install Gatebook to get alerts…
+  Tap Share, Add to Home Screen, open it from there". Unsupported browsers: "This browser can't show Gatebook alerts".
+- **My account → Alerts on this device**: On / Off, Send test alert, Turn off on this device, "Alerts go to N devices: …",
+  In-app sound. Tapping an alert opens the page (incident, expected, patrols, generator, keys, material, else
+  Notifications).
+
+## Patrols (web + mobile)
+
+- **Patrols** (web rail "Patrols", `/patrol`; mobile: Today → "Patrols", Account → Site safety; gate users with the
+  `patrol` module). **Scan checkpoint** (security, admin). Tabs **Rounds** · **Late & missed log** · **Scan log**.
+- **Rounds**: "Due now", "Coming up" (next 3), "Last 12 hours" with "N rounds · x on time · y started late · z partly
+  missed · w missed". Each slot: start time, round, "on time till HH:MM · ends HH:MM", one dot per checkpoint (green
+  scanned, amber issue, red missed), escalations sent, a chip ("Starts in …", "Late · 1/4 · 20m left", "Complete on
+  time", "Complete · started 15 min late", "Missed 2 of 4", "Missed"), **Scan** while open.
+- **Scan** (web): camera QR reader where the browser supports it, or **type the 6-letter code**. Mobile: type the code
+  (camera scanning needs a native library — not yet). Then: which round it counts for ("Counts for Night round 23:00 ·
+  1 of 6 done so far" or "extra scan"), condition **All OK / Issue found**, note (required for an issue), photo
+  (required where set) → "{checkpoint} scanned", progress, **Report as incident** (issue scans: opens the incident form
+  with where and what happened filled in, `source: patrol`), **Scan next**. Opening a printed QR's link in the browser
+  (`/?cp=CODE`) goes straight to the scan.
+- **Late & missed log**: Today · 7 · 30 · 90 days, "Late & missed only" / "All rounds", stat cards (on time %, started
+  late with average minutes, partly missed, missed completely), table (date, round, start time, started +min, finished,
+  scanned + missed checkpoints, status, escalations, guards), **Export CSV**.
+- **Scan log**: last 3 days, photo, checkpoint, Issue / Code typed chips, guard, round or "Extra scan (no round due)",
+  note, time.
+- **Settings → Patrols** (web, admin): 1. Locations (checkpoints) with **Print QR codes** (A4 sheet, 2 per row, name,
+  floor, code) and Add / Edit (name, floor / location, photo required, active, QR preview, **Issue new code** — two
+  taps; the old printed QR stops working); 2. Rounds and times (name, start times or "every N min from … to …",
+  on time if started within, time allowed, locations, active); 3. the "Round late or missed" matrix (steps can be
+  **When time runs out**); 4. who receives (Level 1 = the guard's supervisor).
+- **Overview / Today**: "Patrol rounds complete today" (complete / ended · N missed · N due now).
+
+## Generator & diesel (web + mobile)
+
+- **Generator & diesel** (web rail "Generator", `/generator`; mobile: Today → "Generator", Account → Site safety; gate
+  users with the `gen` module). Tabs **Status** · **Run log** · **Diesel log** (mobile: Status · Run log).
+- **Status** per generator: kVA · tank · rated L/h, **Running 1h 05m** / Off (who started it, reason, hour meter);
+  **Diesel in tank** "About 120 L of 250 L · 48%" with a gauge and the low mark, "Low: arrange refill", how the estimate
+  is worked out; **Diesel level check** (next due / overdue since, last reading with its gauge photo); run this month
+  (hours, starts); diesel filled this month. Buttons **Start generator** / **Stop generator**, **Log diesel fill**,
+  **Weekly level check**.
+- **Sheets**: start (reason Power cut · Weekly test run · Maintenance · Other, hour meter); stop (hour meter, note);
+  level check (gauge photo required, level in litres with "% of the tank", hour meter, note); fill (bill photo, filled
+  at, litres, level after filling, hour meter, supplier, bill no., amount, note).
+- **Run log**: hours in the last 30 days, table, **Export CSV**. **Diesel log** per generator: consumption between
+  level readings (L/h, "above rated", "Diesel dropped without running"), entries with photos, **Export CSV**.
+- **Settings → Generator** (web, admin): generators (name, kVA, tank, rated use, low alert %, active), "Check the tank
+  level every N days, due at H o'clock", the "Diesel level check overdue" and "Low diesel" matrices.
+- **Overview / Today**: "Generator" tile (On / Off, diesel alerts).
+
+## Material gate passes (web + mobile)
+
+- **Security — Material gate passes** (web rail "Material passes", `/material`; mobile: Today → "Material gate
+  passes", visitor details, pass screen): big **Material IN** (green) / **Material OUT** (amber) buttons; tabs with counts
+  — "Boxes in / out today" (IN boxes logged / OUT boxes released), "Waiting for employee to accept", "To count, hand
+  over or release", "Returnable not closed", "Overdue returns", "All passes" (7 / 30 / 120 days); IN & OUT filter;
+  search; Export CSV. Cards: box count block (green IN / amber OUT), carrier photo + name · company · visitor pass,
+  challan · for / from employee, pass no. · time · pickup / returnable, status chip, due date, actions.
+- **Employees — Gate passes** (web rail + phone tab, mobile tab "Gate passes"): **+ Send material out**; To accept ·
+  Sent out · Received · All.
+- **New pass** form: In or out (security) → who takes / brought the boxes (a visitor inside now · not a visitor: name,
+  company, mobile, vehicle, photo · leave with security for pickup: who will collect) → employee (security: receiving /
+  sending; "gets an Approve / Reject request" hint) → boxes (stepper), challan chips, challan no., e-way bill, challan
+  photos (≤ 4) → More: returnable + expected back by (quick 1 day … 1 month, default `mpReturnDays`), purpose chips,
+  item lines (item, qty, unit, serial), box photos (≤ 6), remarks. Button text follows what happens next ("Save & ask
+  employee to accept", "Save & ask for approval", "Save · count at exit", "Save · counted, release now", "Save and
+  hand to security").
+- **Pass details**: next step banner with the actions (Received / Not received; Approve / Reject; Count & release;
+  Hand over; Boxes handed in; Mark received / Received on paper; Remind; Record boxes back / going out), timeline, the
+  carrier and employee, challan photos, item lines, box photos, details, **Cancel pass**, **Gate pass PDF**.
+- **Action sheets**: approve / reject with a note; received / not received / on paper (note required); boxes handed in
+  (count); count & release / hand over (count must match, vehicle; pickup: visitor or name + mobile + photo);
+  returns per line with remarks and a photo.
+- **Visitors**: details show a "Material" section (passes + Material IN / OUT buttons; the visited employee:
+  "Material OUT with this visitor"); the pass screen has the same buttons; **exit** asks for the count of each OUT pass
+  going with the visitor (released after the exit), warns about passes not approved and returnable material brought in.
+- **Expected deliveries**: security's **Received** opens Material IN filled from the entry; the entry gets "Gate pass".
+- **Settings → Material passes** (web; mobile Account): purposes IN / OUT, challans IN / OUT, units, rules (OUT needs an
+  authorising employee · security-made OUT passes need approval in the app · challan photo required · carrier photo
+  required), default return period, escalation matrices (IN not accepted · waiting for approval · returnable overdue).
+- **Gate pass PDF**: coloured header (green IN / amber OUT) with logo, company, MATERIAL IN / OUT, returnable · pass no.
+  · gate · time; box count; challan, purpose, e-way bill, back by, remarks; item lines; carrier with photo; employee and
+  their confirmation; security record (handed in, counted, released, returns); company address / GSTIN / CIN; challan
+  photos.

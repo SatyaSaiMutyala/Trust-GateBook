@@ -1,5 +1,11 @@
 import React, { useLayoutEffect, useMemo, useState } from 'react';
-import { RefreshControl, ScrollView, Text, View } from 'react-native';
+import {
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 import { Button } from '../components/Button';
 import { Panel } from '../components/Layout';
 import { ListError } from '../components/ListFooter';
@@ -14,21 +20,25 @@ import {
   useInsideInfiniteQuery,
   useOverviewQuery,
 } from '../store/api';
-import { selectCanCheckIn } from '../store/authSlice';
+import { selectCanCheckIn, selectHasModule } from '../store/authSlice';
 import { useSettings, useSheets } from '../store/hooks';
 import { useInfiniteList } from '../store/useInfiniteList';
 
-function StatTile({ label, value, tone }) {
+/** `onPress` makes the tile a button (e.g. Expected today → the list). */
+function StatTile({ label, value, tone, onPress }) {
   const { c } = useTheme();
   const bg =
     tone === 'accent' ? c.accentSoft : tone === 'warn' ? c.warnSoft : c.surface;
   const border =
     tone === 'accent' ? c.accentSoft : tone === 'warn' ? c.warn : c.line;
   const fg = tone === 'warn' ? c.warn : c.ink;
+  const Box = onPress ? Pressable : View;
   return (
-    <View
+    <Box
       accessible
+      accessibilityRole={onPress ? 'button' : undefined}
       accessibilityLabel={`${label}: ${value}`}
+      onPress={onPress}
       style={[styles.tile, { backgroundColor: bg, borderColor: border }]}
     >
       <Text
@@ -44,7 +54,7 @@ function StatTile({ label, value, tone }) {
         {label}
       </Text>
       <Text style={[typo.big, { color: fg }]}>{value}</Text>
-    </View>
+    </Box>
   );
 }
 
@@ -142,6 +152,11 @@ function HBars({ data, color, empty }) {
 export function TodayScreen({ navigation }) {
   const { c } = useTheme();
   const canCheckIn = useSelector(selectCanCheckIn);
+  const material = useSelector(selectHasModule('material'));
+  const keys = useSelector(selectHasModule('keys'));
+  const incidents = useSelector(selectHasModule('incidents'));
+  const patrol = useSelector(selectHasModule('patrol'));
+  const gen = useSelector(selectHasModule('gen'));
   const settings = useSettings();
   const { openExit } = useSheets();
   const now = useNow(30000);
@@ -202,6 +217,53 @@ export function TodayScreen({ navigation }) {
           size="lg"
         />
       ) : null}
+      {material ? (
+        <Button
+          title="Material gate passes"
+          variant="ghost"
+          onPress={() => navigation.navigate('Material')}
+        />
+      ) : null}
+      {keys || incidents ? (
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          {keys ? (
+            <Button
+              title="Key register"
+              variant="ghost"
+              style={{ flex: 1 }}
+              onPress={() => navigation.navigate('Keys')}
+            />
+          ) : null}
+          {incidents ? (
+            <Button
+              title="Incidents"
+              variant="ghost"
+              style={{ flex: 1 }}
+              onPress={() => navigation.navigate('Incidents')}
+            />
+          ) : null}
+        </View>
+      ) : null}
+      {patrol || gen ? (
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          {patrol ? (
+            <Button
+              title="Patrols"
+              variant="ghost"
+              style={{ flex: 1 }}
+              onPress={() => navigation.navigate('Patrol')}
+            />
+          ) : null}
+          {gen ? (
+            <Button
+              title="Generator"
+              variant="ghost"
+              style={{ flex: 1 }}
+              onPress={() => navigation.navigate('Generator')}
+            />
+          ) : null}
+        </View>
+      ) : null}
       {error ? <ListError message={error} onRetry={refetch} /> : null}
 
       <View style={styles.tiles}>
@@ -211,12 +273,22 @@ export function TodayScreen({ navigation }) {
           tone="accent"
         />
         <StatTile
+          label="Waiting at gate"
+          value={overview ? fmtNumber(overview.waitingAtGate ?? 0) : '–'}
+          tone={overview?.waitingAtGate > 0 ? 'warn' : undefined}
+        />
+        <StatTile
           label="Entries today"
           value={overview ? fmtNumber(overview.entriesToday) : '–'}
         />
         <StatTile
           label="Persons today"
           value={overview ? fmtNumber(overview.personsToday) : '–'}
+        />
+        <StatTile
+          label="Expected today ›"
+          value={overview ? fmtNumber(overview.expectedToday ?? 0) : '–'}
+          onPress={() => navigation.navigate('Expected')}
         />
         <StatTile
           label="Average stay"
@@ -229,10 +301,68 @@ export function TodayScreen({ navigation }) {
           }
         />
         <StatTile
+          label={
+            overview?.noReplyToday
+              ? `Host reply · ${overview.noReplyToday} no reply`
+              : 'Average host reply'
+          }
+          value={
+            overview
+              ? overview.avgHostReplyMinutes == null
+                ? '–'
+                : fmtMinutes(Math.round(overview.avgHostReplyMinutes))
+              : '–'
+          }
+        />
+        <StatTile
           label={`Over ${hours} h inside`}
           value={overview ? fmtNumber(overCount) : '–'}
           tone={overCount > 0 ? 'warn' : undefined}
         />
+        {keys ? (
+          <StatTile
+            label={
+              overview?.keysOverdue
+                ? `Keys out · ${overview.keysOverdue} overdue ›`
+                : 'Keys out ›'
+            }
+            value={overview ? fmtNumber(overview.keysOut ?? 0) : '–'}
+            tone={overview?.keysOverdue ? 'warn' : undefined}
+            onPress={() => navigation.navigate('Keys')}
+          />
+        ) : null}
+        {incidents ? (
+          <StatTile
+            label="Open incidents ›"
+            value={overview ? fmtNumber(overview.incidentsOpen ?? 0) : '–'}
+            tone={overview?.incidentsOpen ? 'warn' : undefined}
+            onPress={() => navigation.navigate('Incidents')}
+          />
+        ) : null}
+        {patrol && overview?.patrolsToday ? (
+          <StatTile
+            label={`Patrol rounds complete today${
+              overview.patrolsToday.missed
+                ? ` · ${overview.patrolsToday.missed} missed`
+                : ''
+            } ›`}
+            value={`${overview.patrolsToday.complete}/${overview.patrolsToday.ended}`}
+            tone={overview.patrolsToday.missed ? 'warn' : undefined}
+            onPress={() => navigation.navigate('Patrol')}
+          />
+        ) : null}
+        {gen && overview ? (
+          <StatTile
+            label={
+              overview.genAlerts
+                ? `Generator · ${overview.genAlerts} diesel alert ›`
+                : 'Generator ›'
+            }
+            value={overview.genRunning ? 'On' : 'Off'}
+            tone={overview.genAlerts ? 'warn' : undefined}
+            onPress={() => navigation.navigate('Generator')}
+          />
+        ) : null}
       </View>
 
       <Panel title="Arrivals by hour">

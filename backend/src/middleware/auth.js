@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import { config } from '../config.js';
 import { User } from '../models/User.js';
+import { NO_MODULE_MESSAGE, hasModule } from '../services/modules.js';
 import { forbidden, unauthorized } from './error.js';
 
 /** @param {string} userId */
@@ -72,4 +73,17 @@ export function currentUser(req) {
   const user = /** @type {any} */ (req).user;
   if (!user) throw unauthorized();
   return user;
+}
+
+/**
+ * 403 unless the signed-in user has one of the modules (services/modules.js).
+ * @param {...import('../services/modules.js').ModuleKey} keys
+ * @returns {import('express').RequestHandler}
+ */
+export function requireModule(...keys) {
+  return (req, _res, next) => {
+    const user = currentUser(req);
+    if (!keys.some((k) => hasModule(user, k))) throw forbidden(NO_MODULE_MESSAGE);
+    next();
+  };
 }

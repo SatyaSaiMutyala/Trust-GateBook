@@ -93,6 +93,15 @@ export const config = {
     accountDeletion: signupEnabled || flag('ACCOUNT_DELETION_ENABLED'),
   },
   signupRateLimit: { max: 5, windowMs: 60 * 60 * 1000 },
+  /**
+   * Web push (browser alerts). VAPID keys from VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY, or made once and kept in the
+   * database. VAPID_SUBJECT: a mailto: or https: contact for the push services.
+   */
+  webPush: {
+    publicKey: env.VAPID_PUBLIC_KEY?.trim() || '',
+    privateKey: env.VAPID_PRIVATE_KEY?.trim() || '',
+    subject: str('VAPID_SUBJECT', 'mailto:admin@gatebook.local'),
+  },
   /** Where new photos go: 'local' (UPLOAD_DIR, served by /api/files) or 's3'. Validated at start-up. */
   storage: (env.STORAGE ?? 'local').trim().toLowerCase() || 'local',
   /**

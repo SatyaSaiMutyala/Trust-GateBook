@@ -1,6 +1,6 @@
 import { Vibration } from 'react-native';
 import { api, applyNotificationRead, setUnreadCount } from '../store/api';
-import { selectIsGateUser } from '../store/authSlice';
+import { selectIsGateUser, userUpdated } from '../store/authSlice';
 import { settingsReceived } from '../store/settingsSlice';
 import { issuePulsed, toastShown } from '../store/uiSlice';
 import { claimNotice, mailNoticeKey, routeNoticeKey } from '../push/dedupe';
@@ -15,6 +15,7 @@ let timer = null;
 
 function invalidateSoon(dispatch, tags) {
   tags.forEach(t => pending.add(t));
+  pending.add('Track');
   if (timer) return;
   timer = setTimeout(() => {
     const list = [...pending];
@@ -33,9 +34,20 @@ export function flushRealtimeBatch(dispatch) {
   if (list.length) dispatch(api.util.invalidateTags(list));
 }
 
+/** visit:created / visit:updated — gate users get every visit, a host only their own visitors. */
 export const visitEvent = visit => dispatch => {
   dispatch(api.util.updateQueryData('getVisit', visit.id, () => visit));
-  invalidateSoon(dispatch, ['Visit', 'Inside', 'Stats']);
+  dispatch(api.util.updateQueryData('getMyVisit', visit.id, () => visit));
+  invalidateSoon(dispatch, ['Visit', 'Inside', 'Stats', 'MyVisitors']);
+};
+
+/** expected:changed — a pre-registration was added, edited, cancelled or arrived (gate + people concerned). */
+export const expectedEvent = expected => dispatch => {
+  if (!expected) return;
+  dispatch(
+    api.util.updateQueryData('getExpected', expected.code, () => expected),
+  );
+  invalidateSoon(dispatch, ['Expected', 'Stats']);
 };
 
 export const mailEvent = (type, item) => (dispatch, getState) => {
@@ -84,6 +96,37 @@ export const mailReminderEvent = item => dispatch => {
   Vibration.vibrate([0, 300, 150, 300]);
 };
 
+/** material:changed — a gate pass was made or moved on: patch it and refresh the lists. */
+export const materialEvent = pass => dispatch => {
+  if (!pass) return;
+  dispatch(api.util.updateQueryData('getMaterial', pass.id, () => pass));
+  invalidateSoon(dispatch, ['Material']);
+};
+
+/** keys:changed — a key was issued, returned or edited: refresh the board and the diary. */
+export const keysEvent = () => dispatch => {
+  invalidateSoon(dispatch, ['Keys', 'Stats']);
+};
+
+/** patrol:changed / gen:changed — refetch the patrol board / generator status. @param {'Patrol' | 'Gen'} tag */
+export const opsEvent = tag => dispatch => {
+  invalidateSoon(dispatch, [tag, 'Stats']);
+};
+
+/** incident:changed — patch the open incident and refresh the lists. */
+export const incidentEvent = incident => dispatch => {
+  if (!incident) return;
+  dispatch(
+    api.util.updateQueryData('getIncident', incident.id, () => incident),
+  );
+  invalidateSoon(dispatch, ['Incidents', 'Stats']);
+};
+
+/** me:updated — an admin changed my modules / profile: tabs and screens follow without signing in again. */
+export const meUpdatedEvent = user => dispatch => {
+  if (user) dispatch(userUpdated(user));
+};
+
 export const settingsEvent = settings => dispatch => {
   dispatch(settingsReceived(settings));
   invalidateSoon(dispatch, ['Settings']);
@@ -95,6 +138,13 @@ export const reconnected = () => dispatch => {
     'Visit',
     'Inside',
     'Stats',
+    'MyVisitors',
+    'Expected',
+    'Material',
+    'Keys',
+    'Incidents',
+    'Patrol',
+    'Gen',
     'Mail',
     'MailCounts',
     'Notifications',
@@ -122,6 +172,13 @@ export const notificationNewEvent =
         .filter(Boolean)
         .join(' · ');
       if (text) dispatch(toastShown(text));
+      // A visitor waiting at the gate for my answer, or an alarm escalation step: make it noticeable.
+      if (notification.alarm) Vibration.vibrate([0, 500, 200, 500, 200, 500]);
+      else if (
+        notification.event === 'visit_arrived' ||
+        notification.event === 'escalation'
+      )
+        Vibration.vibrate([0, 300, 150, 300]);
     }
   };
 

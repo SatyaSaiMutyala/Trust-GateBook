@@ -54,6 +54,18 @@ export const selectIsEmployee = s => selectRole(s) === 'host';
 export const selectIsRecipient = s =>
   selectRole(s) === 'host' || !!s.auth.user?.isHost;
 
+/**
+ * Module access (docs/API.md "Module access"): admins have every module; others what is ticked for them. A user
+ * from a server without modules (no `modules`) keeps everything.
+ * @param {{ role?: string, modules?: string[] } | null | undefined} u
+ * @param {'track' | 'visitors' | 'expected' | 'post'} key
+ */
+export const userHasModule = (u, key) =>
+  !!u &&
+  (u.role === 'admin' || !Array.isArray(u.modules) || u.modules.includes(key));
+/** @param {'track' | 'visitors' | 'expected' | 'post'} key */
+export const selectHasModule = key => s => userHasModule(s.auth.user, key);
+
 export const ROLE_LABELS = {
   admin: 'Admin',
   security: 'Security',

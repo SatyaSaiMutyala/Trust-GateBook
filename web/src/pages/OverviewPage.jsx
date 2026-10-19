@@ -11,7 +11,7 @@ import { Link as RouterLink, useNavigate } from 'react-router';
 import { errorMessage } from '../api/client';
 import { statsApi, visitsApi } from '../api/endpoints';
 import { useUser } from '../auth/context';
-import { canOperate } from '../auth/roles';
+import { canOperate, hasModule } from '../auth/roles';
 import { PageHeader, Panel } from '../components/bits';
 import { VisitorCard } from '../components/VisitorCard';
 import { useNow } from '../hooks';
@@ -210,22 +210,78 @@ export function OverviewPage() {
       ) : null}
 
       <Grid container spacing={{ xs: 1.5, md: 2 }} sx={{ mb: { xs: 1.5, md: 2 } }}>
-        <Grid size={{ xs: 6, md: 4, xl: 'grow' }}>
+        <Grid size={{ xs: 6, md: 3, xl: 'grow' }}>
           <StatTile label="Inside now" value={o ? o.insideNow : '–'} tone="accent" />
         </Grid>
-        <Grid size={{ xs: 6, md: 4, xl: 'grow' }}>
+        <Grid size={{ xs: 6, md: 3, xl: 'grow' }}>
+          <StatTile
+            label="Waiting at gate"
+            value={o ? o.waitingAtGate : '–'}
+            tone={o?.waitingAtGate > 0 ? 'warn' : undefined}
+          />
+        </Grid>
+        <Grid size={{ xs: 6, md: 3, xl: 'grow' }}>
           <StatTile label="Entries today" value={o ? o.entriesToday : '–'} />
         </Grid>
-        <Grid size={{ xs: 6, md: 4, xl: 'grow' }}>
+        <Grid size={{ xs: 6, md: 3, xl: 'grow' }}>
           <StatTile label="Persons today" value={o ? o.personsToday : '–'} />
         </Grid>
-        <Grid size={{ xs: 6, md: 4, xl: 'grow' }}>
+        <Grid size={{ xs: 6, md: 3, xl: 'grow' }}>
+          <StatTile label="Expected today" value={o ? (o.expectedToday ?? 0) : '–'} />
+        </Grid>
+        {hasModule(user, 'keys') ? (
+          <Grid size={{ xs: 6, md: 3, xl: 'grow' }}>
+            <StatTile
+              label={o?.keysOverdue ? `Keys out · ${o.keysOverdue} overdue` : 'Keys out'}
+              value={o ? (o.keysOut ?? 0) : '–'}
+              tone={o?.keysOverdue ? 'warn' : undefined}
+            />
+          </Grid>
+        ) : null}
+        {hasModule(user, 'incidents') ? (
+          <Grid size={{ xs: 6, md: 3, xl: 'grow' }}>
+            <StatTile
+              label="Open incidents"
+              value={o ? (o.incidentsOpen ?? 0) : '–'}
+              tone={o?.incidentsOpen ? 'warn' : undefined}
+            />
+          </Grid>
+        ) : null}
+        {hasModule(user, 'patrol') && o?.patrolsToday ? (
+          <Grid size={{ xs: 6, md: 3, xl: 'grow' }}>
+            <StatTile
+              label={`Patrol rounds complete today${o.patrolsToday.missed ? ` · ${o.patrolsToday.missed} missed` : ''}${o.patrolsToday.dueNow ? ` · ${o.patrolsToday.dueNow} due now` : ''}`}
+              value={`${o.patrolsToday.complete}/${o.patrolsToday.ended}`}
+              tone={o.patrolsToday.missed ? 'warn' : undefined}
+            />
+          </Grid>
+        ) : null}
+        {hasModule(user, 'gen') && o ? (
+          <Grid size={{ xs: 6, md: 3, xl: 'grow' }}>
+            <StatTile
+              label={
+                o.genAlerts
+                  ? `Generator · ${o.genAlerts} diesel alert${o.genAlerts === 1 ? '' : 's'}`
+                  : 'Generator running'
+              }
+              value={o.genRunning ? 'On' : 'Off'}
+              tone={o.genAlerts ? 'warn' : o.genRunning ? 'accent' : undefined}
+            />
+          </Grid>
+        ) : null}
+        <Grid size={{ xs: 6, md: 3, xl: 'grow' }}>
           <StatTile
             label="Average stay"
             value={o ? (o.avgStayMinutes === null ? '–' : fmtMinutes(o.avgStayMinutes)) : '–'}
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 4, xl: 'grow' }}>
+        <Grid size={{ xs: 6, md: 3, xl: 'grow' }}>
+          <StatTile
+            label={o?.noReplyToday ? `Host reply · ${o.noReplyToday} no reply` : 'Average host reply'}
+            value={o ? (o.avgHostReplyMinutes === null ? '–' : fmtMinutes(Math.round(o.avgHostReplyMinutes))) : '–'}
+          />
+        </Grid>
+        <Grid size={{ xs: 6, md: 3, xl: 'grow' }}>
           <StatTile
             label={`Over ${hours} h inside`}
             value={o ? overCount : '–'}

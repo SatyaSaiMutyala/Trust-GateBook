@@ -104,11 +104,31 @@ export const signOutDeletedAccount = () => signOut({ skipServer: true });
 /** Routing data from an FCM message (`data: { type, id }`), or null. */
 export function routeOf(message) {
   const data = message?.data;
-  if (!data || !data.id || (data.type !== 'mail' && data.type !== 'user'))
+  if (
+    !data ||
+    !data.id ||
+    ![
+      'mail',
+      'user',
+      'visit',
+      'expected',
+      'material',
+      'incident',
+      'key',
+      'patrol',
+      'gen',
+    ].includes(data.type)
+  )
     return null;
   const route = { type: data.type, id: String(data.id) };
   if (data.notificationId) route.notificationId = String(data.notificationId);
   return route;
+}
+
+/** Opens the Expected list searched for `code`. */
+export function openExpected(navigation, gate, code) {
+  if (gate) navigation.navigate('Expected', { q: code });
+  else navigation.navigate('Main', { screen: 'Expected', params: { q: code } });
 }
 
 /** A notification was tapped (app in background or cold start). */
@@ -145,6 +165,64 @@ export const routePendingOpen = navigation => (dispatch, getState) => {
       screen: 'Account',
       params: { section: 'pending' },
     });
+    if (pending.notificationId) {
+      dispatch(
+        api.endpoints.markNotificationRead.initiate(pending.notificationId),
+      );
+    }
+    return true;
+  }
+  if (pending.type === 'visit') {
+    // 🚪 / ✅ / ⏰ host approval: gate users land on Inside now → visit; hosts on My visitors → visit.
+    const gate = selectIsGateUser(state);
+    navigation.navigate('Main', { screen: gate ? 'Inside' : 'MyVisitors' });
+    navigation.navigate('VisitDetails', { id: pending.id });
+    if (pending.notificationId) {
+      dispatch(
+        api.endpoints.markNotificationRead.initiate(pending.notificationId),
+      );
+    }
+    return true;
+  }
+  if (pending.type === 'material') {
+    // 📦 gate pass: open it (gate: from Material passes; employees: from Gate passes).
+    navigation.navigate('MaterialDetails', { id: pending.id });
+    if (pending.notificationId) {
+      dispatch(
+        api.endpoints.markNotificationRead.initiate(pending.notificationId),
+      );
+    }
+    return true;
+  }
+  if (pending.type === 'patrol' || pending.type === 'gen') {
+    // 🛡️ late / missed round, ⛽ diesel: the Patrols / Generator screen (gate users).
+    navigation.navigate(pending.type === 'patrol' ? 'Patrol' : 'Generator');
+    if (pending.notificationId) {
+      dispatch(
+        api.endpoints.markNotificationRead.initiate(pending.notificationId),
+      );
+    }
+    return true;
+  }
+  if (pending.type === 'incident' || pending.type === 'key') {
+    // ⚠️ incident: open it. 🔑 key: gate users see the key board; others just the inbox.
+    if (pending.type === 'incident') {
+      navigation.navigate('IncidentDetails', { id: pending.id });
+    } else if (selectIsGateUser(state)) {
+      navigation.navigate('Keys');
+    } else {
+      navigation.navigate('Notifications');
+    }
+    if (pending.notificationId) {
+      dispatch(
+        api.endpoints.markNotificationRead.initiate(pending.notificationId),
+      );
+    }
+    return true;
+  }
+  if (pending.type === 'expected') {
+    // 📅 pre-registration: the Expected list searched for its code (gate: a stack screen; employees: a tab).
+    openExpected(navigation, selectIsGateUser(state), pending.id);
     if (pending.notificationId) {
       dispatch(
         api.endpoints.markNotificationRead.initiate(pending.notificationId),

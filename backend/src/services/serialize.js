@@ -25,9 +25,12 @@ function guard(g) {
  * @param {any} v
  * @param {number} overstayHours
  * @param {number} [nowMs]
- * @param {{ photoUrl: string, idPhotoUrl: string | null }} [urls]
+ * @param {{ photoUrl: string, idPhotoUrl: string | null, agreementUrl?: string | null }} [urls]
  */
 export function visitFields(v, overstayHours, nowMs = Date.now(), urls = { photoUrl: '', idPhotoUrl: null }) {
+  // Visits from before host approval have no hostStatus: they were let in at check-in.
+  const legacy = !v.hostStatus;
+  const iso = (/** @type {Date | null | undefined} */ d) => (d ? d.toISOString() : null);
   return {
     id: v.pass,
     pass: v.pass,
@@ -39,6 +42,21 @@ export function visitFields(v, overstayHours, nowMs = Date.now(), urls = { photo
     persons: v.persons,
     purpose: v.purpose,
     host: v.host,
+    hostId: v.hostId ?? null,
+    hostPhone: v.hostPhone ?? '',
+    hostLocation: v.hostLocation ?? '',
+    hostStatus: legacy ? 'manual' : v.hostStatus,
+    hostAt: iso(v.hostAt),
+    hostBy: guard(v.hostBy),
+    hostVia: v.hostVia ?? null,
+    hostNote: v.hostNote ?? '',
+    escalatedAt: iso(v.escalatedAt),
+    allowedAt: legacy ? v.inAt.toISOString() : iso(v.allowedAt),
+    allowedBy: guard(v.allowedBy),
+    expectedId: v.expectedId ?? null,
+    termsVersion: v.termsVersion ?? null,
+    termsAt: iso(v.termsAt),
+    agreementUrl: urls.agreementUrl ?? null,
     dept: v.dept ?? '',
     idType: v.idType,
     idLast4: v.idLast4 ?? '',
@@ -64,6 +82,10 @@ export function visitFields(v, overstayHours, nowMs = Date.now(), urls = { photo
  * @param {number} [nowMs]
  */
 export async function serializeVisit(v, overstayHours, nowMs = Date.now()) {
-  const [p, idp] = await Promise.all([photoUrl(v.photo, nowMs), v.idPhoto ? photoUrl(v.idPhoto, nowMs) : null]);
-  return visitFields(v, overstayHours, nowMs, { photoUrl: p, idPhotoUrl: idp });
+  const [p, idp, agr] = await Promise.all([
+    photoUrl(v.photo, nowMs),
+    v.idPhoto ? photoUrl(v.idPhoto, nowMs) : null,
+    v.agreement ? photoUrl(v.agreement, nowMs) : null,
+  ]);
+  return visitFields(v, overstayHours, nowMs, { photoUrl: p, idPhotoUrl: idp, agreementUrl: agr });
 }

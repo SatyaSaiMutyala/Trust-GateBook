@@ -17,14 +17,21 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Button } from '../components/Button';
+import { Checkbox } from '../components/Checkbox';
 import { ChipSelect } from '../components/ChipSelect';
+import { TermsSheet } from '../components/Terms';
+import {
+  ExpectedBanner,
+  ExpectedPhoneMatch,
+  ExpectedTodayStrip,
+} from '../components/ExpectedHints';
 import { Field, FieldShell } from '../components/Field';
 import { Banner } from '../components/Layout';
 import { HeaderText } from '../components/TopBar';
 import { SelectField } from '../components/SelectField';
 import { useDebounced } from '../state/useDebounced';
 import { useNow } from '../state/useNow';
-import { fonts, MIN_TOUCH, typo, useTheme } from '../theme';
+import { fonts, MIN_TOUCH, radius, typo, useTheme } from '../theme';
 import { ID_TYPES } from '../types';
 import { captureImage } from '../utils/camera';
 import {
@@ -57,6 +64,21 @@ import {
 } from '../store/draftsSlice';
 import { useSettings, useToast } from '../store/hooks';
 import { useInfiniteList } from '../store/useInfiniteList';
+import { RecipientPicker } from '../components/RecipientPicker';
+
+/** "Whom to meet": a picked employee is asked to accept in the app; a typed name is confirmed by phone. */
+const HOST_WORDING = {
+  label: 'Whom to meet',
+  picked: '🔔 Gets a notification and accepts or declines in Gatebook',
+  typed: '📞 Not on Gatebook — call them before letting the visitor in',
+  idle: 'Pick the employee being visited. Not listed? Type their name.',
+  noMatch: name => `No employee named “${name}” is on Gatebook.`,
+  useTyped: name => `Use “${name}” — I'll confirm by phone`,
+  none: "No employees are on Gatebook yet. An admin can add them in Users. For now, type the name — you'll confirm by phone.",
+  changeLabel: name => `Change whom to meet, currently ${name}`,
+};
+/** Server error fields → form fields. */
+const FIELD_MAP = { hostId: 'host' };
 
 /** Live clock for the app bar, in its own component so ticking never re-renders the form. */
 function LiveClock() {
@@ -77,7 +99,8 @@ export function CheckInScreen() {
   const dispatch = useDispatch();
   const canCheckIn = useSelector(selectCanCheckIn);
   // The half-filled form lives in the drafts slice: it survives gate changes, navigation and live updates.
-  const { form, photoUri, idPhotoUri } = useSelector(selectCheckInDraft);
+  const { form, photoUri, idPhotoUri, hostPick, expected } =
+    useSelector(selectCheckInDraft);
   const [checkIn] = useCheckInMutation();
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState(null);
@@ -85,6 +108,8 @@ export function CheckInScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [issued, setIssued] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
+  const termsOn = !!settings.terms?.required;
+  const [termsOpen, setTermsOpen] = useState(false);
   const scrollRef = useRef(null);
 
   // App bar: "Check in" with the live clock, switching to "Pass issued" after a check-in.
@@ -153,6 +178,15 @@ export function CheckInScreen() {
           idType: last.idType || form.idType,
           idLast4: last.idLast4 || form.idLast4,
         },
+        // Same employee as last time (the server re-checks they can still receive visitors).
+        hostPick: last.hostId
+          ? {
+              id: last.hostId,
+              name: last.host,
+              dept: last.dept ?? '',
+              location: last.hostLocation ?? '',
+            }
+          : hostPick,
       }),
     );
     setErrors({});
@@ -184,15 +218,19 @@ export function CheckInScreen() {
   const submit = async () => {
     setServerError(null);
     const e = {};
-    if (!photoUri) e.photo = true;
+    // Photo and pass number can be made optional in Settings → Visitors.
+    const photoRequired = settings.visitorPhotoRequired !== false;
+    const passRequired = settings.visitorPassRequired !== false;
+    if (photoRequired && !photoUri) e.photo = true;
     if (phoneDigits.length < 10) e.phone = true;
     if (!form.name.trim()) e.name = true;
     if (!form.purpose) e.purpose = true;
     if (!form.host.trim()) e.host = true;
-    if (!form.badge.trim()) e.badge = true;
+    if (passRequired && !form.badge.trim()) e.badge = true;
     const persons = parseInt(form.persons, 10);
     if (!Number.isFinite(persons) || persons < 1 || persons > 50)
       e.persons = true;
+    if (termsOn && !form.terms) e.terms = true;
     setErrors(e);
     if (Object.keys(e).length) {
       setFormError('Fill the highlighted fields.');
@@ -208,6 +246,7 @@ export function CheckInScreen() {
         company: form.company.trim(),
         persons,
         purpose: form.purpose,
+        hostId: hostPick?.id,
         host: form.host.trim(),
         dept: form.dept,
         idType: form.idType,
@@ -215,15 +254,27 @@ export function CheckInScreen() {
         vehicle: form.vehicle.trim().toUpperCase(),
         items: form.items.trim(),
         notes: form.notes.trim(),
+        expectedId: expected?.code,
+        termsAccepted: termsOn ? !!form.terms : undefined,
         photoUri,
         idPhotoUri,
       }).unwrap();
-      toast.show(`Checked in · ${res.visit.pass}`);
+      toast.show(
+        res.visit.hostVia === 'preapproved'
+          ? `Checked in · pre-approved for ${res.visit.host}, send them in`
+          : res.visit.hostStatus === 'waiting'
+          ? `Checked in · ${res.visit.host} notified`
+          : `Checked in · call ${res.visit.host} to confirm`,
+      );
       clear();
       setIssued(res.visit);
     } catch (err) {
       setServerError(errorMessage(err));
-      if (err && err.field) setErrors(prev => ({ ...prev, [err.field]: true }));
+      if (err && err.field)
+        setErrors(prev => ({
+          ...prev,
+          [FIELD_MAP[err.field] ?? err.field]: true,
+        }));
       if (err && err.code === 'badge_in_use')
         setErrors(prev => ({ ...prev, badge: true }));
       if (err && err.code === 'already_inside')
@@ -281,6 +332,11 @@ export function CheckInScreen() {
         keyboardDismissMode="on-drag"
         contentContainerStyle={styles.content}
       >
+        {expected ? (
+          <ExpectedBanner expected={expected} />
+        ) : (
+          <ExpectedTodayStrip />
+        )}
         <View style={styles.photos}>
           <View style={{ flex: 1 }}>
             <PhotoTile
@@ -288,7 +344,7 @@ export function CheckInScreen() {
               sub="Face, shoulders up"
               uri={photoUri}
               aspect={3 / 4}
-              required
+              required={settings.visitorPhotoRequired !== false}
               error={errors.photo}
               onPress={() => take('photo')}
             />
@@ -327,6 +383,9 @@ export function CheckInScreen() {
           placeholder="98xxxxxxxx"
         />
 
+        {!expected && !openVisit ? (
+          <ExpectedPhoneMatch phone={lookupPhone} />
+        ) : null}
         {openVisit ? (
           <Banner tone="warn">
             <Text style={[typo.body, { color: c.ink }]}>
@@ -458,13 +517,27 @@ export function CheckInScreen() {
           />
         </FieldShell>
 
-        <Field
-          label="Whom to meet"
-          required
-          value={form.host}
-          onChangeText={t => set('host', t)}
-          autoCapitalize="words"
+        <RecipientPicker
+          wording={HOST_WORDING}
+          text={form.host}
+          recipient={hostPick}
           error={errors.host}
+          onText={t => {
+            set('host', t);
+            setErrors(e => ({ ...e, host: false }));
+          }}
+          onPick={h => {
+            dispatch(
+              checkInPatched({
+                hostPick: h,
+                form: { host: h.name, dept: h.dept || form.dept },
+              }),
+            );
+            setErrors(e => ({ ...e, host: false }));
+          }}
+          onClear={() =>
+            dispatch(checkInPatched({ hostPick: null, form: { host: '' } }))
+          }
         />
         <SelectField
           label="Department"
@@ -510,7 +583,7 @@ export function CheckInScreen() {
 
         <Field
           label="Pass number"
-          required
+          required={settings.visitorPassRequired !== false}
           value={form.badge}
           onChangeText={t =>
             set(
@@ -543,6 +616,54 @@ export function CheckInScreen() {
           multiline
           maxLength={500}
         />
+
+        {termsOn ? (
+          <View
+            style={[
+              styles.termsRow,
+              {
+                borderColor: errors.terms ? c.bad : form.terms ? c.ok : c.line,
+                backgroundColor: form.terms ? c.okSoft : 'transparent',
+              },
+            ]}
+          >
+            <Checkbox
+              checked={!!form.terms}
+              onChange={v => set('terms', v)}
+              label="Visitor agrees to the terms and conditions, including confidentiality"
+            >
+              <Text style={[typo.bodySemi, { color: c.ink }]}>
+                Visitor agrees to the terms, including confidentiality
+                <Text style={{ color: c.bad }}> *</Text>
+              </Text>
+            </Checkbox>
+            <Button
+              title="Read the terms & conditions"
+              variant="ghost"
+              size="sm"
+              style={{ alignSelf: 'flex-start' }}
+              onPress={() => setTermsOpen(true)}
+            />
+            <Text style={[typo.small, { color: c.muted }]}>
+              Show or read the terms to the visitor. Checking in with their
+              photo records their agreement, and the photo is placed on a
+              confidentiality agreement saved as a PDF.
+            </Text>
+            {errors.terms ? (
+              <Text style={[typo.small, { color: c.bad }]}>
+                The visitor must agree to the terms before check-in.
+              </Text>
+            ) : null}
+            <TermsSheet
+              visible={termsOpen}
+              onClose={() => setTermsOpen(false)}
+              onAgree={() => {
+                set('terms', true);
+                setTermsOpen(false);
+              }}
+            />
+          </View>
+        ) : null}
 
         {formError ? (
           <Text
@@ -597,4 +718,10 @@ const styles = ScaledSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   actions: { flexDirection: 'row', gap: '12@ms', marginTop: '6@vs' },
+  termsRow: {
+    borderWidth: 1.5,
+    borderRadius: radius.panel,
+    padding: '12@ms',
+    gap: '6@ms',
+  },
 });

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { visitsApi } from '../api/endpoints';
 import { useAuth } from '../auth/context';
-import { isGateUser } from '../auth/roles';
+import { hasModule, isGateUser } from '../auth/roles';
 import { useVisitChanges } from '../realtime/context';
 import { InsideContext } from './context';
 
@@ -11,7 +11,8 @@ import { InsideContext } from './context';
  */
 export function InsideProvider({ children }) {
   const { user } = useAuth();
-  const enabled = isGateUser(user); // employees get 403 on visit endpoints
+  // Employees, and gate users without Visitors / Overview, get 403 on the register.
+  const enabled = isGateUser(user) && (hasModule(user, 'visitors') || hasModule(user, 'track'));
   const [count, setCount] = useState(null);
   const [nonce, setNonce] = useState(0);
 

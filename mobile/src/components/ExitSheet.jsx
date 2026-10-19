@@ -10,7 +10,12 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { errorMessage, useExitVisitMutation } from '../store/api';
+import {
+  errorMessage,
+  useExitVisitMutation,
+  useMaterialUploadMutation,
+} from '../store/api';
+import { ExitMaterial } from './material/VisitMaterial';
 import { useToast } from '../store/hooks';
 import { fonts, MIN_TOUCH, typo, useTheme } from '../theme';
 import { fmtDuration, fmtTime, fmtDateTime } from '../utils/format';
@@ -47,6 +52,10 @@ export function ExitSheet({ visit, onClose }) {
   const [note, setNote] = useState(visit.exitNote ?? '');
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
+  // Material OUT going with the visitor: counted here, released after the exit.
+  const [counts, setCounts] = useState({});
+  const [readyPasses, setReadyPasses] = useState([]);
+  const [releaseMaterial] = useMaterialUploadMutation();
   const inAt = new Date(visit.inAt);
   const localError =
     outAt.getTime() < inAt.getTime()
@@ -59,6 +68,17 @@ export function ExitSheet({ visit, onClose }) {
       setError(localError);
       return;
     }
+    const wrong = correcting
+      ? null
+      : readyPasses.find(p => Number(counts[p.id]) !== p.boxes);
+    if (wrong) {
+      setError(
+        `Count the boxes for ${wrong.id}: the pass says ${
+          wrong.boxes
+        } boxes, you counted ${counts[wrong.id] || 0}.`,
+      );
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -68,10 +88,27 @@ export function ExitSheet({ visit, onClose }) {
       if (visit.badge) body.passReturned = collected;
       const res = await exitVisit({ id: visit.id, ...body }).unwrap();
       const dur = fmtDuration(res.visit.inAt, res.visit.outAt);
+      const released = [];
+      for (const p of correcting ? [] : readyPasses) {
+        try {
+          await releaseMaterial({
+            id: p.id,
+            action: 'release',
+            fields: { boxes: p.boxes },
+          }).unwrap();
+          released.push(p.boxes);
+        } catch (e) {
+          toast.show(`${p.id} not released: ${errorMessage(e)}`, 'error');
+        }
+      }
       toast.show(
         `${res.visit.name} checked out · ${dur}${
           res.visit.badge && res.visit.passReturned === false
             ? ' · pass not returned'
+            : ''
+        }${
+          released.length
+            ? ` · ${released.reduce((a, b) => a + b, 0)} boxes released`
             : ''
         }`,
       );
@@ -195,6 +232,14 @@ export function ExitSheet({ visit, onClose }) {
               </Pressable>
             ) : null}
 
+            {!correcting ? (
+              <ExitMaterial
+                visit={visit}
+                counts={counts}
+                setCounts={setCounts}
+                onPasses={setReadyPasses}
+              />
+            ) : null}
             <Field
               label="Exit remarks"
               value={note}

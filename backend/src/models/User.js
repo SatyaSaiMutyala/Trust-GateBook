@@ -1,4 +1,5 @@
 import { Schema, model } from 'mongoose';
+import { effectiveModules } from '../services/modules.js';
 
 /** @typedef {'admin' | 'security' | 'viewer' | 'host'} Role */
 export const ROLES = /** @type {const} */ (['admin', 'security', 'viewer', 'host']);
@@ -21,6 +22,18 @@ const userSchema = new Schema(
     location: { type: String, default: '' },
     /** Can receive post although the role is not `host`. */
     isHost: { type: Boolean, default: false },
+    /** May register expected visitors and deliveries (admins always may). Missing = true. */
+    canPreRegister: { type: Boolean, default: true },
+    /** Modules this person can use (services/modules.js). Missing = the role's defaults. Ignored for admins. */
+    modules: { type: [String], default: undefined },
+    /** Who they report to: escalation Level 1 (Level 2 = that person's manager, …). null = top of the chain. */
+    reportsTo: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+    /** Job title, e.g. "Security supervisor" (suggestions: settings.designations). */
+    designation: { type: String, default: '' },
+    /** Gate supervisor: target of "Gate supervisors" escalation steps (not for Employee accounts). */
+    isSupervisor: { type: Boolean, default: false },
+    /** The gate they work at ('' = all gates). Security: escalations for a gate go to its guards. */
+    site: { type: String, default: '' },
     /** Pace HR employee code (e.g. TLE0145) for users created/linked from the Pace directory. Never null: sparse. */
     paceEmpCode: { type: String, required: false },
     /** pending = self sign-up awaiting admin approval; deleted = anonymised by the user. Missing = active. */
@@ -33,6 +46,8 @@ userSchema.index({ name: 1 });
 userSchema.index({ createdAt: 1 });
 // Recipient directory (GET /api/hosts).
 userSchema.index({ active: 1, role: 1, isHost: 1, name: 1 });
+// Org chart: who reports to whom.
+userSchema.index({ reportsTo: 1 });
 userSchema.index({ paceEmpCode: 1 }, { unique: true, sparse: true });
 
 export const User = model('User', userSchema);
@@ -46,6 +61,9 @@ export const RECIPIENT_FILTER = {
 
 /** @param {{ role: string, isHost?: boolean | null }} u */
 export const isRecipient = (u) => u.role === 'host' || u.isHost === true;
+
+/** May register expected visitors and deliveries: admins always; others unless an admin switched it off. @param {any} u */
+export const canPreRegister = (u) => u.role === 'admin' || u.canPreRegister !== false;
 
 /** Active and has a password (Pace-linked users get one only when an admin sets it). @param {any} u */
 export const canSignIn = (u) => Boolean(u && u.active && u.passwordHash && (u.status ?? 'active') === 'active');
@@ -64,6 +82,12 @@ export const canSignIn = (u) => Boolean(u && u.active && u.passwordHash && (u.st
  * @property {boolean} isHost   always true when role = 'host'
  * @property {boolean} canSignIn  active and has a password
  * @property {UserStatus} status
+ * @property {boolean} canPreRegister  may register expected visitors / deliveries
+ * @property {string[]} modules  modules they can use (admins: all)
+ * @property {string | null} reportsTo  manager's user id
+ * @property {string} designation
+ * @property {boolean} isSupervisor
+ * @property {string} site  gate they work at ('' = all gates)
  */
 
 /** @param {any} u a User document @returns {UserDto} */
@@ -81,6 +105,12 @@ export function serializeUser(u) {
     isHost: isRecipient(u),
     canSignIn: canSignIn(u),
     status: u.status ?? 'active',
+    canPreRegister: canPreRegister(u),
+    modules: effectiveModules(u),
+    reportsTo: u.reportsTo ? u.reportsTo.toString() : null,
+    designation: u.designation ?? '',
+    isSupervisor: u.role !== 'host' && u.isSupervisor === true,
+    site: u.site ?? '',
   };
 }
 

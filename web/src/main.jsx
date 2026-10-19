@@ -14,6 +14,9 @@ import { App } from './App';
 import { AuthProvider } from './auth/AuthProvider';
 import { ToastProvider } from './state/ToastProvider';
 import { theme } from './theme';
+import { registerServiceWorker } from './utils/webpush';
+
+registerServiceWorker();
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

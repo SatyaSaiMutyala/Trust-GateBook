@@ -1,4 +1,5 @@
 import CloseIcon from '@mui/icons-material/Close';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -13,10 +14,14 @@ import { canOperate, isAdmin } from '../auth/roles';
 import { useIsDesktop, useNow } from '../hooks';
 import { useSettings } from '../state/context';
 import { fonts } from '../theme/tokens';
-import { fmtDateTime, fmtDuration } from '../utils/format';
-import { visitStatus } from '../utils/visit';
-import { FieldLabel, FillThumb, PassBadge, StatusChip, TimelineItem } from './bits';
+import { fmtDateTime, fmtDuration, fmtTime } from '../utils/format';
+import { hostStage, visitStatus } from '../utils/visit';
+import { FieldLabel, FillThumb, HostStageChip, PassBadge, StatusChip, TimelineItem } from './bits';
+import { HostActions } from './HostActions';
+import { HostRespond } from './HostRespond';
 import { ImagePreview } from './ImagePreview';
+import { AgreementButton } from './Terms';
+import { VisitMaterial } from './material/VisitMaterial';
 /** Drawer on desktop, full screen on phone. */
 export function VisitorDetailsDrawer({ visit, open, onClose, onExit }) {
   const desktop = useIsDesktop();
@@ -61,18 +66,43 @@ function Details({ visit: v, onClose, onExit }) {
   const { settings } = useSettings();
   const now = useNow();
   const status = visitStatus(v, settings?.overstayHours, now);
+  const stage = hostStage(v);
   const inside = !v.outAt;
+  const gate = canOperate(user);
+  // The visited host looking at their own visitor who is still waiting for their answer.
+  const myWaiting = inside && v.hostStatus === 'waiting' && !!user && v.hostId === user.id;
+  // Visits from before host approval: let in at check-in, no host steps to show.
+  const legacy = v.hostStatus === 'manual' && !!v.allowedAt;
   const details = [
     ['Mobile', <Mono key="m">{v.phone || '—'}</Mono>],
     ['Coming from', v.company || '—'],
     ['Purpose', v.purpose || '—'],
     ['Persons', String(v.persons)],
-    ['Whom to meet', v.host || '—'],
+    [
+      'Whom to meet',
+      <span key="h">
+        {v.host || '—'}
+        {v.hostLocation ? (
+          <Box component="span" sx={{ display: 'block', color: 'text.secondary', fontWeight: 400 }}>
+            {v.hostLocation}
+          </Box>
+        ) : null}
+        {gate && v.hostPhone ? (
+          <Box
+            component="span"
+            sx={{ display: 'block', color: 'text.secondary', fontWeight: 400, fontFamily: fonts.mono }}
+          >
+            {v.hostPhone}
+          </Box>
+        ) : null}
+      </span>,
+    ],
     ['Department', v.dept || '—'],
     ['ID shown', v.idType === 'None' || !v.idType ? 'None' : `${v.idType}${v.idLast4 ? ` ·· ${v.idLast4}` : ''}`],
     ['Vehicle', v.vehicle ? <Mono key="v">{v.vehicle}</Mono> : '—'],
     ['Items carried', v.items || '—'],
     ['Remarks', v.notes || '—'],
+    ...(v.hostNote ? [["Host's message", `“${v.hostNote}”`]] : []),
   ];
   return (
     <Stack sx={{ minHeight: '100%' }}>
@@ -103,9 +133,10 @@ function Details({ visit: v, onClose, onExit }) {
             <Typography variant="h2" sx={{ wordBreak: 'break-word' }}>
               {v.name}
             </Typography>
-            <Box sx={{ mt: 1 }}>
+            <Stack direction="row" sx={{ mt: 1, gap: 1, flexWrap: 'wrap' }}>
               <StatusChip status={status} />
-            </Box>
+              <HostStageChip stage={stage} />
+            </Stack>
           </Box>
           <IconButton onClick={onClose} aria-label="Close" sx={{ border: 1, borderColor: 'divider' }}>
             <CloseIcon />
@@ -152,6 +183,7 @@ function Details({ visit: v, onClose, onExit }) {
             <b>In</b> <Mono>{fmtDateTime(v.inAt)}</Mono>
             {v.guardIn ? ` · logged by ${v.guardIn.name}` : ''}
           </TimelineItem>
+          {legacy ? null : <HostSteps visit={v} now={now} />}
           {v.outAt ? (
             <TimelineItem kind="out" last>
               <b>Out</b> <Mono>{fmtDateTime(v.outAt)}</Mono> · Stayed <Mono>{fmtDuration(v.inAt, v.outAt)}</Mono>
@@ -176,6 +208,35 @@ function Details({ visit: v, onClose, onExit }) {
             </TimelineItem>
           )}
         </Stack>
+
+        <Box sx={{ mb: 2 }}>
+          <VisitMaterial visit={v} />
+        </Box>
+
+        {v.termsAt ? (
+          <Stack
+            direction="row"
+            spacing={1.5}
+            sx={{
+              alignItems: 'center',
+              p: 1.5,
+              mb: 2,
+              bgcolor: 'background.paper',
+              border: 1,
+              borderColor: 'divider',
+              borderRadius: '10px',
+            }}
+          >
+            <DescriptionOutlinedIcon sx={{ color: 'text.secondary' }} />
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography sx={{ fontWeight: 700 }}>Terms &amp; confidentiality agreement</Typography>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                Accepted with photo at {fmtDateTime(v.termsAt)} · terms version {v.termsVersion}
+              </Typography>
+            </Box>
+            {gate ? <AgreementButton visit={v} /> : null}
+          </Stack>
+        ) : null}
 
         <Grid
           container
@@ -206,7 +267,7 @@ function Details({ visit: v, onClose, onExit }) {
         </Grid>
       </Box>
 
-      {(inside && canOperate(user)) || (!inside && isAdmin(user)) ? (
+      {myWaiting || (inside && gate) || (!inside && isAdmin(user)) ? (
         <Box
           sx={{
             p: { xs: 2, md: 3 },
@@ -218,10 +279,18 @@ function Details({ visit: v, onClose, onExit }) {
             borderColor: 'divider',
           }}
         >
-          {inside ? (
-            <Button variant="exit" size="large" fullWidth onClick={() => onExit(v)}>
-              Mark exit
-            </Button>
+          {myWaiting && !gate ? (
+            <HostRespond visit={v} />
+          ) : inside ? (
+            <Stack spacing={1.25}>
+              {myWaiting ? <HostRespond visit={v} /> : null}
+              <Stack direction="row" sx={{ gap: 1.25, flexWrap: 'wrap', '& > *': { flex: '1 1 160px' } }}>
+                <HostActions visit={v} size="large" />
+              </Stack>
+              <Button variant="exit" size="large" fullWidth onClick={() => onExit(v)}>
+                Mark exit
+              </Button>
+            </Stack>
           ) : (
             <Button variant="outlined" size="large" fullWidth onClick={() => onExit(v)}>
               Correct exit time
@@ -243,6 +312,61 @@ function Details({ visit: v, onClose, onExit }) {
     </Stack>
   );
 }
+/** Timeline rows between "In" and "Out": the host's answer, then when security let the visitor in. */
+function HostSteps({ visit: v, now }) {
+  const open = !v.outAt;
+  let answer;
+  if (v.hostStatus === 'waiting') {
+    answer = (
+      <TimelineItem kind="pending">
+        <b>Waiting for {v.host}</b> · asked <Mono>{fmtDuration(v.inAt, null, now)}</Mono> ago
+        {v.escalatedAt ? ` · no reply, security alerted at ${fmtTime(v.escalatedAt)}` : ''}
+      </TimelineItem>
+    );
+  } else if (v.hostStatus === 'manual') {
+    answer = (
+      <TimelineItem kind="pending">
+        <b>Confirm with {v.host} by phone</b> · not on Gatebook
+      </TimelineItem>
+    );
+  } else {
+    const accepted = v.hostStatus === 'accepted';
+    const by =
+      v.hostVia === 'phone'
+        ? `confirmed by phone${v.hostBy ? ` by ${v.hostBy.name}` : ''}`
+        : v.hostVia === 'preapproved'
+          ? `pre-approved when registered${v.hostBy ? ` by ${v.hostBy.name}` : ''}${v.expectedId ? ` (${v.expectedId})` : ''}`
+          : `by ${v.host} in ${fmtDuration(v.inAt, v.hostAt)}`;
+    answer = (
+      <TimelineItem kind={accepted ? 'in' : 'bad'}>
+        <b>{accepted ? 'Accepted' : 'Declined'}</b> <Mono>{fmtTime(v.hostAt)}</Mono> · {by}
+        {v.hostNote ? ` · “${v.hostNote}”` : ''}
+      </TimelineItem>
+    );
+  }
+  let allowed = null;
+  if (v.allowedAt) {
+    allowed = (
+      <TimelineItem kind="in">
+        <b>Let in</b> <Mono>{fmtTime(v.allowedAt)}</Mono>
+        {v.allowedBy ? ` · by ${v.allowedBy.name}` : ''}
+      </TimelineItem>
+    );
+  } else if (open && v.hostStatus !== 'declined') {
+    allowed = (
+      <TimelineItem kind="pending">
+        <b>Not let in yet</b>
+      </TimelineItem>
+    );
+  }
+  return (
+    <>
+      {answer}
+      {allowed}
+    </>
+  );
+}
+
 function Mono({ children }) {
   return (
     <Box component="span" sx={{ fontFamily: fonts.mono, fontSize: '0.92em' }}>

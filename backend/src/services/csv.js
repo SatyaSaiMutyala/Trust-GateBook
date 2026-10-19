@@ -4,7 +4,19 @@ const HEADERS = [
   'Pass no.', 'Entry ID', 'Name', 'Mobile', 'Coming from', 'Persons', 'Purpose', 'Whom to meet', 'Department',
   'ID type', 'ID last 4', 'Vehicle', 'Items', 'Gate', 'In', 'Out', 'Duration', 'Checked in by', 'Checked out by',
   'Pass returned', 'Remarks', 'Exit remarks',
+  'Host reply', 'Host replied at', 'Host message', 'No-reply alert', 'Allowed in at', 'Allowed in by',
+  'Terms accepted',
 ];
+
+/** @param {{ hostStatus: string, hostVia: string | null }} v */
+function hostReplyLabel(v) {
+  if (v.hostStatus === 'accepted') return v.hostVia === 'phone' ? 'Accepted (confirmed by phone)' : 'Accepted';
+  if (v.hostStatus === 'declined') return 'Declined';
+  if (v.hostStatus === 'waiting') return 'No reply yet';
+  return 'Not on Gatebook';
+}
+/** @param {string | null} iso */
+const dateTimeOrBlank = (iso) => (iso ? formatDateTime(new Date(iso)) : '');
 
 /**
  * Quote a cell; neutralise spreadsheet formula injection (but keep "+91…" phones intact).
@@ -15,6 +27,9 @@ function cell(value) {
   if (/^[=@\t\r]/.test(s) || /^[+-][^\d\s]/.test(s)) s = `'${s}`;
   return `"${s.replace(/"/g, '""')}"`;
 }
+
+/** One CSV line of quoted, injection-safe cells. @param {Array<string | number | null | undefined>} values */
+export const csvRow = (values) => values.map(cell).join(',');
 
 /**
  * Serialized visits → CSV text with a UTF-8 BOM and CRLF line endings.
@@ -36,6 +51,13 @@ export function visitsToCsv(visits) {
       v.passReturned === null ? '' : v.passReturned ? 'Yes' : 'No',
       v.notes,
       v.exitNote,
+      hostReplyLabel(v),
+      dateTimeOrBlank(v.hostAt),
+      v.hostNote,
+      dateTimeOrBlank(v.escalatedAt),
+      dateTimeOrBlank(v.allowedAt),
+      v.allowedBy?.name ?? '',
+      v.termsAt ? `Yes, version ${v.termsVersion}, ${formatDateTime(new Date(v.termsAt))}` : '',
     ];
     lines.push(row.map(cell).join(','));
   }

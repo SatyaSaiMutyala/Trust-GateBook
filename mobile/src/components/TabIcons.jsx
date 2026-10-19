@@ -37,6 +37,94 @@ export function TabIcon({ name, color, bg, size = 22 }) {
           />
         </View>
       );
+    case 'box':
+      return (
+        <View
+          style={{
+            width: s,
+            height: s,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <View
+            style={{
+              width: s * 0.84,
+              height: s * 0.68,
+              marginTop: s * 0.08,
+              borderRadius: moderateScale(2),
+              borderWidth: 2,
+              borderColor: color,
+              alignItems: 'center',
+            }}
+          >
+            <View
+              style={{
+                width: s * 0.84,
+                height: 2,
+                backgroundColor: color,
+                marginTop: s * 0.16,
+              }}
+            />
+            <View
+              style={{
+                width: s * 0.22,
+                height: s * 0.1,
+                backgroundColor: color,
+                marginTop: s * 0.06,
+              }}
+            />
+          </View>
+        </View>
+      );
+    case 'calendar':
+      return (
+        <View
+          style={{
+            width: s,
+            height: s,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <View
+            style={{
+              width: s * 0.82,
+              height: s * 0.74,
+              marginTop: s * 0.1,
+              borderRadius: moderateScale(3),
+              borderWidth: 2,
+              borderTopWidth: s * 0.2,
+              borderColor: color,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <View
+              style={{
+                width: s * 0.16,
+                height: s * 0.16,
+                borderRadius: moderateScale(1),
+                backgroundColor: color,
+              }}
+            />
+          </View>
+          {[0.28, 0.72].map(x => (
+            <View
+              key={x}
+              style={{
+                position: 'absolute',
+                top: s * 0.02,
+                left: s * x - moderateScale(1),
+                width: moderateScale(2),
+                height: s * 0.2,
+                borderRadius: moderateScale(1),
+                backgroundColor: color,
+              }}
+            />
+          ))}
+        </View>
+      );
     case 'log':
       return (
         <View
