@@ -45,6 +45,7 @@ import {
   mayPreRegister,
 } from '../utils/expected';
 import { fmtTime } from '../utils/format';
+import { TabIcon } from '../components/TabIcons';
 
 const GATE_TABS = [
   { value: 'today', label: 'Today' },
@@ -92,10 +93,14 @@ function ExpectedCard({
       <Text style={[typo.monoSmall, { color: c.muted }]}>
         {expectedWhen(e)}
       </Text>
-      <Text style={[typo.h3, { color: c.ink }]} numberOfLines={2}>
-        {delivery ? '📦 ' : ''}
-        {expectedTitle(e)}
-      </Text>
+      <View style={styles.titleRow}>
+        {delivery ? (
+          <TabIcon name="box" color={c.ok} bg={c.surface} size={18} />
+        ) : null}
+        <Text style={[typo.h3, { color: c.ink, flex: 1 }]} numberOfLines={2}>
+          {expectedTitle(e)}
+        </Text>
+      </View>
       <View style={styles.chips}>
         <HostStageChip stage={chip} />
         {!delivery && e.preapproved && open ? (
@@ -413,6 +418,7 @@ function Separator() {
 }
 
 const styles = ScaledSheet.create({
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: '6@ms' },
   content: { padding: '16@ms', flexGrow: 1 },
   card: {
     borderWidth: 1,

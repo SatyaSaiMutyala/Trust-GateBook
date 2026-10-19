@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { fonts, MIN_TOUCH, typo, useTheme } from '../theme';
+import { MIN_TOUCH, typo, useTheme } from '../theme';
 import { ScaledSheet } from 'react-native-size-matters/extend';
 
 export function Checkbox({ checked, onChange, label, children, disabled }) {
@@ -24,9 +24,7 @@ export function Checkbox({ checked, onChange, label, children, disabled }) {
         ]}
       >
         {checked ? (
-          <Text style={{ color: c.accentInk, fontFamily: fonts.bodySemi }}>
-            ✓
-          </Text>
+          <Text style={{ color: c.accentInk, fontWeight: '700' }}>✓</Text>
         ) : null}
       </View>
       <Text style={[typo.body, { color: c.ink, flex: 1 }]}>

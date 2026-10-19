@@ -36,6 +36,7 @@ import {
   MP_OPEN,
   outstandingText,
 } from '../utils/material';
+import { CrossIcon } from '../components/Glyphs';
 
 /** The next step in words: [title, sub, tone]. */
 function nextStep(p, user, gate) {
@@ -581,7 +582,7 @@ export function MaterialDetailsScreen({ navigation, route }) {
         onPress={() => navigation.goBack()}
         style={styles.close}
       >
-        <Text style={[typo.h2, { color: c.ink }]}>✕</Text>
+        <CrossIcon color={c.ink} size={18} />
       </Pressable>
       {p ? (
         <View style={{ flex: 1, gap: 4 }}>
@@ -841,8 +842,8 @@ const styles = ScaledSheet.create({
     borderBottomWidth: 1,
   },
   close: {
-    width: 40,
-    height: 40,
+    width: '40@ms',
+    height: '40@ms',
     alignItems: 'center',
     justifyContent: 'center',
   },

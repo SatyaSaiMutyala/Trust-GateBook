@@ -14,6 +14,7 @@ import {
   moderateScale,
   scale,
 } from 'react-native-size-matters/extend';
+import { CrossIcon } from './Glyphs';
 
 const BAR_H = moderateScale(40);
 const PILL_H = moderateScale(32);
@@ -104,7 +105,7 @@ export function SearchBar({ value, onChangeText, placeholder, label, right }) {
             onPress={() => onChangeText('')}
             style={[styles.clear, { backgroundColor: c.sunk }]}
           >
-            <Text style={[styles.clearText, { color: c.muted }]}>✕</Text>
+            <CrossIcon color={c.muted} size={9} />
           </Pressable>
         ) : null}
       </View>
@@ -307,7 +308,6 @@ const styles = ScaledSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  clearText: { fontSize: '11@ms', lineHeight: '13@ms' },
   tabsScroll: { flexGrow: 0, marginHorizontal: '-16@s' },
   tabs: { paddingHorizontal: '16@s', gap: '6@ms', alignItems: 'center' },
   pill: {

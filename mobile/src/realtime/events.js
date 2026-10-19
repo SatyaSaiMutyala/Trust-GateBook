@@ -1,4 +1,5 @@
 import { Vibration } from 'react-native';
+import { stripEmoji } from '../utils/format';
 import { api, applyNotificationRead, setUnreadCount } from '../store/api';
 import { selectIsGateUser, userUpdated } from '../store/authSlice';
 import { settingsReceived } from '../store/settingsSlice';
@@ -168,9 +169,10 @@ export const notificationNewEvent =
       ? routeNoticeKey({ type: data.type, id: data.id })
       : `notification:${notification?.id}`;
     if (notification && claimNotice(key)) {
-      const text = [notification.title, notification.body]
-        .filter(Boolean)
-        .join(' · ');
+      // The app font has no emoji glyphs: drop the server title's leading emoji ("📬 …").
+      const text = stripEmoji(
+        [notification.title, notification.body].filter(Boolean).join(' · '),
+      );
       if (text) dispatch(toastShown(text));
       // A visitor waiting at the gate for my answer, or an alarm escalation step: make it noticeable.
       if (notification.alarm) Vibration.vibrate([0, 500, 200, 500, 200, 500]);

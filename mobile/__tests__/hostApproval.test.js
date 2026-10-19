@@ -261,7 +261,7 @@ describe('realtime', () => {
       }),
     );
     expect(store.getState().ui.toast.message).toBe(
-      '🚪 Anil Rao is at the gate · Acme · Meeting · tap to accept or decline',
+      'Anil Rao is at the gate · Acme · Meeting · tap to accept or decline',
     );
   });
 });

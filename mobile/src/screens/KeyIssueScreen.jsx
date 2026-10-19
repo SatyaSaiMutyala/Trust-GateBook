@@ -118,7 +118,7 @@ export function KeyIssueScreen({ navigation, route }) {
         {k.restricted ? (
           <Banner tone="warn">
             <Text style={[typo.body, { color: c.ink }]}>
-              🔒 Restricted key.
+              Restricted key.
               {k.authorised
                 ? ` Only: ${k.authorised}.`
                 : ' Check the person is allowed to take it.'}

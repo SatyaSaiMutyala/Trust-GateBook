@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fonts, MIN_TOUCH, radius, useTheme } from '../theme';
 import { ScaledSheet, verticalScale } from 'react-native-size-matters/extend';
+import { TickIcon } from './Glyphs';
 
 const ROW_H = MIN_TOUCH;
 const MAX_LIST_H = verticalScale(280);
@@ -173,9 +174,7 @@ export function DropdownMenu({
                 >
                   {item.label}
                 </Text>
-                {selected ? (
-                  <Text style={[styles.tick, { color: c.ink }]}>✓</Text>
-                ) : null}
+                {selected ? <TickIcon color={c.ink} size={13} /> : null}
               </Pressable>
             );
           }}
@@ -212,5 +211,4 @@ const styles = ScaledSheet.create({
     gap: '8@ms',
   },
   rowText: { flex: 1, fontSize: '15@ms' },
-  tick: { fontSize: '14@ms' },
 });

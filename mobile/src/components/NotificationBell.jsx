@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { AppState, Pressable, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
-import { ScaledSheet } from 'react-native-size-matters/extend';
+import { ScaledSheet, moderateScale } from 'react-native-size-matters/extend';
 import { useUnreadCountQuery } from '../store/api';
 import { selectIsSignedIn } from '../store/authSlice';
 import { fonts, useTheme } from '../theme';
@@ -16,16 +16,44 @@ export function badgeLabel(count) {
  * Bell drawn with Views (dome + rim + clapper), like the app's other icons — no emoji/font dependency,
  * so it renders the same on every iOS / Android device.
  */
-function BellIcon({ color }) {
+export function BellIcon({ color, size = 20 }) {
+  const k = moderateScale(size) / 20; // drawn at 20 pt, scaled to `size`
   return (
     <View
-      style={styles.iconBox}
+      style={{ width: 20 * k, height: 20 * k, alignItems: 'center' }}
       accessibilityElementsHidden
       importantForAccessibility="no"
     >
-      <View style={[styles.dome, { borderColor: color }]} />
-      <View style={[styles.rim, { backgroundColor: color }]} />
-      <View style={[styles.clapper, { backgroundColor: color }]} />
+      <View
+        style={{
+          marginTop: 1 * k,
+          width: 14 * k,
+          height: 13 * k,
+          borderWidth: 2,
+          borderBottomWidth: 0,
+          borderTopLeftRadius: 7 * k,
+          borderTopRightRadius: 7 * k,
+          borderColor: color,
+        }}
+      />
+      <View
+        style={{
+          width: 18 * k,
+          height: 2,
+          borderRadius: 1,
+          backgroundColor: color,
+        }}
+      />
+      <View
+        style={{
+          marginTop: 1 * k,
+          width: 5 * k,
+          height: 3 * k,
+          borderBottomLeftRadius: 3 * k,
+          borderBottomRightRadius: 3 * k,
+          backgroundColor: color,
+        }}
+      />
     </View>
   );
 }
@@ -88,24 +116,6 @@ const styles = ScaledSheet.create({
     borderRadius: '18@ms',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  iconBox: { width: '20@ms', height: '20@ms', alignItems: 'center' },
-  dome: {
-    marginTop: '1@ms',
-    width: '14@ms',
-    height: '13@ms',
-    borderWidth: 2,
-    borderBottomWidth: 0,
-    borderTopLeftRadius: '7@ms',
-    borderTopRightRadius: '7@ms',
-  },
-  rim: { width: '18@ms', height: 2, borderRadius: 1 },
-  clapper: {
-    marginTop: '1@ms',
-    width: '5@ms',
-    height: '3@ms',
-    borderBottomLeftRadius: '3@ms',
-    borderBottomRightRadius: '3@ms',
   },
   badge: {
     position: 'absolute',

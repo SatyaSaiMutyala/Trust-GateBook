@@ -33,6 +33,9 @@ local.properties
 .cxx/
 *.keystore
 !debug.keystore
+# Play upload key and its passwords: never commit (back them up outside the repo)
+*.jks
+android/key.properties
 .kotlin/
 
 # node.js

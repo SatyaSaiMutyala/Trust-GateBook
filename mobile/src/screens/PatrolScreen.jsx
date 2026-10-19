@@ -279,7 +279,11 @@ function ScanLog() {
           <View style={{ flex: 1, gap: 2 }}>
             <Text style={[typo.bodySemi, { color: c.ink }]}>
               {s.checkpoint.name}
-              {s.status === 'issue' ? ' · ⚠️ Issue' : ''}
+              {s.status === 'issue' ? (
+                <Text style={{ color: c.bad }}> · Issue</Text>
+              ) : (
+                ''
+              )}
               {s.manual ? ' · code typed' : ''}
             </Text>
             <Text style={[typo.small, { color: c.muted }]}>

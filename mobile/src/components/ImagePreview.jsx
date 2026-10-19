@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fileUrl } from '../api/config';
 import { fonts } from '../theme';
 import { ScaledSheet } from 'react-native-size-matters/extend';
+import { CrossIcon } from './Glyphs';
 
 const MAX_ZOOM = 4;
 const DOUBLE_TAP_ZOOM = 2.5;
@@ -265,7 +266,7 @@ export function ImagePreview({ images, index = 0, visible, onClose }) {
             hitSlop={10}
             style={({ pressed }) => [styles.close, pressed && { opacity: 0.7 }]}
           >
-            <Text style={styles.closeText}>✕</Text>
+            <CrossIcon color="#FFFFFF" size={14} />
           </Pressable>
         </View>
         {!zoomed ? (
@@ -309,7 +310,6 @@ const styles = ScaledSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  closeText: { color: '#FFFFFF', fontSize: '16@ms', lineHeight: '18@ms' },
   hintWrap: {
     position: 'absolute',
     left: 0,

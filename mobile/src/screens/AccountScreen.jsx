@@ -68,6 +68,7 @@ import {
   moduleText,
 } from '../utils/modules';
 import { version as APP_VERSION } from '../../package.json';
+import { CrossIcon } from '../components/Glyphs';
 
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Admin' },
@@ -146,9 +147,7 @@ function ListEditor({ title, subtitle, field, editable }) {
                 hitSlop={10}
                 style={styles.tagX}
               >
-                <Text style={{ color: c.muted, fontSize: moderateScale(14) }}>
-                  ✕
-                </Text>
+                <CrossIcon color={c.muted} size={11} />
               </Pressable>
             ) : null}
           </View>

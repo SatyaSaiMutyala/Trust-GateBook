@@ -50,8 +50,8 @@ function Note({ children, first }) {
 /** Post room wording ("For (receiver)"). Check-in passes its own ("Whom to meet"). */
 const POST_WORDING = {
   label: 'For (receiver)',
-  picked: '🔔 Gets a notification and must confirm collection',
-  typed: '📞 Not on Gatebook — call them to collect it',
+  picked: 'Gets a notification and must confirm collection',
+  typed: 'Not on Gatebook — call them to collect it',
   idle: 'Pick the employee it is addressed to. Not listed? Type their name.',
   noMatch: name => `No one named “${name}” can receive post on Gatebook.`,
   useTyped: name => `Use “${name}” — I'll inform them by phone`,
@@ -235,7 +235,7 @@ export function RecipientPicker({
       autoCorrect={false}
       returnKeyType="done"
       error={error}
-      placeholder="🔍  Search employees or type a name"
+      placeholder="Search employees or type a name"
       hint={hint}
       hintTone={query && !focused ? 'warn' : 'muted'}
       dropdown={open ? rows : null}

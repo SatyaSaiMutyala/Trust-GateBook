@@ -10,6 +10,7 @@ import {
   severityColors,
 } from '../../utils/incidents';
 import { HostStageChip } from '../HostStageChip';
+import { CameraIcon } from '../Glyphs';
 
 /** Severity pill (Low · Medium · High · Critical). */
 export function SeverityTag({ severity }) {
@@ -65,9 +66,12 @@ export function IncidentCard({ incident: i, now, onPress }) {
           <SeverityTag severity={i.severity} />
           <StatusTag status={i.status} />
           {i.photoUrls?.length ? (
-            <Text style={[typo.small, { color: c.muted }]}>
-              📷 {i.photoUrls.length}
-            </Text>
+            <View style={styles.photoCount}>
+              <CameraIcon color={c.muted} size={12} />
+              <Text style={[typo.small, { color: c.muted }]}>
+                {i.photoUrls.length}
+              </Text>
+            </View>
           ) : null}
         </View>
         <Text style={[typo.body, { color: c.ink }]} numberOfLines={2}>
@@ -85,6 +89,7 @@ export function IncidentCard({ incident: i, now, onPress }) {
 }
 
 const styles = ScaledSheet.create({
+  photoCount: { flexDirection: 'row', alignItems: 'center', gap: '4@ms' },
   card: {
     flexDirection: 'row',
     borderWidth: 1,

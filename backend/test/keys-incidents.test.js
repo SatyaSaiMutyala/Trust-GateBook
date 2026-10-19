@@ -36,6 +36,8 @@ const get = (who, url, query = {}) => request(server).get(url).query(query).set(
 
 /** @param {string} who @param {string} event */
 async function inboxOf(who, event) {
+  // Notifications are stored in the background after the response; give them a moment to land.
+  await new Promise((r) => setTimeout(r, 150));
   const r = await get(who, '/api/notifications', { limit: 100 }).expect(200);
   return r.body.data.filter((/** @type {any} */ n) => n.event === event);
 }

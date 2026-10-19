@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { BellIcon } from '../components/NotificationBell';
 import {
   ActivityIndicator,
   Image,
@@ -42,6 +43,7 @@ import {
 import { disputeNoteSet, selectDisputeNote } from '../store/draftsSlice';
 import { useSheets, useToast } from '../store/hooks';
 import { useConfirmMail, useRemind } from '../store/mailActions';
+import { CrossIcon } from '../components/Glyphs';
 
 function Detail({ label, value, mono }) {
   const { c } = useTheme();
@@ -226,15 +228,7 @@ export function MailDetailsScreen({ navigation, route }) {
         hitSlop={8}
         style={[styles.close, { borderColor: c.line }]}
       >
-        <Text
-          style={{
-            color: c.ink,
-            fontSize: moderateScale(18),
-            lineHeight: moderateScale(22),
-          }}
-        >
-          ✕
-        </Text>
+        <CrossIcon color={c.ink} size={16} />
       </Pressable>
     </View>
   );
@@ -422,7 +416,8 @@ export function MailDetailsScreen({ navigation, route }) {
           <View style={styles.actions}>
             {item.notifiedAt ? (
               <Button
-                title="🔔 Remind"
+                title="Remind"
+                icon={<BellIcon color={c.ink} size={16} />}
                 variant="ghost"
                 onPress={() => remind(item)}
                 loading={remindingId === item.id}

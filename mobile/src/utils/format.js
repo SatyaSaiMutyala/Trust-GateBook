@@ -165,3 +165,25 @@ export function fmtRelative(v, now = new Date()) {
     return `Yesterday ${fmtTime(d)}`;
   return `${fmtShortDate(d)}, ${fmtTime(d)}`;
 }
+
+/**
+ * Remove emoji / pictographic symbols (and their joiners / variation selectors) from text. The bundled Barlow
+ * fonts have no emoji glyphs, so text like "📬 Courier for you" from the server would render with a "?" box.
+ * Push notifications shown by the OS keep their emoji; this is for in-app text only.
+ */
+export function stripEmoji(text) {
+  if (!text) return '';
+  let out = '';
+  for (const ch of String(text)) {
+    const cp = ch.codePointAt(0);
+    const pictographic =
+      (cp >= 0x1f000 && cp <= 0x1faff) || // emoji & pictographs
+      (cp >= 0x2600 && cp <= 0x27bf) || // misc symbols, dingbats (☀ ⚠ ✅ ✓ …)
+      (cp >= 0x2300 && cp <= 0x23ff) || // technical (⏰ ⌛ …)
+      (cp >= 0x2b00 && cp <= 0x2bff) || // arrows / stars (⭐ …)
+      cp === 0xfe0f || // variation selector-16
+      cp === 0x200d; // zero-width joiner
+    if (!pictographic) out += ch;
+  }
+  return out.replace(/\s{2,}/g, ' ').trim();
+}

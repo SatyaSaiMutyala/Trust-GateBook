@@ -75,7 +75,8 @@ export function ConfirmDialog({
           >
             <Text
               style={[
-                styles.iconText,
+                // ✓ isn't in the bundled Barlow fonts (it would show "?"), so the success tick uses the system font.
+                success ? styles.iconSymbol : styles.iconText,
                 { color: danger ? c.bad : success ? c.ok : c.accentInk },
               ]}
             >
@@ -154,6 +155,7 @@ const styles = ScaledSheet.create({
     fontSize: '24@ms',
     lineHeight: '28@ms',
   },
+  iconSymbol: { fontSize: '22@ms', lineHeight: '28@ms', fontWeight: '700' },
   title: {
     fontFamily: fonts.display,
     fontSize: '22@ms',

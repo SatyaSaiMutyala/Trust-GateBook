@@ -19,31 +19,8 @@ import { selectIsGateUser } from '../store/authSlice';
 import { useToast } from '../store/hooks';
 import { useInfiniteList } from '../store/useInfiniteList';
 import { fonts, radius, typo, useTheme } from '../theme';
-import { fmtRelative } from '../utils/format';
-
-/** Icon per notification event (SPEC "Notifications screen"). */
-export const EVENT_ICONS = {
-  mail_logged: '📬',
-  mail_reminder: '⏰',
-  mail_confirm: '✅',
-  mail_disputed: '⚠️',
-  signup_request: '🙋',
-  visit_arrived: '🚪',
-  visit_reply: '✅',
-  visit_no_reply: '⏰',
-  expected_new: '📅',
-  expected_arrived: '✅',
-  expected_cancelled: '🚫',
-  escalation: '⏰',
-  material_in: '📦',
-  material_approval: '📦',
-  material_decision: '✅',
-  material_disputed: '⚠️',
-  key_issued: '🔑',
-  incident_assigned: '⚠️',
-  incident_update: '📝',
-  incident_closed: '✅',
-};
+import { fmtRelative, stripEmoji } from '../utils/format';
+import { EventIcon } from '../components/EventIcon';
 
 const HINTS = {
   user: 'Opens pending account requests',
@@ -64,7 +41,7 @@ function NotificationRow({ item: n, now, onPress }) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${unread ? 'Unread. ' : ''}${n.title}. ${
+      accessibilityLabel={`${unread ? 'Unread. ' : ''}${stripEmoji(n.title)}. ${
         n.body
       }. ${fmtRelative(n.createdAt, now)}`}
       accessibilityHint={HINTS[n.data?.type] ?? HINTS.mail}
@@ -78,13 +55,13 @@ function NotificationRow({ item: n, now, onPress }) {
         },
       ]}
     >
-      <Text style={styles.icon}>{EVENT_ICONS[n.event] ?? '🔔'}</Text>
+      <EventIcon event={n.event} />
       <View style={styles.texts}>
         <Text
           numberOfLines={2}
           style={[typo.bodySemi, { color: c.ink, fontFamily: fonts.bodySemi }]}
         >
-          {n.title}
+          {stripEmoji(n.title)}
         </Text>
         {n.body ? (
           <Text numberOfLines={3} style={[typo.small, { color: c.muted }]}>
@@ -254,7 +231,6 @@ const styles = ScaledSheet.create({
     borderRadius: radius.panel,
     borderWidth: 1,
   },
-  icon: { includeFontPadding: false, fontSize: '22@ms', lineHeight: '26@ms' },
   texts: { flex: 1, minWidth: 0, gap: '3@ms' },
   dot: {
     width: '10@ms',

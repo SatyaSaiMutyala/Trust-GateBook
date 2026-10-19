@@ -20,6 +20,7 @@ import {
   expectedWhen,
 } from '../utils/expected';
 import { fmtTime, plural } from '../utils/format';
+import { TabIcon } from './TabIcons';
 
 /** Top of Check in: "3 expected today" → the Expected list. Hidden when no one is expected. */
 export function ExpectedTodayStrip() {
@@ -48,8 +49,9 @@ export function ExpectedTodayStrip() {
         },
       ]}
     >
+      <TabIcon name="calendar" color={c.ink} bg={c.accentSoft} size={18} />
       <Text style={[typo.bodySemi, { color: c.ink, flex: 1 }]}>
-        📅 {count} expected today
+        {count} expected today
       </Text>
       <Text style={[typo.bodySemi, { color: c.ink }]}>View ›</Text>
     </Pressable>

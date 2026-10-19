@@ -27,6 +27,7 @@ import {
 } from '../store/api';
 import { selectUser } from '../store/authSlice';
 import { useSettings, useToast } from '../store/hooks';
+import { CrossIcon } from '../components/Glyphs';
 
 export const CHALLANS = [
   'Delivery challan',
@@ -433,12 +434,12 @@ function ExpectedForm({ entry, kind, navigation }) {
                     }
                     style={[
                       styles.chip,
+                      styles.chipRow,
                       { backgroundColor: c.sunk, borderColor: c.line },
                     ]}
                   >
-                    <Text style={[typo.small, { color: c.ink }]}>
-                      {a.name} ✕
-                    </Text>
+                    <Text style={[typo.small, { color: c.ink }]}>{a.name}</Text>
+                    <CrossIcon color={c.muted} size={9} />
                   </Pressable>
                 ))}
               </View>
@@ -582,4 +583,5 @@ const styles = ScaledSheet.create({
     paddingHorizontal: '12@s',
     paddingVertical: '6@vs',
   },
+  chipRow: { flexDirection: 'row', alignItems: 'center', gap: '6@ms' },
 });

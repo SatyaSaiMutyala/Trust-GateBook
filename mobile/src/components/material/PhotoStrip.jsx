@@ -5,6 +5,7 @@ import { useToast } from '../../store/hooks';
 import { radius, typo, useTheme } from '../../theme';
 import { captureImage } from '../../utils/camera';
 import { errorMessage } from '../../store/api';
+import { CameraIcon, CrossIcon } from '../Glyphs';
 
 /**
  * Several photos (challan pages, boxes): thumbnails with remove, plus a camera tile up to `max`.
@@ -56,7 +57,7 @@ export function PhotoStrip({
               hitSlop={6}
               style={styles.remove}
             >
-              <Text style={styles.removeText}>✕</Text>
+              <CrossIcon color="#fff" size={9} />
             </Pressable>
           </View>
         ))}
@@ -75,7 +76,7 @@ export function PhotoStrip({
               },
             ]}
           >
-            <Text style={{ fontSize: 22 }}>📷</Text>
+            <CameraIcon color={c.muted} size={22} />
             <Text style={[typo.small, { color: c.muted, textAlign: 'center' }]}>
               {label}
             </Text>
@@ -108,14 +109,13 @@ const styles = ScaledSheet.create({
   img: { width: '100%', height: '100%' },
   remove: {
     position: 'absolute',
-    top: 3,
-    right: 3,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    top: '3@ms',
+    right: '3@ms',
+    width: '22@ms',
+    height: '22@ms',
+    borderRadius: '11@ms',
     backgroundColor: 'rgba(0,0,0,0.6)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  removeText: { color: '#fff', fontSize: 12 },
 });

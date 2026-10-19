@@ -1,4 +1,5 @@
 import React, { memo } from 'react';
+import { BellIcon } from './NotificationBell';
 import { Pressable, Text, View } from 'react-native';
 import { fonts, radius, typo, useTheme } from '../theme';
 import { fmtAgo, fmtTimeOrDate } from '../utils/format';
@@ -108,7 +109,8 @@ function MailCardInner({
           <View style={styles.actions}>
             {m.notifiedAt && onRemind ? (
               <Button
-                title="🔔 Remind"
+                title="Remind"
+                icon={<BellIcon color={c.ink} size={14} />}
                 variant="ghost"
                 size="sm"
                 loading={reminding}

@@ -160,8 +160,9 @@ test('list renders rows; Unread tab requests unread=true; header gets "Mark all 
   );
   expect(texts(tree)).toEqual(
     expect.arrayContaining([
-      '📬 Courier for you',
-      '⏰ Reminder: Letter waiting',
+      // Emoji stripped (the app font has none); the icon is drawn per event instead.
+      'Courier for you',
+      'Reminder: Letter waiting',
       'All',
       'Unread',
     ]),
@@ -183,7 +184,7 @@ test('list renders rows; Unread tab requests unread=true; header gets "Mark all 
       c => c.path === '/api/notifications' && c.params.get('unread') === 'true',
     ),
   ).toBe(true);
-  expect(texts(tree)).not.toContain('⏰ Reminder: Letter waiting');
+  expect(texts(tree)).not.toContain('Reminder: Letter waiting');
   await ReactTestRenderer.act(async () => tree.unmount());
 });
 
@@ -237,7 +238,7 @@ test('socket notification:new bumps the badge and toasts once per post item; not
   expect(api.endpoints.unreadCount.select()(store.getState()).data).toBe(4);
   const first = store.getState().ui.toast;
   expect(first.message).toBe(
-    '📬 Courier for you · From Transasia · collect it at the gate',
+    'Courier for you · From Transasia · collect it at the gate',
   );
   store.dispatch(
     notificationNewEvent({

@@ -217,9 +217,7 @@ export function ExitSheet({ visit, onClose }) {
                   ]}
                 >
                   {collected ? (
-                    <Text
-                      style={{ color: c.accentInk, fontFamily: fonts.bodySemi }}
-                    >
+                    <Text style={{ color: c.accentInk, fontWeight: '700' }}>
                       ✓
                     </Text>
                   ) : null}

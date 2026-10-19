@@ -42,6 +42,7 @@ import {
   selectUser,
 } from '../store/authSlice';
 import { useSettings, useSheets } from '../store/hooks';
+import { CrossIcon } from '../components/Glyphs';
 
 function Detail({ label, value, mono }) {
   const { c } = useTheme();
@@ -217,15 +218,7 @@ export function VisitDetailsScreen({ navigation, route }) {
         hitSlop={8}
         style={[styles.close, { borderColor: c.line }]}
       >
-        <Text
-          style={{
-            color: c.ink,
-            fontSize: moderateScale(18),
-            lineHeight: moderateScale(22),
-          }}
-        >
-          ✕
-        </Text>
+        <CrossIcon color={c.ink} size={16} />
       </Pressable>
     </View>
   );

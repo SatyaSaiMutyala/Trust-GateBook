@@ -244,7 +244,7 @@ describe('branding & escalations', () => {
     );
     expect(spy).toHaveBeenLastCalledWith([0, 300, 150, 300]);
     expect(store.getState().ui.toast.message).toBe(
-      '⏰ Visitor still waiting · Anil has waited 16m',
+      'Visitor still waiting · Anil has waited 16m',
     );
     store.dispatch(
       notificationNewEvent({

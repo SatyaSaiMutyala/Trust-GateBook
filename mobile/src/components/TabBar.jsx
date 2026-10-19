@@ -212,17 +212,20 @@ export function TabBar({ state, navigation }) {
             onLongPress={onLongPress}
             style={styles.item}
           >
-            <View
-              style={[
-                styles.iconWrap,
-                focused && { backgroundColor: c.accentSoft },
-              ]}
-            >
-              <TabIcon
-                name={meta.icon}
-                color={color}
-                bg={focused ? c.accentSoft : c.surface}
-              />
+            {/* The pill clips (overflow hidden, for Android's rounded tint), so the badge sits beside it, not in it. */}
+            <View style={styles.iconSlot}>
+              <View
+                style={[
+                  styles.iconWrap,
+                  focused && { backgroundColor: c.accentSoft },
+                ]}
+              >
+                <TabIcon
+                  name={meta.icon}
+                  color={color}
+                  bg={focused ? c.accentSoft : c.surface}
+                />
+              </View>
               {badge ? (
                 <View
                   style={[
@@ -269,6 +272,8 @@ const styles = ScaledSheet.create({
     minHeight: '48@vs',
     gap: '3@ms',
   },
+  // Holds the pill + badge; doesn't clip, so the badge can overhang the pill's top-right corner.
+  iconSlot: { position: 'relative' },
   // Pill behind the icon; tinted only on the active tab.
   iconWrap: {
     width: '52@ms',

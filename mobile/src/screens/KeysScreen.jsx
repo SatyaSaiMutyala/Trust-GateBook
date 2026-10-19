@@ -26,6 +26,7 @@ import { useInfiniteList } from '../store/useInfiniteList';
 import { fonts, radius, typo, useTheme } from '../theme';
 import { fmtDateTime, fmtRelative, fmtTime } from '../utils/format';
 import { DIARY_PERIODS, KEY_STATE, freeCopies } from '../utils/keys';
+import { LockIcon } from '../components/Glyphs';
 
 const CHIP = { ok: 'go', warn: 'wait', bad: 'bad', muted: 'neutral' };
 
@@ -167,10 +168,15 @@ function KeyCard({ k, now, operator, onIssue, onReturn }) {
           </Text>
         </View>
         <View style={{ flex: 1, gap: 2 }}>
-          <Text style={[typo.bodyMedium, { color: c.ink }]} numberOfLines={1}>
-            {k.restricted ? '🔒 ' : ''}
-            {k.name}
-          </Text>
+          <View style={styles.nameRow}>
+            {k.restricted ? <LockIcon color={c.warn} size={13} /> : null}
+            <Text
+              style={[typo.bodyMedium, { color: c.ink, flexShrink: 1 }]}
+              numberOfLines={1}
+            >
+              {k.name}
+            </Text>
+          </View>
           <Text style={[typo.small, { color: c.muted }]} numberOfLines={1}>
             {[k.location, k.site].filter(Boolean).join(' · ')}
           </Text>
@@ -414,6 +420,7 @@ function Separator() {
 }
 
 const styles = ScaledSheet.create({
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: '5@ms' },
   content: { padding: '16@ms', flexGrow: 1 },
   row: { flexDirection: 'row', gap: '10@ms' },
   card: {

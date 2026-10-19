@@ -29,6 +29,7 @@ import { useToast } from '../store/hooks';
 import { typo, useTheme } from '../theme';
 import { fmtDateTime } from '../utils/format';
 import { STATUS_LABEL, incidentRights } from '../utils/incidents';
+import { CrossIcon } from '../components/Glyphs';
 
 function Fact({ label, value }) {
   const { c } = useTheme();
@@ -100,7 +101,7 @@ export function IncidentDetailsScreen({ navigation, route }) {
         onPress={() => navigation.goBack()}
         style={styles.close}
       >
-        <Text style={[typo.h2, { color: c.ink }]}>✕</Text>
+        <CrossIcon color={c.ink} size={18} />
       </Pressable>
       {i ? (
         <View style={{ flex: 1, gap: 4 }}>

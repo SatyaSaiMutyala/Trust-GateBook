@@ -358,7 +358,7 @@ describe('admin pending requests', () => {
 });
 
 describe('signup_request notifications', () => {
-  test('tapping the 🙋 row opens Account → Pending; a push does the same and marks it read', async () => {
+  test('tapping the sign-up request row opens Account → Pending; a push does the same and marks it read', async () => {
     routes['GET /api/notifications'] = () =>
       reply(200, {
         ...page([
@@ -379,7 +379,10 @@ describe('signup_request notifications', () => {
       signedIn('admin'),
       <NotificationsScreen navigation={navigation} />,
     );
-    expect(texts(tree)).toContain('🙋');
+    expect(texts(tree)).toContain('New account request');
+    expect(
+      tree.root.findAll(n => n.props.event === 'signup_request').length,
+    ).toBeGreaterThan(0);
     await ReactTestRenderer.act(async () =>
       tree.root.findByProps({ testID: 'notification-n5' }).props.onPress(),
     );

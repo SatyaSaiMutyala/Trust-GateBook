@@ -1,4 +1,5 @@
 import { PermissionsAndroid, Platform } from 'react-native';
+import { stripEmoji } from '../utils/format';
 import { api } from '../store/api';
 import { loggedOut, selectIsGateUser } from '../store/authSlice';
 import {
@@ -146,7 +147,8 @@ export const foregroundMessage = message => dispatch => {
   if (!claimNotice(key)) return;
   const title = message?.notification?.title;
   const body = message?.notification?.body;
-  const text = [title, body].filter(Boolean).join(' · ');
+  // In-app toast uses the app font, which has no emoji glyphs: drop them (the OS notification keeps them).
+  const text = stripEmoji([title, body].filter(Boolean).join(' · '));
   if (text) dispatch(toastShown(text));
 };
 
