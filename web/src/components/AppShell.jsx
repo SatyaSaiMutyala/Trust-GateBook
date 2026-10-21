@@ -14,17 +14,22 @@ import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutlined';
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
 import SettingsIcon from '@mui/icons-material/Settings';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import LogoutIcon from '@mui/icons-material/Logout';
+import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
+import VerifiedUserOutlinedIcon from '@mui/icons-material/VerifiedUserOutlined';
 import AppBar from '@mui/material/AppBar';
 import Badge from '@mui/material/Badge';
 import BottomNavigation from '@mui/material/BottomNavigation';
 import BottomNavigationAction from '@mui/material/BottomNavigationAction';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import Drawer from '@mui/material/Drawer';
+import ButtonBase from '@mui/material/ButtonBase';
+import Divider from '@mui/material/Divider';
+import IconButton from '@mui/material/IconButton';
+import Menu from '@mui/material/Menu';
 import List from '@mui/material/List';
 import ListItemButton from '@mui/material/ListItemButton';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ListItemText from '@mui/material/ListItemText';
 import Stack from '@mui/material/Stack';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
@@ -32,7 +37,8 @@ import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import RadarIcon from '@mui/icons-material/Radar';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
-import { useUser } from '../auth/context';
+import { useState } from 'react';
+import { useAuth, useUser } from '../auth/context';
 import { hasModule, isEmployee, isRecipient, ROLE_LABEL } from '../auth/roles';
 import { useIsDesktop } from '../hooks';
 import {
@@ -47,7 +53,8 @@ import {
 } from '../state/context';
 import { PushBanner } from './PushAlerts';
 import { fileUrl } from '../api/client';
-import { fonts, RAIL_WIDTH } from '../theme/tokens';
+import { fonts, RAIL_BG, RAIL_COLLAPSED, RAIL_WIDTH, TOPBAR_HEIGHT } from '../theme/tokens';
+import { initials } from '../utils/format';
 import { IssueAlerts, MailNotifier } from './mail/IssueAlerts';
 import { NotificationBell } from './NotificationBell';
 import { HostVisitNotifier, VisitAlerts } from './VisitAlerts';
@@ -94,6 +101,7 @@ export function LogoTile({ size, src }) {
   );
 }
 
+/** Wordmark: "GATEBOOK" over the company name (AIMS rail lockup). */
 function Brand({ compact = false }) {
   const user = useUser();
   const { settings } = useSettings();
@@ -101,46 +109,49 @@ function Brand({ compact = false }) {
   const sub = company?.name || (isEmployee(user) ? 'Host desk' : 'Visitor register');
   return (
     <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 0 }}>
-      <LogoTile size={compact ? 32 : 38} src={company?.logoUrl} />
+      <LogoTile size={compact ? 32 : 40} src={company?.logoUrl} />
       <Box sx={{ minWidth: 0 }}>
         <Typography
-          sx={{
-            fontFamily: fonts.display,
-            fontWeight: 700,
-            letterSpacing: '0.14em',
-            fontSize: compact ? 18 : 21,
-            lineHeight: 1,
-            color: 'gb.railInk',
-          }}
+          sx={{ fontWeight: 800, letterSpacing: '0.045em', fontSize: compact ? 18 : 21, lineHeight: 1, color: '#fff' }}
         >
           GATEBOOK
         </Typography>
-        {!compact ? (
-          <Typography sx={{ fontSize: 12, color: 'gb.railMuted', mt: 0.25 }} noWrap>
-            {sub}
-          </Typography>
-        ) : null}
+        <Typography
+          noWrap
+          sx={{
+            fontSize: 9,
+            fontWeight: 600,
+            letterSpacing: '0.155em',
+            textTransform: 'uppercase',
+            color: 'rgba(255,255,255,.58)',
+            mt: 0.5,
+          }}
+        >
+          {sub}
+        </Typography>
       </Box>
     </Stack>
   );
 }
 
-/** Count pill in the rail. tone: 'ok' (green), 'warn' (amber). */
+/** Count pill in the rail (AIMS nav badge). tone: 'ok' (green), 'warn' (gold). */
 function CountBadge({ count, tone = 'ok' }) {
   if (count === null || count === undefined) return null;
   const on = count > 0;
+  const warn = tone === 'warn';
   return (
     <Box
       component="span"
       sx={{
         fontFamily: fonts.mono,
-        fontSize: 12,
-        fontWeight: 500,
-        px: 1,
+        fontSize: 11,
+        fontWeight: 600,
+        px: 0.875,
         py: '1px',
         borderRadius: '20px',
-        bgcolor: on ? (tone === 'warn' ? 'gb.accent' : 'gb.ok') : 'rgba(255,255,255,0.08)',
-        color: on ? (tone === 'warn' ? 'gb.accentInk' : '#fff') : 'gb.railMuted',
+        flexShrink: 0,
+        bgcolor: on ? (warn ? 'rgba(255,200,31,.2)' : 'rgba(51,204,85,.2)') : 'rgba(255,255,255,0.08)',
+        color: on ? (warn ? '#FFD45C' : '#4FDD6E') : 'gb.railMuted',
       }}
     >
       {count}
@@ -148,19 +159,41 @@ function CountBadge({ count, tone = 'ok' }) {
   );
 }
 
-function RailGroup({ label }) {
+/** Small dot on a collapsed rail icon when its count is above zero. */
+function CountDot({ count, tone }) {
+  if (!count) return null;
+  return (
+    <Box
+      component="span"
+      sx={{
+        position: 'absolute',
+        top: 4,
+        right: 4,
+        width: 8,
+        height: 8,
+        borderRadius: '50%',
+        bgcolor: tone === 'warn' ? 'gb.gold' : '#4FDD6E',
+        boxShadow: '0 0 0 2px #0E3529',
+      }}
+    />
+  );
+}
+
+function RailGroup({ label, open }) {
+  if (!open) return <Box sx={{ mx: 1.5, my: 1.25, borderTop: '1px solid rgba(255,255,255,.09)' }} />;
   return (
     <Typography
       sx={{
-        px: 1.5,
-        pt: 2.5,
+        px: 1.25,
+        pt: 2,
         pb: 0.75,
-        fontFamily: fonts.display,
+        fontFamily: fonts.mono,
         fontWeight: 600,
-        fontSize: 12,
-        letterSpacing: '0.14em',
+        fontSize: 10,
+        letterSpacing: '0.12em',
         textTransform: 'uppercase',
         color: 'gb.railMuted',
+        whiteSpace: 'nowrap',
       }}
     >
       {label}
@@ -168,29 +201,80 @@ function RailGroup({ label }) {
   );
 }
 
-function RailLink({ to, icon, label, right, end }) {
+/**
+ * Rail row (AIMS nav row): coloured icon tile + uppercase label + count. Active = sky-blue tint with a bar in the
+ * item's own colour on the left. Collapsed (`open` false): the icon tile only.
+ */
+function RailLink({ to, icon, label, color, badge, end, open }) {
   return (
     <ListItemButton
       component={NavLink}
       to={to}
       end={end}
-      sx={(theme) => ({
-        borderRadius: 1,
+      aria-label={open ? undefined : label}
+      sx={{
+        '--ic': color,
+        position: 'relative',
+        gap: 1.5,
+        px: open ? 1.25 : 0,
+        py: open ? 0.75 : 0.5,
+        mb: '3px',
         minHeight: 44,
-        px: 1.5,
-        color: theme.vars.palette.gb.railInk,
-        '& .MuiListItemIcon-root': { color: theme.vars.palette.gb.railMuted, minWidth: 34 },
-        '&:hover': { backgroundColor: 'rgba(255,255,255,0.05)' },
-        '&.active': {
-          backgroundColor: 'rgba(255,255,255,0.09)',
-          boxShadow: `inset 3px 0 0 ${theme.vars.palette.gb.accent}`,
-          '& .MuiListItemIcon-root': { color: theme.vars.palette.gb.accent },
-        },
-      })}
+        justifyContent: open ? 'flex-start' : 'center',
+        borderRadius: '10px',
+        border: '1px solid transparent',
+        color: '#E2EDE8',
+        transition: 'background-color .12s ease',
+        '&:hover': { backgroundColor: 'rgba(255,255,255,.07)' },
+        '&.active': open
+          ? {
+              backgroundColor: 'rgba(46,177,255,.16)',
+              borderColor: 'rgba(46,177,255,.35)',
+              color: '#fff',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                left: -9,
+                top: 6,
+                bottom: 6,
+                width: 4,
+                borderRadius: '0 4px 4px 0',
+                backgroundColor: 'var(--ic)',
+              },
+            }
+          : { backgroundColor: 'transparent', '& .rail-ico': { backgroundColor: 'color-mix(in srgb, var(--ic) 26%, transparent)' } },
+      }}
     >
-      <ListItemIcon>{icon}</ListItemIcon>
-      <ListItemText primary={label} slotProps={{ primary: { sx: { fontWeight: 600, fontSize: 15 } } }} />
-      {right}
+      <Box
+        className="rail-ico"
+        sx={{
+          position: 'relative',
+          width: 34,
+          height: 34,
+          flexShrink: 0,
+          borderRadius: '9px',
+          display: 'grid',
+          placeItems: 'center',
+          color: 'var(--ic)',
+          backgroundColor: 'rgba(255,255,255,.06)',
+          filter: 'brightness(1.18) saturate(1.15)',
+          '& .MuiSvgIcon-root': { fontSize: 19 },
+        }}
+      >
+        {icon}
+        {!open && badge ? <CountDot count={badge.count} tone={badge.tone} /> : null}
+      </Box>
+      {open ? (
+        <>
+          <Typography
+            noWrap
+            sx={{ flex: 1, fontSize: 11, fontWeight: 600, letterSpacing: '0.9px', textTransform: 'uppercase', color: 'inherit' }}
+          >
+            {label}
+          </Typography>
+          {badge ? <CountBadge count={badge.count} tone={badge.tone} /> : null}
+        </>
+      ) : null}
     </ListItemButton>
   );
 }
@@ -210,7 +294,7 @@ function useTrackBadge() {
   return { count: data.counts.total, tone: data.counts.urgent ? 'warn' : 'ok' };
 }
 
-/** "This gate" picker (gate users, several gates). `onRail`: light text on the dark rail. */
+/** "This gate" picker (gate users, several gates). `onRail`: light text on the dark phone bar. */
 function GatePicker({ onRail, compact }) {
   const { site, sites, multi, setSite } = useSite();
   if (!multi) return null;
@@ -218,22 +302,18 @@ function GatePicker({ onRail, compact }) {
     <TextField
       select
       size="small"
-      label={compact ? undefined : 'This gate'}
       value={site}
       onChange={(e) => setSite(e.target.value)}
       slotProps={{ htmlInput: { 'aria-label': 'This gate' } }}
-      sx={
-        onRail
-          ? {
-              '& .MuiInputBase-root': { color: 'gb.railInk', bgcolor: 'rgba(255,255,255,0.06)' },
-              '& .MuiInputLabel-root': { color: 'gb.railMuted' },
-              '& .MuiSvgIcon-root': { color: 'gb.railMuted' },
-              '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.15)' },
-              minWidth: compact ? 130 : undefined,
-            }
-          : undefined
-      }
-      fullWidth={!compact}
+      sx={{
+        minWidth: compact ? 130 : 160,
+        width: 'auto',
+        ...(onRail && {
+          '& .MuiInputBase-root': { color: 'gb.railInk', bgcolor: 'rgba(255,255,255,0.06)' },
+          '& .MuiSvgIcon-root': { color: 'gb.railMuted' },
+          '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.15)' },
+        }),
+      }}
     >
       {sites.map((s) => (
         <MenuItem key={s} value={s}>
@@ -244,7 +324,27 @@ function GatePicker({ onRail, compact }) {
   );
 }
 
-function DesktopRail() {
+/** Menu colours per section (AIMS gives every menu its own icon colour). */
+const C = {
+  track: '#FF8C1A',
+  inside: '#12C48B',
+  post: '#2288EE',
+  expected: '#FFC400',
+  material: '#976BFF',
+  keys: '#F5A300',
+  incidents: '#FF5D5D',
+  patrol: '#33CC55',
+  gen: '#0EA5A5',
+  log: '#5FD3F3',
+  overview: '#7FB3FF',
+  myVisitors: '#4FD1A5',
+  myPost: '#FF7FB6',
+  notifications: '#FF9E4A',
+  settings: '#93A8B8',
+};
+
+/** Sidebar items for this user: `[group, items]`. */
+function useRailItems() {
   const user = useUser();
   const employee = isEmployee(user);
   const { count } = useInside();
@@ -253,156 +353,430 @@ function DesktopRail() {
   const { unreadCount: unread } = useNotifications();
   const { waiting: myVisitors } = useMyVisitors();
   const { today: expectedToday } = useExpected();
-  return (
-    <Drawer
-      variant="permanent"
-      sx={{ width: RAIL_WIDTH, flexShrink: 0 }}
-      slotProps={{
-        paper: {
-          sx: {
-            width: RAIL_WIDTH,
-            bgcolor: 'gb.rail',
-            color: 'gb.railInk',
-            borderRight: 'none',
-            borderRadius: 0,
-            p: 1.5,
-            display: 'flex',
-            flexDirection: 'column',
+  const has = (m) => hasModule(user, m);
+  const notifications = {
+    to: '/notifications',
+    icon: <NotificationsNoneOutlinedIcon />,
+    label: 'Notifications',
+    color: C.notifications,
+    badge: { count: unread, tone: 'warn' },
+  };
+  if (employee) {
+    return [
+      [
+        'My desk',
+        [
+          {
+            to: '/my-visitors',
+            icon: <BadgeOutlinedIcon />,
+            label: 'My visitors',
+            color: C.myVisitors,
+            badge: { count: myVisitors, tone: 'warn' },
           },
+          has('expected') && { to: '/expected', icon: <EventAvailableOutlinedIcon />, label: 'Expected', color: C.expected },
+          has('material') && { to: '/material', icon: <Inventory2OutlinedIcon />, label: 'Gate passes', color: C.material },
+          has('incidents') && {
+            to: '/incidents',
+            icon: <ReportProblemOutlinedIcon />,
+            label: 'Incidents',
+            color: C.incidents,
+          },
+          has('post') && {
+            to: '/my-post',
+            icon: <MarkunreadMailboxOutlinedIcon />,
+            label: 'My post',
+            color: C.myPost,
+            badge: { count: mail.count, tone: 'warn' },
+          },
+          notifications,
+        ],
+      ],
+      ['Account', [{ to: '/settings', icon: <PersonOutlineIcon />, label: 'My account', color: C.settings }]],
+    ];
+  }
+  return [
+    [
+      'Register',
+      [
+        has('track') && { to: '/track', icon: <RadarIcon />, label: 'TRACK', color: C.track, badge: track },
+        has('visitors') && {
+          to: '/inside',
+          icon: <PeopleAltIcon />,
+          label: 'Inside now',
+          color: C.inside,
+          badge: { count, tone: 'ok' },
         },
-      }}
-    >
-      <Box sx={{ px: 1, pt: 1, pb: 2.5 }}>
-        <Brand />
-      </Box>
-      {employee ? (
-        <List disablePadding sx={{ display: 'grid', gap: 0.5 }}>
-          <RailLink
-            to="/my-visitors"
-            icon={<BadgeOutlinedIcon />}
-            label="My visitors"
-            right={<CountBadge count={myVisitors} tone="warn" />}
-          />
-          {hasModule(user, 'expected') ? (
-            <RailLink to="/expected" icon={<EventAvailableOutlinedIcon />} label="Expected" />
+        has('post') && { to: '/post', icon: <MailOutlineIcon />, label: 'Post room', color: C.post, badge: mail },
+        has('expected') && {
+          to: '/expected',
+          icon: <EventAvailableOutlinedIcon />,
+          label: 'Expected',
+          color: C.expected,
+          badge: { count: expectedToday, tone: 'ok' },
+        },
+        has('material') && { to: '/material', icon: <Inventory2OutlinedIcon />, label: 'Material passes', color: C.material },
+        has('keys') && { to: '/keys', icon: <KeyOutlinedIcon />, label: 'Key register', color: C.keys },
+        has('incidents') && { to: '/incidents', icon: <ReportProblemOutlinedIcon />, label: 'Incidents', color: C.incidents },
+        has('patrol') && { to: '/patrol', icon: <ShieldOutlinedIcon />, label: 'Patrols', color: C.patrol },
+        has('gen') && { to: '/generator', icon: <BoltOutlinedIcon />, label: 'Generator', color: C.gen },
+        has('visitors') && { to: '/log', icon: <ListAltIcon />, label: 'Visitor log', color: C.log },
+        has('track') && { to: '/overview', icon: <BarChartIcon />, label: 'Overview', color: C.overview },
+        isRecipient(user) && {
+          to: '/my-visitors',
+          icon: <BadgeOutlinedIcon />,
+          label: 'My visitors',
+          color: C.myVisitors,
+          badge: { count: myVisitors, tone: 'warn' },
+        },
+        isRecipient(user) &&
+          has('post') && { to: '/my-post', icon: <MarkunreadMailboxOutlinedIcon />, label: 'My post', color: C.myPost },
+        notifications,
+      ],
+    ],
+    ['Admin', [{ to: '/settings', icon: <SettingsIcon />, label: 'Settings', color: C.settings }]],
+  ];
+}
+
+const PIN_KEY = 'gb.rail.pinned';
+/** Remembered pin; without one, the menu starts open on wide screens and as icons below 1200 px. */
+function readPinned() {
+  const wide = typeof window === 'undefined' || window.innerWidth >= 1200;
+  try {
+    const v = localStorage.getItem(PIN_KEY);
+    return v === null ? wide : v === '1';
+  } catch {
+    return wide;
+  }
+}
+
+/**
+ * Desktop sidebar (AIMS rail): dark green gradient, 258px; unpinned it collapses to 66px of icons and opens over
+ * the page while hovered. The pin is remembered on this browser.
+ */
+function DesktopRail() {
+  const user = useUser();
+  const groups = useRailItems();
+  const [pinned, setPinned] = useState(readPinned);
+  const [hover, setHover] = useState(false);
+  const open = pinned || hover;
+  const togglePin = () => {
+    setPinned((p) => {
+      try {
+        localStorage.setItem(PIN_KEY, p ? '0' : '1');
+      } catch {
+        /* storage blocked: keep it for this visit only */
+      }
+      return !p;
+    });
+    setHover(false);
+  };
+  return (
+    <Box sx={{ width: pinned ? RAIL_WIDTH : RAIL_COLLAPSED, flexShrink: 0, transition: 'width .16s ease' }}>
+      <Box
+        component="nav"
+        aria-label="Main menu"
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        sx={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          bottom: 0,
+          zIndex: 1200,
+          width: open ? RAIL_WIDTH : RAIL_COLLAPSED,
+          transition: 'width .16s ease',
+          overflow: 'hidden',
+          background: RAIL_BG,
+          color: 'gb.railInk',
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow:
+            hover && !pinned
+              ? '6px 0 24px rgba(16,21,28,.22)'
+              : '2px 0 16px -8px rgba(0,0,0,.45), inset -1px 0 0 rgba(255,255,255,.055)',
+        }}
+      >
+        <Stack
+          direction="row"
+          sx={{
+            height: TOPBAR_HEIGHT + 6,
+            px: open ? 1.75 : 1.5,
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 1,
+            flexShrink: 0,
+            background: 'linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.018))',
+            borderBottom: '1px solid rgba(255,255,255,.09)',
+          }}
+        >
+          {open ? <Brand /> : <LogoTile size={40} src={null} />}
+          {open ? (
+            <IconButton
+              size="small"
+              onClick={togglePin}
+              aria-pressed={pinned}
+              aria-label={pinned ? 'Unpin menu (collapse to icons)' : 'Pin menu open'}
+              title={pinned ? 'Collapse menu' : 'Keep menu open'}
+              sx={{
+                color: pinned ? 'gb.gold' : 'gb.railMuted',
+                transform: pinned ? 'rotate(45deg)' : 'none',
+                transition: 'transform .15s ease, color .12s ease',
+                '&:hover': { color: 'gb.gold', bgcolor: 'rgba(255,255,255,.07)' },
+              }}
+            >
+              <PushPinOutlinedIcon fontSize="small" />
+            </IconButton>
           ) : null}
-          {hasModule(user, 'material') ? (
-            <RailLink to="/material" icon={<Inventory2OutlinedIcon />} label="Gate passes" />
-          ) : null}
-          {hasModule(user, 'incidents') ? (
-            <RailLink to="/incidents" icon={<ReportProblemOutlinedIcon />} label="Incidents" />
-          ) : null}
-          {hasModule(user, 'post') ? (
-            <RailLink
-              to="/my-post"
-              icon={<MarkunreadMailboxOutlinedIcon />}
-              label="My post"
-              right={<CountBadge count={mail.count} tone="warn" />}
-            />
-          ) : null}
-          <RailLink
-            to="/notifications"
-            icon={<NotificationsNoneOutlinedIcon />}
-            label="Notifications"
-            right={<CountBadge count={unread} tone="warn" />}
-          />
-          <RailLink to="/settings" icon={<PersonOutlineIcon />} label="My account" />
-        </List>
-      ) : (
-        <>
-          {hasModule(user, 'visitors') ? (
+        </Stack>
+        <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', px: 1.25, pt: 1.5, pb: 1 }}>
+          {!isEmployee(user) && hasModule(user, 'visitors') ? (
             <Button
               component={NavLink}
               to="/check-in"
               variant="contained"
               color="primary"
-              size="large"
-              startIcon={<AddIcon />}
+              aria-label="Check in"
+              startIcon={open ? <AddIcon /> : null}
               fullWidth
+              sx={{
+                minHeight: 40,
+                mb: 0.5,
+                px: open ? 2 : 0,
+                minWidth: 0,
+                borderRadius: '9px',
+                border: '1.5px solid',
+                borderColor: 'gb.gold',
+                fontWeight: 700,
+                letterSpacing: '.02em',
+                boxShadow: '0 1px 2px rgba(16,21,28,.10), 0 3px 8px rgba(15,118,110,.18)',
+                '&:hover': { bgcolor: 'gb.accentDark', borderColor: 'gb.gold', transform: 'translateY(-1px)' },
+                '&.active': { bgcolor: 'gb.accentDark' },
+              }}
             >
-              Check in
+              {open ? 'Check in' : <AddIcon />}
             </Button>
           ) : null}
-          <RailGroup label="Register" />
-          <List disablePadding sx={{ display: 'grid', gap: 0.5 }}>
-            {hasModule(user, 'track') ? (
-              <RailLink
-                to="/track"
-                icon={<RadarIcon />}
-                label="TRACK"
-                right={<CountBadge count={track.count} tone={track.tone} />}
-              />
-            ) : null}
-            {hasModule(user, 'visitors') ? (
-              <RailLink to="/inside" icon={<PeopleAltIcon />} label="Inside now" right={<CountBadge count={count} />} />
-            ) : null}
-            {hasModule(user, 'post') ? (
-              <RailLink
-                to="/post"
-                icon={<MailOutlineIcon />}
-                label="Post room"
-                right={<CountBadge count={mail.count} tone={mail.tone} />}
-              />
-            ) : null}
-            {hasModule(user, 'expected') ? (
-              <RailLink
-                to="/expected"
-                icon={<EventAvailableOutlinedIcon />}
-                label="Expected"
-                right={<CountBadge count={expectedToday} />}
-              />
-            ) : null}
-            {hasModule(user, 'material') ? (
-              <RailLink to="/material" icon={<Inventory2OutlinedIcon />} label="Material passes" />
-            ) : null}
-            {hasModule(user, 'keys') ? <RailLink to="/keys" icon={<KeyOutlinedIcon />} label="Key register" /> : null}
-            {hasModule(user, 'incidents') ? (
-              <RailLink to="/incidents" icon={<ReportProblemOutlinedIcon />} label="Incidents" />
-            ) : null}
-            {hasModule(user, 'patrol') ? <RailLink to="/patrol" icon={<ShieldOutlinedIcon />} label="Patrols" /> : null}
-            {hasModule(user, 'gen') ? <RailLink to="/generator" icon={<BoltOutlinedIcon />} label="Generator" /> : null}
-            {hasModule(user, 'visitors') ? <RailLink to="/log" icon={<ListAltIcon />} label="Visitor log" /> : null}
-            {hasModule(user, 'track') ? <RailLink to="/overview" icon={<BarChartIcon />} label="Overview" /> : null}
-            {isRecipient(user) ? (
-              <>
-                <RailLink
-                  to="/my-visitors"
-                  icon={<BadgeOutlinedIcon />}
-                  label="My visitors"
-                  right={<CountBadge count={myVisitors} tone="warn" />}
-                />
-                {hasModule(user, 'post') ? (
-                  <RailLink to="/my-post" icon={<MarkunreadMailboxOutlinedIcon />} label="My post" />
-                ) : null}
-              </>
-            ) : null}
-            <RailLink
-              to="/notifications"
-              icon={<NotificationsNoneOutlinedIcon />}
-              label="Notifications"
-              right={<CountBadge count={unread} tone="warn" />}
-            />
-          </List>
-          <RailGroup label="Admin" />
-          <List disablePadding>
-            <RailLink to="/settings" icon={<SettingsIcon />} label="Settings" />
-          </List>
-        </>
-      )}
-      <Box sx={{ flex: 1 }} />
-      <Box sx={{ px: 0.5, pb: 1.5 }}>
-        <GatePicker onRail />
+          {groups.map(([group, items]) => (
+            <Box key={group}>
+              <RailGroup label={group} open={open} />
+              <List disablePadding>
+                {items.filter(Boolean).map((it) => (
+                  <RailLink key={it.to} {...it} open={open} />
+                ))}
+              </List>
+            </Box>
+          ))}
+        </Box>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: 'center',
+            justifyContent: open ? 'flex-start' : 'center',
+            px: 2,
+            py: 1.5,
+            borderTop: '1px solid rgba(255,255,255,.09)',
+            color: 'gb.railMuted',
+            fontFamily: fonts.mono,
+            fontSize: 11,
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
+          }}
+        >
+          <VerifiedUserOutlinedIcon sx={{ fontSize: 15 }} />
+          {open ? <span>Trust Gatebook</span> : null}
+        </Stack>
       </Box>
-      <Box sx={{ px: 0.5, pb: 1 }}>
-        <Typography sx={{ fontSize: 13, color: 'gb.railMuted' }}>
-          Signed in as{' '}
-          <Box component="span" sx={{ color: 'gb.railInk', fontWeight: 600 }}>
+    </Box>
+  );
+}
+
+/** Page names for the top bar breadcrumb: `[group, page]`. */
+const CRUMBS = {
+  '/check-in': ['Register', 'Check in'],
+  '/track': ['Register', 'TRACK'],
+  '/inside': ['Register', 'Inside now'],
+  '/post': ['Register', 'Post room'],
+  '/post/new': ['Post room', 'Log incoming post'],
+  '/expected': ['Register', 'Expected visitors'],
+  '/material': ['Register', 'Material passes'],
+  '/keys': ['Register', 'Key register'],
+  '/incidents': ['Register', 'Incidents'],
+  '/patrol': ['Register', 'Patrols'],
+  '/generator': ['Register', 'Generator'],
+  '/log': ['Register', 'Visitor log'],
+  '/overview': ['Register', 'Overview'],
+  '/my-visitors': ['My desk', 'My visitors'],
+  '/my-post': ['My desk', 'My post'],
+  '/notifications': ['Inbox', 'Notifications'],
+  '/settings': ['Admin', 'Settings'],
+};
+
+function UserMenu() {
+  const user = useUser();
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+  const [anchor, setAnchor] = useState(null);
+  const { unreadCount } = useNotifications();
+  const role = ROLE_LABEL[user.role] ?? user.role;
+  const go = (to) => {
+    setAnchor(null);
+    navigate(to);
+  };
+  const avatar = (size) => (
+    <Box
+      aria-hidden
+      sx={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        bgcolor: 'primary.main',
+        color: '#fff',
+        display: 'grid',
+        placeItems: 'center',
+        fontWeight: 700,
+        fontSize: size * 0.38,
+        flexShrink: 0,
+        boxShadow: `0 0 0 2px #fff, 0 0 0 3.5px ${'#FFC81F'}`,
+      }}
+    >
+      {initials(user.name) || '?'}
+    </Box>
+  );
+  return (
+    <>
+      <ButtonBase
+        onClick={(e) => setAnchor(e.currentTarget)}
+        aria-haspopup="menu"
+        aria-expanded={anchor ? 'true' : undefined}
+        aria-label={`Account menu, ${user.name}`}
+        sx={{
+          gap: 1,
+          pl: 0.75,
+          pr: 1.5,
+          py: 0.5,
+          borderRadius: '14px',
+          bgcolor: 'gb.accentSoft',
+          border: '1px solid rgba(15,118,110,.28)',
+          '&:hover': { borderColor: 'primary.main' },
+        }}
+      >
+        {avatar(30)}
+        <Box sx={{ textAlign: 'left', display: { xs: 'none', lg: 'block' } }}>
+          <Typography sx={{ fontSize: 13, fontWeight: 700, lineHeight: 1.2 }} noWrap>
             {user.name}
+          </Typography>
+          <Typography sx={{ fontSize: 11, color: 'gb.faint', lineHeight: 1.2 }} noWrap>
+            {role}
+          </Typography>
+        </Box>
+        <KeyboardArrowDownIcon sx={{ fontSize: 18, color: 'gb.muted' }} />
+      </ButtonBase>
+      <Menu
+        anchorEl={anchor}
+        open={!!anchor}
+        onClose={() => setAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        slotProps={{
+          paper: { sx: { mt: 1, width: 300, borderRadius: '18px', boxShadow: '0 18px 46px rgba(16,21,28,.16)' } },
+        }}
+      >
+        <Stack direction="row" spacing={1.5} sx={{ px: 2.5, py: 2, alignItems: 'center' }}>
+          {avatar(48)}
+          <Box sx={{ minWidth: 0 }}>
+            <Typography sx={{ fontSize: 16, fontWeight: 700 }} noWrap>
+              {user.name}
+            </Typography>
+            <Typography sx={{ fontSize: 12, color: 'gb.faint' }} noWrap>
+              {role} · {user.email}
+            </Typography>
           </Box>
-          {` · ${ROLE_LABEL[user.role] ?? user.role}`}
+        </Stack>
+        <Divider />
+        <MenuItem onClick={() => go('/settings')} sx={{ py: 1.25, px: 2.5, gap: 1.5 }}>
+          <PersonOutlineIcon sx={{ fontSize: 18, color: 'primary.main' }} />
+          {isEmployee(user) ? 'My account' : 'My account & settings'}
+        </MenuItem>
+        <MenuItem onClick={() => go('/notifications')} sx={{ py: 1.25, px: 2.5, gap: 1.5 }}>
+          <NotificationsNoneOutlinedIcon sx={{ fontSize: 18, color: 'primary.main' }} />
+          <Box sx={{ flex: 1 }}>Notifications</Box>
+          {unreadCount ? (
+            <Box
+              component="span"
+              sx={{ fontFamily: fonts.mono, fontSize: 11, px: 1, borderRadius: '20px', bgcolor: 'gb.badSoft', color: 'gb.bad' }}
+            >
+              {unreadCount}
+            </Box>
+          ) : null}
+        </MenuItem>
+        <Divider />
+        <MenuItem
+          onClick={() => {
+            setAnchor(null);
+            logout();
+          }}
+          sx={{ py: 1.25, px: 2.5, gap: 1.5, color: 'gb.bad', '&:hover': { bgcolor: 'gb.badSoft' } }}
+        >
+          <LogoutIcon sx={{ fontSize: 18 }} />
+          Sign out
+        </MenuItem>
+      </Menu>
+    </>
+  );
+}
+
+/** Desktop top bar (AIMS topbar): breadcrumb, gate picker, date, bell, user chip. */
+function TopBar() {
+  const { pathname } = useLocation();
+  const user = useUser();
+  const key = Object.keys(CRUMBS)
+    .filter((k) => pathname === k || pathname.startsWith(`${k}/`))
+    .sort((a, b) => b.length - a.length)[0];
+  const [group, page] = CRUMBS[key] ?? ['', ''];
+  const shownGroup = isEmployee(user) && group === 'Admin' ? 'Account' : group;
+  const shownPage = isEmployee(user) && key === '/settings' ? 'My account' : page;
+  const today = new Date().toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+  return (
+    <Box
+      component="header"
+      sx={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 1100,
+        height: TOPBAR_HEIGHT,
+        px: 2.5,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1.5,
+        bgcolor: 'background.paper',
+        borderBottom: '1px solid',
+        borderColor: 'divider',
+        boxShadow: '0 4px 12px -8px rgba(16,21,28,.22)',
+      }}
+    >
+      <Stack direction="row" spacing={0.75} sx={{ alignItems: 'baseline', minWidth: 0 }}>
+        {shownGroup ? (
+          <>
+            <Typography sx={{ fontSize: 12.5, color: 'gb.faint' }} noWrap>
+              {shownGroup}
+            </Typography>
+            <Typography sx={{ fontSize: 12.5, color: 'gb.faint' }}>›</Typography>
+          </>
+        ) : null}
+        <Typography sx={{ fontSize: 14, fontWeight: 600 }} noWrap>
+          {shownPage}
         </Typography>
-      </Box>
-    </Drawer>
+      </Stack>
+      <Box sx={{ flex: 1 }} />
+      <GatePicker compact />
+      <Typography variant="mono" sx={{ fontSize: 11.5, color: 'gb.muted', display: { xs: 'none', lg: 'block' } }}>
+        {today}
+      </Typography>
+      <NotificationBell />
+      <Box sx={{ width: '1px', height: 26, bgcolor: 'divider' }} />
+      <UserMenu />
+    </Box>
   );
 }
 
@@ -430,8 +804,8 @@ function TabBadge({ count, tone, children }) {
       max={999}
       sx={{
         '& .MuiBadge-badge': {
-          bgcolor: tone === 'warn' ? 'gb.accent' : 'gb.ok',
-          color: tone === 'warn' ? 'gb.accentInk' : '#fff',
+          bgcolor: tone === 'warn' ? 'gb.gold' : 'gb.ok',
+          color: tone === 'warn' ? 'gb.ink' : '#fff',
           fontFamily: fonts.mono,
           fontSize: 11,
         },
@@ -466,7 +840,7 @@ function PhoneChrome() {
   };
   return (
     <>
-      <AppBar position="sticky" elevation={0} sx={{ bgcolor: 'gb.rail', color: 'gb.railInk', backgroundImage: 'none' }}>
+      <AppBar position="sticky" elevation={0} sx={{ background: RAIL_BG, color: 'gb.railInk' }}>
         <Toolbar sx={{ gap: 1.5, justifyContent: 'space-between', minHeight: 60, px: 2 }}>
           <Brand compact />
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
@@ -484,6 +858,7 @@ function PhoneChrome() {
           bottom: 0,
           zIndex: (t) => t.zIndex.appBar,
           bgcolor: 'gb.rail',
+          background: 'linear-gradient(180deg, #134A38 0%, #0A2620 100%)',
           pb: 'env(safe-area-inset-bottom)',
           borderTop: '1px solid rgba(255,255,255,0.06)',
         }}
@@ -513,15 +888,15 @@ function PhoneChrome() {
                         color: 'gb.accentInk',
                         display: 'grid',
                         placeItems: 'center',
-                        border: '4px solid',
-                        borderColor: 'gb.rail',
+                        border: '3px solid',
+                        borderColor: 'gb.gold',
                         boxShadow: '0 6px 16px rgba(0,0,0,0.35)',
                       }}
                     >
                       <AddIcon sx={{ fontSize: 28 }} />
                     </Box>
                   }
-                  sx={{ '&.Mui-selected': { color: 'gb.accent' } }}
+                  sx={{ '&.Mui-selected': { color: 'gb.gold' } }}
                 />
               );
             }
@@ -557,24 +932,19 @@ export function AppShell() {
     <Box sx={{ display: 'flex', minHeight: '100dvh', bgcolor: 'background.default' }}>
       {desktop ? <DesktopRail /> : null}
       <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        {!desktop ? <PhoneChrome /> : null}
+        {desktop ? <TopBar /> : <PhoneChrome />}
         <Box
           component="main"
           sx={{
             flex: 1,
             width: '100%',
-            maxWidth: 1440,
+            maxWidth: 1600,
             mx: 'auto',
-            px: { xs: 2, md: 4 },
-            pt: { xs: 2.5, md: 4 },
-            pb: { xs: 'calc(96px + env(safe-area-inset-bottom))', md: 6 },
+            px: { xs: 1.75, md: 2.5 },
+            pt: { xs: 2, md: 2.5 },
+            pb: { xs: 'calc(96px + env(safe-area-inset-bottom))', md: 3 },
           }}
         >
-          {desktop ? (
-            <Stack direction="row" sx={{ justifyContent: 'flex-end', mt: -2, mb: 1 }}>
-              <NotificationBell />
-            </Stack>
-          ) : null}
           <PushBanner />
           {!employee && hasModule(user, 'visitors') ? <VisitAlerts /> : null}
           {!employee && hasModule(user, 'post') ? <IssueAlerts /> : null}

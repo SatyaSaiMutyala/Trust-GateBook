@@ -97,7 +97,7 @@ export function VisitorThumb({ src, name, size = 64, width, height, radius = 1 }
         <Typography
           sx={{
             fontFamily: fonts.display,
-            fontWeight: 700,
+            fontWeight: 600,
             fontSize: Math.max(12, Math.round(Math.min(w, h) * 0.34)),
             color: 'text.secondary',
           }}
@@ -108,6 +108,9 @@ export function VisitorThumb({ src, name, size = 64, width, height, radius = 1 }
     </Box>
   );
 }
+/**
+ * Page header (AIMS `.phead`): small mono eyebrow, 20px bold title, actions on the right, 2px teal rule below.
+ */
 export function PageHeader({ eyebrow, title, right, eyebrowColor }) {
   return (
     <Stack
@@ -116,56 +119,100 @@ export function PageHeader({ eyebrow, title, right, eyebrowColor }) {
         alignItems: 'flex-end',
         justifyContent: 'space-between',
         gap: 2,
-        mb: { xs: 2, md: 3 },
+        pb: 1.5,
+        mb: { xs: 2, md: 2.5 },
+        borderBottom: '2px solid',
+        borderColor: 'primary.main',
         flexWrap: 'wrap',
       }}
     >
       <Box sx={{ minWidth: 0 }}>
-        <Typography variant="eyebrow" sx={{ color: eyebrowColor ?? 'text.secondary', mb: 0.5 }}>
-          {eyebrow}
-        </Typography>
+        {eyebrow ? (
+          <Typography variant="eyebrow" sx={{ color: eyebrowColor ?? 'text.secondary', mb: 0.25 }}>
+            {eyebrow}
+          </Typography>
+        ) : null}
         <Typography variant="h1">{title}</Typography>
       </Box>
       {right ? <Box sx={{ flexShrink: 0 }}>{right}</Box> : null}
     </Stack>
   );
 }
+
+/** Buttons sitting on the dark panel title bar. */
+const onBar = {
+  '& .MuiButton-outlined': { bgcolor: 'rgba(255,255,255,.94)', borderColor: 'transparent', color: 'gb.ink' },
+  '& .MuiButton-outlined:hover': { bgcolor: '#fff', borderColor: 'transparent' },
+  '& .MuiButton-contained': { border: '1.5px solid', borderColor: 'gb.gold' },
+  '& .MuiButton-text, & .MuiIconButton-root': { color: '#fff' },
+  '& .MuiButton-text:hover, & .MuiIconButton-root:hover': { bgcolor: 'rgba(255,255,255,.12)' },
+};
+
+/**
+ * Card (AIMS `.card-x`): white, 1px border, soft shadow. With a `title` it gets the teal title bar
+ * (white bold title, 2px yellow rule below) and `action` on its right.
+ */
 export function Panel({ title, action, children, sx, ...rest }) {
+  const head = title || action;
   return (
-    <Paper variant="outlined" sx={{ p: { xs: 2, md: 2.5 }, height: '100%', ...sx }} {...rest}>
-      {title || action ? (
+    <Paper
+      variant="outlined"
+      sx={{ overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column', ...sx }}
+      {...rest}
+    >
+      {head ? (
         <Stack
           direction="row"
           sx={{
             alignItems: 'center',
             justifyContent: 'space-between',
-            mb: 1.5,
+            flexWrap: 'wrap',
             gap: 1,
+            minHeight: 48,
+            px: 1.875,
+            py: 1,
+            bgcolor: 'gb.head',
+            color: '#fff',
+            borderBottom: '2px solid',
+            borderColor: 'gb.headRule',
+            ...onBar,
           }}
         >
-          {title ? <Typography variant="h4">{title}</Typography> : <span />}
+          {title ? (
+            <Typography variant="h4" component="h2" sx={{ color: 'inherit', fontSize: '0.84rem', letterSpacing: '0.02em' }}>
+              {title}
+            </Typography>
+          ) : (
+            <span />
+          )}
           {action}
         </Stack>
       ) : null}
-      {children}
+      <Box sx={{ px: 2, py: 1.75, flex: 1, minWidth: 0 }}>{children}</Box>
     </Paper>
   );
 }
+
+/** Empty state (AIMS `.dash-empty`): dashed border on the canvas colour, muted text. */
 export function EmptyState({ title, text, action }) {
   return (
     <Paper
       variant="outlined"
       sx={{
-        p: { xs: 4, md: 6 },
+        p: { xs: 3.5, md: 5 },
         textAlign: 'center',
         borderStyle: 'dashed',
-        bgcolor: 'transparent',
+        borderRadius: '10px',
+        bgcolor: 'background.default',
+        boxShadow: 'none',
       }}
     >
-      <Typography variant="h2" sx={{ mb: 1 }}>
+      <Typography variant="h3" sx={{ mb: 0.75 }}>
         {title}
       </Typography>
-      <Typography sx={{ color: 'text.secondary', maxWidth: 440, mx: 'auto' }}>{text}</Typography>
+      <Typography variant="body2" sx={{ color: 'gb.faint', maxWidth: 440, mx: 'auto' }}>
+        {text}
+      </Typography>
       {action ? <Box sx={{ mt: 2.5 }}>{action}</Box> : null}
     </Paper>
   );
@@ -177,8 +224,8 @@ export function FieldLabel({ children }) {
       variant="eyebrow"
       sx={{
         color: 'text.secondary',
-        fontSize: '0.75rem',
-        letterSpacing: '0.1em',
+        fontSize: '0.66rem',
+        letterSpacing: '0.08em',
       }}
     >
       {children}

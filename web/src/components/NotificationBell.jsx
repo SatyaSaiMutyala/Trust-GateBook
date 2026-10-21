@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router';
 import { useNotifications } from '../state/context';
 import { fonts } from '../theme/tokens';
 
-/** Amber unread badge (99+ cap). Shared by the bell and the rail link. */
+/** Red unread badge with a white ring (AIMS bell dot), 99+ cap. */
 export function UnreadBadge({ count, children }) {
   return (
     <Badge
@@ -14,11 +14,14 @@ export function UnreadBadge({ count, children }) {
       max={99}
       sx={{
         '& .MuiBadge-badge': {
-          bgcolor: 'gb.accent',
-          color: 'gb.accentInk',
+          bgcolor: 'gb.bad',
+          color: '#fff',
+          border: '2px solid #fff',
           fontFamily: fonts.mono,
           fontWeight: 600,
-          fontSize: 11,
+          fontSize: 10,
+          height: 19,
+          minWidth: 19,
         },
       }}
     >
@@ -38,12 +41,13 @@ export function NotificationBell({ onRail = false }) {
         aria-label={label}
         onClick={() => navigate('/notifications')}
         sx={(theme) => ({
-          width: 44,
-          height: 44,
+          width: onRail ? 40 : 34,
+          height: onRail ? 40 : 34,
           color: onRail ? theme.vars.palette.gb.railInk : theme.vars.palette.gb.ink,
           border: onRail ? '1px solid rgba(255,255,255,0.16)' : `1px solid ${theme.vars.palette.gb.line}`,
           bgcolor: onRail ? 'rgba(255,255,255,0.06)' : theme.vars.palette.gb.surface,
-          '&:hover': { bgcolor: onRail ? 'rgba(255,255,255,0.12)' : theme.vars.palette.gb.sunk },
+          '&:hover': { bgcolor: onRail ? 'rgba(255,255,255,0.12)' : theme.vars.palette.gb.accentSoft },
+          '& .MuiSvgIcon-root': { fontSize: onRail ? 22 : 19 },
         })}
       >
         <UnreadBadge count={unreadCount}>
