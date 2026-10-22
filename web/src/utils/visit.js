@@ -33,7 +33,7 @@ export function hostReplyText(v) {
   }
   if (v.hostStatus === 'declined') return 'Declined';
   if (v.hostStatus === 'waiting') return v.escalatedAt ? 'No reply' : 'No reply yet';
-  return 'Not on Gatebook';
+  return 'Not on TruSentinel';
 }
 
 export function passNotReturned(v) {

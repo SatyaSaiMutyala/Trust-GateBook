@@ -72,7 +72,7 @@ function ScannerBody({ onCode, onClose }) {
             if (!found.length) return;
             const code = codeFrom(found[0].rawValue);
             if (!code) {
-              setMsg('That QR is not a Gatebook checkpoint');
+              setMsg('That QR is not a TruSentinel checkpoint');
               return;
             }
             done.current = true;

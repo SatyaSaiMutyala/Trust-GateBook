@@ -341,7 +341,7 @@ async function printQrs(checkpoints, companyName) {
       const src = await QRCode.toDataURL(checkpointQr(c.code), { margin: 1, width: 400 });
       const esc = (s) =>
         String(s).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
-      return `<div class="card"><div class="co">${esc(companyName || 'Gatebook')} patrol checkpoint · ${esc(c.site)}</div><img src="${src}"/><div class="nm">${esc(c.name)}</div><div class="lo">${esc(c.location || '')}</div><div class="cd">${esc(c.code)}</div><div class="ft">Scan with Gatebook on every round</div></div>`;
+      return `<div class="card"><div class="co">${esc(companyName || 'TruSentinel')} patrol checkpoint · ${esc(c.site)}</div><img src="${src}"/><div class="nm">${esc(c.name)}</div><div class="lo">${esc(c.location || '')}</div><div class="cd">${esc(c.code)}</div><div class="ft">Scan with TruSentinel on every round</div></div>`;
     }),
   );
   const w = window.open('', '_blank');

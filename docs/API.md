@@ -3,7 +3,7 @@
 The single source of truth that `backend/`, `web/` and `mobile/` all implement against.
 
 Type blocks below use TypeScript-style notation only to describe JSON shapes; all three projects are plain JavaScript.
-Base URL: production `https://gatebook.mytrustlab.co.in` (live AWS server; all paths below start with `/api`, so the base is the bare origin), local dev `http://localhost:4000`. All JSON. All timestamps are ISO-8601 strings (UTC).
+Base URL: production `https://trusentinel.mytrustlab.co.in` (live AWS server; all paths below start with `/api`, so the base is the bare origin), local dev `http://localhost:4000`. All JSON. All timestamps are ISO-8601 strings (UTC).
 
 ## Auth
 

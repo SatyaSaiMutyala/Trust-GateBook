@@ -46,7 +46,7 @@ function HostNote({ visit: v }) {
   if (v.hostStatus === 'manual') {
     return (
       <Alert severity="warning">
-        <b>{v.host} isn&apos;t on Gatebook.</b> Call them to confirm, then let {v.name} in.
+        <b>{v.host} isn&apos;t on TruSentinel.</b> Call them to confirm, then let {v.name} in.
         {actions}
       </Alert>
     );

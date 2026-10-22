@@ -429,7 +429,7 @@ export function SettingsPage() {
                 ],
                 [
                   'mpApprovalInApp',
-                  'Security-made OUT passes need the employee to approve in Gatebook',
+                  'Security-made OUT passes need the employee to approve in TruSentinel',
                   'When security makes an OUT pass naming an employee, the employee gets Approve / Reject. OUT passes employees make themselves are already authorised.',
                 ],
                 [

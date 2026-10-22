@@ -61,7 +61,7 @@ import { HostVisitNotifier, VisitAlerts } from './VisitAlerts';
 
 /**
  * Logo on a white rounded tile (its colours would disappear on the dark rail): the company logo from Settings →
- * Company when there is one (up to 3× as wide as tall), otherwise the Gatebook mark.
+ * Company when there is one (up to 3× as wide as tall), otherwise the TruSentinel mark.
  */
 export function LogoTile({ size, src }) {
   if (src) {
@@ -101,7 +101,7 @@ export function LogoTile({ size, src }) {
   );
 }
 
-/** Wordmark: "GATEBOOK" over the company name (AIMS rail lockup). */
+/** Wordmark: "TruSentinel" over the company name (AIMS rail lockup). */
 function Brand({ compact = false }) {
   const user = useUser();
   const { settings } = useSettings();
@@ -112,9 +112,9 @@ function Brand({ compact = false }) {
       <LogoTile size={compact ? 32 : 40} src={company?.logoUrl} />
       <Box sx={{ minWidth: 0 }}>
         <Typography
-          sx={{ fontWeight: 800, letterSpacing: '0.045em', fontSize: compact ? 18 : 21, lineHeight: 1, color: '#fff' }}
+          sx={{ fontWeight: 800, letterSpacing: '0.02em', fontSize: compact ? 18 : 20, lineHeight: 1, color: '#fff' }}
         >
-          GATEBOOK
+          TruSentinel
         </Typography>
         <Typography
           noWrap
@@ -584,7 +584,7 @@ function DesktopRail() {
           }}
         >
           <VerifiedUserOutlinedIcon sx={{ fontSize: 15 }} />
-          {open ? <span>Trust Gatebook</span> : null}
+          {open ? <span>TruSentinel</span> : null}
         </Stack>
       </Box>
     </Box>

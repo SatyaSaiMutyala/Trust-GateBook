@@ -82,7 +82,7 @@ export function TermsPanel() {
         <Panel title="Terms & confidentiality agreement">
           <Typography variant="body2" sx={{ color: 'text.secondary', mt: -0.5, mb: 1.5, maxWidth: '75ch' }}>
             Shown from the Terms link on the check-in form. When security checks a visitor in with their photo, the
-            visitor has agreed: Gatebook places the photo on this agreement and saves it as a PDF with the visit.
+            visitor has agreed: TruSentinel places the photo on this agreement and saves it as a PDF with the visit.
           </Typography>
           <Stack direction="row" spacing={1} sx={{ mb: 1.5, flexWrap: 'wrap' }}>
             <Button

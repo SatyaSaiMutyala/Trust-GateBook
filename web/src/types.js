@@ -148,7 +148,7 @@
 /** @typedef {{ id: string, name: string }} GuardRef */
 
 /**
- * Host approval: waiting (asked in the app) · accepted · declined · manual (host not on Gatebook: confirm by phone).
+ * Host approval: waiting (asked in the app) · accepted · declined · manual (host not on TruSentinel: confirm by phone).
  * @typedef {'waiting' | 'accepted' | 'declined' | 'manual'} HostStatus
  */
 
@@ -164,7 +164,7 @@
  * @property {number} persons
  * @property {string} purpose
  * @property {string} host
- * @property {string | null} hostId      the Gatebook employee being visited (null when typed)
+ * @property {string | null} hostId      the TruSentinel employee being visited (null when typed)
  * @property {string} hostPhone
  * @property {string} hostLocation
  * @property {HostStatus} hostStatus

@@ -72,7 +72,7 @@ export function MailLogged({ item: m, onNext }) {
                   <Box sx={{ p: 1.5, borderRadius: 1, bgcolor: 'gb.warnSoft', border: 1, borderColor: 'warning.main' }}>
                     <Typography>
                       <b>
-                        {m.recipientName} {m.recipient ? "can't sign in to Gatebook." : "isn't on Gatebook."}
+                        {m.recipientName} {m.recipient ? "can't sign in to TruSentinel." : "isn't on TruSentinel."}
                       </b>{' '}
                       Call them to collect it.
                     </Typography>

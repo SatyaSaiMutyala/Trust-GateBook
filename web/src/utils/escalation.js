@@ -69,7 +69,7 @@ export const MATRICES = {
     title: 'Key not returned',
     person: 'Key holder',
     start: 'the key is due back',
-    hint: 'Runs until the key is back. Key holders who are not on Gatebook (e.g. an electrician) are covered by the guards.',
+    hint: 'Runs until the key is back. Key holders who are not on TruSentinel (e.g. an electrician) are covered by the guards.',
   },
   ...Object.fromEntries(
     ['critical', 'high', 'medium', 'low'].map((s) => [

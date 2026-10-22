@@ -34,8 +34,8 @@ const HOST_WORDING = {
   picked: 'Gets a notification when they arrive',
   typed: 'Pick someone from the list.',
   idle: 'The employee they are visiting.',
-  noMatch: (name) => `No employee named “${name}” is on Gatebook.`,
-  none: 'No employees are on Gatebook yet. An admin can add them in Settings → Users.',
+  noMatch: (name) => `No employee named “${name}” is on TruSentinel.`,
+  none: 'No employees are on TruSentinel yet. An admin can add them in Settings → Users.',
 };
 const RECEIVER_WORDING = { ...HOST_WORDING, label: 'Received by', idle: 'The employee who accepts the boxes.' };
 const CONTACT_WORDING = {

@@ -326,7 +326,7 @@ function HostSteps({ visit: v, now }) {
   } else if (v.hostStatus === 'manual') {
     answer = (
       <TimelineItem kind="pending">
-        <b>Confirm with {v.host} by phone</b> · not on Gatebook
+        <b>Confirm with {v.host} by phone</b> · not on TruSentinel
       </TimelineItem>
     );
   } else {

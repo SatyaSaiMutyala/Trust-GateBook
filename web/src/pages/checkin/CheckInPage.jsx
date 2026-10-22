@@ -37,11 +37,11 @@ const FIELD_MAP = { hostId: 'host' };
 /** "Whom to meet": a picked employee is asked to accept in the app; a typed name is confirmed by phone. */
 const HOST_WORDING = {
   label: 'Whom to meet',
-  picked: 'Gets a notification and accepts or declines in Gatebook',
-  typed: 'Not on Gatebook — call them to confirm before letting the visitor in.',
+  picked: 'Gets a notification and accepts or declines in TruSentinel',
+  typed: 'Not on TruSentinel — call them to confirm before letting the visitor in.',
   idle: 'Pick the employee being visited. Not listed? Type their name.',
-  noMatch: (name) => `No employee named “${name}” is on Gatebook. Keep the typed name — you'll confirm by phone.`,
-  none: "No employees are on Gatebook yet. An admin can add them in Settings → Users. For now, type the name — you'll confirm by phone.",
+  noMatch: (name) => `No employee named “${name}” is on TruSentinel. Keep the typed name — you'll confirm by phone.`,
+  none: "No employees are on TruSentinel yet. An admin can add them in Settings → Users. For now, type the name — you'll confirm by phone.",
 };
 
 export function CheckInPage() {

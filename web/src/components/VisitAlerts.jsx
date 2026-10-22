@@ -49,7 +49,7 @@ function describe(v) {
       return {
         tone: 'warn',
         what: `Call ${v.host} to confirm ${v.name}`,
-        why: 'The host is not on Gatebook. Let them in once the host confirms.',
+        why: 'The host is not on TruSentinel. Let them in once the host confirms.',
       };
     default:
       return null;
@@ -78,7 +78,7 @@ const stateKey = (v) => `${v.id}:${v.hostStatus}:${v.escalatedAt ? 1 : 0}`;
 /**
  * Rows above every gate screen for open visits that need the guard now (`GET /api/visits/inside?attention=true`):
  * host accepted → Allowed in; host declined → Mark exit; no reply → Call host / Confirmed by phone; host not on
- * Gatebook → Confirmed by phone. A host's answer or a no-reply alert arriving live gets a toast and a pulse.
+ * TruSentinel → Confirmed by phone. A host's answer or a no-reply alert arriving live gets a toast and a pulse.
  */
 export function VisitAlerts() {
   const user = useUser();

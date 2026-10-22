@@ -1,4 +1,4 @@
-/* Gatebook service worker: shows web push alerts and opens the right page when one is tapped. */
+/* TruSentinel service worker: shows web push alerts and opens the right page when one is tapped. */
 
 /** Where a notification opens, from its `data { type, id }`. */
 function urlFor(data) {
@@ -29,11 +29,11 @@ self.addEventListener('push', (event) => {
   try {
     msg = event.data ? event.data.json() : {};
   } catch {
-    msg = { title: 'Gatebook', body: event.data ? event.data.text() : '' };
+    msg = { title: 'TruSentinel', body: event.data ? event.data.text() : '' };
   }
   const data = msg.data ?? {};
   event.waitUntil(
-    self.registration.showNotification(msg.title || 'Gatebook', {
+    self.registration.showNotification(msg.title || 'TruSentinel', {
       body: msg.body || '',
       icon: '/logo.png',
       badge: '/favicon.png',

@@ -6,15 +6,15 @@ import {
 } from '../src/api/config';
 
 test('the live server is the bare origin (the app adds /api/... itself)', () => {
-  expect(PRODUCTION_API_URL).toBe('https://gatebook.mytrustlab.co.in');
+  expect(PRODUCTION_API_URL).toBe('https://trusentinel.mytrustlab.co.in');
 });
 
 test('base URLs lose a trailing slash and a trailing /api, so requests never hit /api/api', () => {
-  expect(normalizeBaseUrl('https://gatebook.mytrustlab.co.in/api')).toBe(
-    'https://gatebook.mytrustlab.co.in',
+  expect(normalizeBaseUrl('https://trusentinel.mytrustlab.co.in/api')).toBe(
+    'https://trusentinel.mytrustlab.co.in',
   );
-  expect(normalizeBaseUrl('https://gatebook.mytrustlab.co.in/api/')).toBe(
-    'https://gatebook.mytrustlab.co.in',
+  expect(normalizeBaseUrl('https://trusentinel.mytrustlab.co.in/api/')).toBe(
+    'https://trusentinel.mytrustlab.co.in',
   );
   expect(normalizeBaseUrl(' http://10.0.2.2:4000/ ')).toBe(
     'http://10.0.2.2:4000',

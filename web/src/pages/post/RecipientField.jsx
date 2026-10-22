@@ -16,16 +16,16 @@ import { initials } from '../../utils/format';
 const POST_WORDING = {
   label: 'For (receiver)',
   picked: 'Gets a notification and must confirm collection',
-  typed: 'Not on Gatebook — call them to collect it.',
+  typed: 'Not on TruSentinel — call them to collect it.',
   idle: 'Pick the employee it is addressed to. Not listed? Type their name.',
   noMatch: (name) =>
-    `No one named “${name}” can receive post on Gatebook. Keep the typed name — you'll inform them by phone.`,
-  none: "No one can receive post on Gatebook yet. An admin can add Employees or tick “Can also receive post” in Settings → Users. For now, type the receiver's name — you'll inform them by phone.",
+    `No one named “${name}” can receive post on TruSentinel. Keep the typed name — you'll inform them by phone.`,
+  none: "No one can receive post on TruSentinel yet. An admin can add Employees or tick “Can also receive post” in Settings → Users. For now, type the receiver's name — you'll inform them by phone.",
 };
 
 /**
  * Pick an employee (type-ahead over `GET /api/hosts?q=…&limit=8`; they get notified), or type a name for
- * someone not on Gatebook (security phones them). The list opens on focus, so it reads as a picker, and explains
+ * someone not on TruSentinel (security phones them). The list opens on focus, so it reads as a picker, and explains
  * itself when empty. Post room by default ("For (receiver)"); `wording` overrides the texts.
  */
 export function RecipientField({ recipient, text, onPick, onText, error, wording: custom }) {

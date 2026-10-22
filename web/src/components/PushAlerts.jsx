@@ -88,17 +88,17 @@ export function PushBanner() {
     >
       {ios ? (
         <>
-          <b>Install Gatebook to get alerts {who}.</b> Tap the Share button in Safari, choose “Add to Home Screen”, then
-          open Gatebook from the Home Screen and sign in.
+          <b>Install TruSentinel to get alerts {who}.</b> Tap the Share button in Safari, choose “Add to Home Screen”, then
+          open TruSentinel from the Home Screen and sign in.
         </>
       ) : !pushSupported() ? (
         <>
-          <b>This browser can't show Gatebook alerts.</b> Use Chrome, Edge or Firefox, or the Gatebook app on your
+          <b>This browser can't show TruSentinel alerts.</b> Use Chrome, Edge or Firefox, or the Trust Gatebook app on your
           phone.
         </>
       ) : (
         <>
-          <b>Turn on alerts on this device.</b> Get a notification {who}, even when Gatebook is closed.
+          <b>Turn on alerts on this device.</b> Get a notification {who}, even when TruSentinel is closed.
         </>
       )}
     </Alert>
@@ -137,7 +137,7 @@ export function AlertsPanel() {
   return (
     <Panel title="Alerts on this device">
       <Typography variant="body2" sx={{ mb: 1.5 }}>
-        {on ? 'On. This device gets Gatebook notifications even when the app is closed.' : 'Off on this device.'}
+        {on ? 'On. This device gets TruSentinel notifications even when the app is closed.' : 'Off on this device.'}
       </Typography>
       <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap', mb: 1.5 }}>
         {on ? (

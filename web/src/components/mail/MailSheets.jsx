@@ -127,8 +127,8 @@ function HandoverForm({ item: m, onClose, onDone }) {
           {user
             ? `${m.recipientName} will be asked to confirm on their phone that they received it.`
             : m.recipient
-              ? `${m.recipientName} can't sign in to Gatebook, so there is no confirmation step.`
-              : `${m.recipientName} is not on Gatebook, so there is no confirmation step.`}
+              ? `${m.recipientName} can't sign in to TruSentinel, so there is no confirmation step.`
+              : `${m.recipientName} is not on TruSentinel, so there is no confirmation step.`}
         </Typography>
         {error ? <Alert severity="error">{error}</Alert> : null}
         <Stack direction="row" spacing={1.5} sx={{ justifyContent: 'flex-end' }}>

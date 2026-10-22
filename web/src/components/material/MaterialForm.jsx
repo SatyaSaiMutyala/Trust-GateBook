@@ -37,10 +37,10 @@ import { PhotoTile } from '../PhotoTile';
 import { PhotoList } from './PhotoList';
 
 const EMPLOYEE_WORDING = {
-  picked: 'Gets a notification in Gatebook',
+  picked: 'Gets a notification in TruSentinel',
   typed: 'Pick someone from the list.',
-  noMatch: (name) => `No employee named “${name}” is on Gatebook.`,
-  none: 'No employees are on Gatebook yet. An admin can add them in Settings → Users.',
+  noMatch: (name) => `No employee named “${name}” is on TruSentinel.`,
+  none: 'No employees are on TruSentinel yet. An admin can add them in Settings → Users.',
 };
 const RETURN_QUICK = [
   ['1 day', 1],

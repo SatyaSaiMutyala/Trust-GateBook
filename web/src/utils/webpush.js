@@ -75,7 +75,7 @@ export async function enablePush() {
   if (!pushSupported()) {
     throw new Error(
       isIOS() && !isStandalone()
-        ? 'Add Gatebook to your Home Screen first.'
+        ? 'Add TruSentinel to your Home Screen first.'
         : 'This browser cannot show notifications.',
     );
   }

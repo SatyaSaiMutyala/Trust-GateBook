@@ -60,11 +60,11 @@ export function whenShort(iso, now = Date.now()) {
 export const firstWord = (s) => (s ?? '').trim().split(/\s+/)[0] ?? '';
 
 /**
- * Was the receiver notified on Gatebook (and so must confirm collection)? Only receivers who can sign in
+ * Was the receiver notified on TruSentinel (and so must confirm collection)? Only receivers who can sign in
  * get `notifiedAt` — a receiver whose account has no password yet does not.
  */
 export const hasRecipientUser = (m) => !!m.recipient && !!m.notifiedAt;
 
 /** Why the receiver isn't notified: typed name (not in the directory) vs. directory employee without a login. */
 export const offlineReceiverLabel = (m) =>
-  m.recipient ? "Receiver can't sign in to Gatebook" : 'Receiver not on Gatebook';
+  m.recipient ? "Receiver can't sign in to TruSentinel" : 'Receiver not on TruSentinel';

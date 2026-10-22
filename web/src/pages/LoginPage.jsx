@@ -180,12 +180,12 @@ export function LoginPage() {
               fontFamily: fonts.display,
               fontWeight: 800,
               fontSize: { xs: 30, md: 38 },
-              letterSpacing: '0.09em',
+              letterSpacing: '0.03em',
               lineHeight: 1,
               textShadow: '0 2px 4px rgba(0,0,0,.15), 0 4px 12px rgba(0,0,0,.12), 0 0 30px rgba(255,255,255,.12)',
             }}
           >
-            GATEBOOK
+            TruSentinel
           </Typography>
           <Stack direction="row" spacing={1} sx={{ my: 2 }} aria-hidden>
             {[0, 1, 2, 3].map((i) => (
@@ -383,7 +383,7 @@ export function LoginPage() {
             sx={{ mt: 3.5, alignItems: 'center', color: '#9ca3af', fontFamily: UI_FONT, fontSize: 11 }}
           >
             <LockOutlinedIcon sx={{ fontSize: 13 }} />
-            <span>Authorized access only · Trust Gatebook</span>
+            <span>Authorized access only · TruSentinel</span>
           </Stack>
         </Box>
       </Box>

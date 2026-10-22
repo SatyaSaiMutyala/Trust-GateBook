@@ -1,7 +1,7 @@
 import Config from 'react-native-config';
 
 /** Live Gatebook server (AWS). Request paths already start with `/api/…`, so this is the bare origin. */
-export const PRODUCTION_API_URL = 'https://gatebook.mytrustlab.co.in';
+export const PRODUCTION_API_URL = 'https://trusentinel.mytrustlab.co.in';
 
 /**
  * Normalise a base URL: no trailing slash, and no trailing `/api` — the app adds `/api/…` itself, so
