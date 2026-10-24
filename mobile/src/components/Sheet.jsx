@@ -1,14 +1,10 @@
 import React from 'react';
-import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  KeyboardAvoidingRoot,
+  KeyboardAwareScrollView,
+} from './KeyboardAwareScrollView';
 import { radius, useTheme } from '../theme';
 import { ScaledSheet, verticalScale } from 'react-native-size-matters/extend';
 
@@ -24,10 +20,7 @@ export function Sheet({ visible = true, onClose, children }) {
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.root}
-      >
+      <KeyboardAvoidingRoot style={styles.root}>
         <Pressable
           style={[StyleSheet.absoluteFill, { backgroundColor: c.overlay }]}
           onPress={onClose}
@@ -43,20 +36,23 @@ export function Sheet({ visible = true, onClose, children }) {
           ]}
         >
           <View style={[styles.grabber, { backgroundColor: c.line }]} />
-          <ScrollView
+          <KeyboardAwareScrollView
+            addSpace={false}
+            containerStyle={styles.scroll}
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.body}
           >
             {children}
-          </ScrollView>
+          </KeyboardAwareScrollView>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingRoot>
     </Modal>
   );
 }
 
 const styles = ScaledSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
+  scroll: { flexShrink: 1 },
   sheet: {
     borderTopLeftRadius: radius.sheet,
     borderTopRightRadius: radius.sheet,

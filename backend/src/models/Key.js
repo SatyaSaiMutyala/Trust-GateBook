@@ -58,6 +58,7 @@ const moveSchema = new Schema(
   { timestamps: true },
 );
 moveSchema.index({ 'key.id': 1, returnedAt: 1 });
+moveSchema.index({ 'taker.id': 1, returnedAt: 1 });
 moveSchema.index({ site: 1, issuedAt: -1 });
 moveSchema.index({ returnedAt: 1, dueAt: 1 });
 

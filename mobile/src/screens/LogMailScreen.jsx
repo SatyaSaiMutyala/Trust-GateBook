@@ -1,12 +1,5 @@
 import React, { useCallback, useLayoutEffect, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Button } from '../components/Button';
 import { ChipSelect } from '../components/ChipSelect';
 import { Field, FieldShell } from '../components/Field';
@@ -17,6 +10,7 @@ import { PhotoTile } from '../components/PhotoTile';
 import { SelectField } from '../components/SelectField';
 import { NoBackPhoto, Thumb } from '../components/Thumb';
 import { RecipientPicker } from '../components/RecipientPicker';
+import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
 import { fonts, MIN_TOUCH, radius, typo, useTheme } from '../theme';
 import { CARRIERS } from '../types';
 import { captureImage } from '../utils/camera';
@@ -60,6 +54,8 @@ function ItemLogged({ item, onNext, onPostRoom }) {
   const { c } = useTheme();
   return (
     <ScrollView
+      showsVerticalScrollIndicator={false}
+      showsHorizontalScrollIndicator={false}
       style={{ flex: 1, backgroundColor: c.bg }}
       contentContainerStyle={styles.content}
     >
@@ -327,13 +323,9 @@ export function LogMailScreen({ navigation }) {
     ...settings.departments.map(d => ({ value: d, label: d })),
   ];
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: c.bg }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
+      <KeyboardAwareScrollView
         keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
         contentContainerStyle={styles.content}
       >
         {/* Left column: cover front over cover back (4:3 each). Right column: delivery person,
@@ -522,8 +514,8 @@ export function LogMailScreen({ navigation }) {
             size="lg"
           />
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </View>
   );
 }
 

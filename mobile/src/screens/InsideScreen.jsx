@@ -158,6 +158,8 @@ export function InsideScreen({ navigation, route }) {
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       {filters}
       <FlatList
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
         style={{ flex: 1, backgroundColor: c.bg }}
         contentContainerStyle={styles.content}
         data={list.items}

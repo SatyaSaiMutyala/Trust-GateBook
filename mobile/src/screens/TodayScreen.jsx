@@ -199,6 +199,8 @@ export function TodayScreen({ navigation }) {
 
   return (
     <ScrollView
+      showsVerticalScrollIndicator={false}
+      showsHorizontalScrollIndicator={false}
       style={{ flex: 1, backgroundColor: c.bg }}
       contentContainerStyle={styles.content}
       refreshControl={

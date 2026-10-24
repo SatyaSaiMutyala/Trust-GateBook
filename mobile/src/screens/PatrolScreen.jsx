@@ -141,6 +141,8 @@ function Rounds({ now, operator, admin, onScan }) {
   );
   return (
     <ScrollView
+      showsVerticalScrollIndicator={false}
+      showsHorizontalScrollIndicator={false}
       contentContainerStyle={[styles.content, { gap: moderateScale(18) }]}
       refreshControl={
         <RefreshControl
@@ -173,6 +175,8 @@ function LateLog() {
   const s = data?.summary;
   return (
     <ScrollView
+      showsVerticalScrollIndicator={false}
+      showsHorizontalScrollIndicator={false}
       contentContainerStyle={[styles.content, { gap: moderateScale(10) }]}
       refreshControl={
         <RefreshControl
@@ -262,6 +266,8 @@ function ScanLog() {
   );
   return (
     <FlatList
+      showsVerticalScrollIndicator={false}
+      showsHorizontalScrollIndicator={false}
       style={{ flex: 1 }}
       contentContainerStyle={styles.content}
       data={list.items}

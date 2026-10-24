@@ -1,18 +1,12 @@
 import React, { useLayoutEffect, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { ScaledSheet } from 'react-native-size-matters/extend';
 import { Button } from '../components/Button';
 import { DateTimeField } from '../components/DateTimeField';
 import { Field, FieldShell } from '../components/Field';
 import { Banner } from '../components/Layout';
 import { RecipientPicker } from '../components/RecipientPicker';
+import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
 import { errorMessage, useIssueKeyMutation } from '../store/api';
 import { useSettings, useToast } from '../store/hooks';
 import { radius, typo, useTheme } from '../theme';
@@ -23,7 +17,8 @@ const TAKER_WORDING = {
   picked: 'Gets a reminder in TruSentinel when the key is due back',
   typed: 'Not on TruSentinel — the guards are reminded instead.',
   idle: 'Pick the employee, or type the name of anyone else (electrician, vendor).',
-  noMatch: name => `No one named “${name}” on TruSentinel. Keep the typed name.`,
+  noMatch: name =>
+    `No one named “${name}” on TruSentinel. Keep the typed name.`,
   none: 'No employees on TruSentinel yet. Type the name.',
   changeLabel: name => `Change who takes the key, currently ${name}`,
 };
@@ -103,11 +98,8 @@ export function KeyIssueScreen({ navigation, route }) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: c.bg }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
+      <KeyboardAwareScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.content}
       >
@@ -213,8 +205,8 @@ export function KeyIssueScreen({ navigation, route }) {
             onPress={submit}
           />
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </View>
   );
 }
 

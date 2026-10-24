@@ -12,10 +12,12 @@ import {
   flushRealtimeBatch,
   incidentEvent,
   keysEvent,
+  myKeysEvent,
 } from '../src/realtime/events';
 import { dueChips, freeCopies } from '../src/utils/keys';
 import { incidentRights } from '../src/utils/incidents';
 import { KeysScreen } from '../src/screens/KeysScreen';
+import { MyKeysScreen } from '../src/screens/MyKeysScreen';
 import { IncidentsScreen } from '../src/screens/IncidentsScreen';
 import { IncidentDetailsScreen } from '../src/screens/IncidentDetailsScreen';
 
@@ -153,6 +155,21 @@ beforeEach(() => {
   resetNotices();
   global.fetch = jest.fn(req => {
     const url = typeof req === 'string' ? req : req.url;
+    if (url.includes('/api/mykeys'))
+      return json({
+        data: [{ ...move, taker: { id: 'h1', name: 'Ravi', phone: '' } }],
+        returned: [
+          {
+            ...move,
+            id: 'm0',
+            key: { id: 'k2', number: 'ST-2', name: 'Store', location: '' },
+            returnedAt: '2026-10-18T09:00:00.000Z',
+            receivedBy: { id: 's1', name: 'Suresh' },
+            state: 'returned',
+          },
+        ],
+        counts: { out: 1, overdue: 1 },
+      });
     if (url.includes('/api/keymoves'))
       return json({
         data: [move],
@@ -295,6 +312,24 @@ describe('API, push and realtime', () => {
     const nav2 = { isReady: () => true, navigate: jest.fn() };
     expect(gate.dispatch(routePendingOpen(nav2))).toBe(true);
     expect(nav2.navigate).toHaveBeenCalledWith('Keys');
+    // An employee: their My keys.
+    store.dispatch(pushOpened({ data: { type: 'key', id: 'm1' } }));
+    const nav3 = { isReady: () => true, navigate: jest.fn() };
+    expect(store.dispatch(routePendingOpen(nav3))).toBe(true);
+    expect(nav3.navigate).toHaveBeenCalledWith('MyKeys');
+  });
+
+  test('mykeys:changed refreshes My keys', () => {
+    const store = storeAs({ id: 'h1', name: 'Ravi', role: 'host' });
+    store.dispatch(myKeysEvent());
+    const actions = [];
+    flushRealtimeBatch(a => {
+      actions.push(a);
+      return store.dispatch(a);
+    });
+    expect(actions.find(a => api.util.invalidateTags.match(a)).payload).toEqual(
+      expect.arrayContaining(['MyKeys']),
+    );
   });
 
   test('incident:changed patches the cached incident; keys:changed refreshes the key lists', async () => {
@@ -340,6 +375,23 @@ describe('screens', () => {
         'Take back key SRV-1 from Electrician Raju',
       ]),
     );
+  });
+
+  test('My keys: an employee sees the keys with them and the ones given back', async () => {
+    const { texts, buttons } = await render(
+      storeAs({ id: 'h1', name: 'Ravi', role: 'host' }),
+      <MyKeysScreen />,
+    );
+    expect(texts).toContain('With me · 1');
+    expect(texts).toContain('SRV-1');
+    expect(texts).toContain('Server room');
+    expect(texts).toContain('Overdue');
+    expect(texts).toContain('past the');
+    expect(texts).toContain('Given back this week');
+    expect(texts).toContain('ST-2');
+    expect(texts).toContain('Returned');
+    // Read only: nothing to issue or take back.
+    expect(buttons.filter(b => /Issue|Take back/.test(b))).toEqual([]);
   });
 
   test('a viewer sees the board without Issue / Return', async () => {

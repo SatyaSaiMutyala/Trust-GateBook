@@ -1,12 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { Keyboard, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 import {
@@ -19,6 +12,7 @@ import { BrandMark } from '../components/BrandMark';
 import { loggedIn } from '../store/authSlice';
 import { Button } from '../components/Button';
 import { Field } from '../components/Field';
+import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
 import { fonts, MIN_TOUCH, radius, typo, useTheme } from '../theme';
 import { ScaledSheet, verticalScale } from 'react-native-size-matters/extend';
 
@@ -51,6 +45,9 @@ export function LoginScreen({ navigation, route }) {
       setError('Enter your email and password.');
       return;
     }
+    // Close the keyboard first: the next screen replaces this one, and the open password field would otherwise
+    // leave the keyboard up over Check in (Android, and iOS when submitting from the keyboard).
+    Keyboard.dismiss();
     setBusy(true);
     setError(null);
     try {
@@ -82,11 +79,8 @@ export function LoginScreen({ navigation, route }) {
           {brand?.name || 'Visitor register'}
         </Text>
       </View>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
+      <View style={{ flex: 1 }}>
+        <KeyboardAwareScrollView
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.body,
@@ -157,8 +151,8 @@ export function LoginScreen({ navigation, route }) {
               </Pressable>
             ) : null}
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
+      </View>
     </View>
   );
 }

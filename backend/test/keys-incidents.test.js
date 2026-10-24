@@ -221,6 +221,36 @@ describe('key register', () => {
     await post('security', `/api/keys/${key.id}/issue`, { takerName: 'Again', dueAt: null }).expect(201);
   });
 
+  it('my keys: an employee sees the keys issued to them, and the ones they gave back this week', async () => {
+    const [a, b, c] = [await newKey(), await newKey(), await newKey()];
+    const later = new Date(Date.now() + 3 * 3_600_000).toISOString();
+    const sooner = new Date(Date.now() + 3_600_000).toISOString();
+    const ma = await post('security', `/api/keys/${a.id}/issue`, { takerId: u.anil.id, dueAt: later }).expect(201);
+    const mb = await post('security', `/api/keys/${b.id}/issue`, { takerId: u.anil.id, dueAt: sooner }).expect(201);
+    const mc = await post('security', `/api/keys/${c.id}/issue`, { takerId: u.anil.id, dueAt: null }).expect(201);
+    // Someone else's key and a key typed by name do not show.
+    await post('security', `/api/keys/${(await newKey()).id}/issue`, { takerId: u.priya.id }).expect(201);
+    await post('security', `/api/keys/${(await newKey()).id}/issue`, { takerName: 'Anil Rao' }).expect(201);
+
+    const r = await get('anil', '/api/mykeys').expect(200);
+    expect(r.body.data.map((/** @type {any} */ m) => m.id)).toEqual([
+      mb.body.move.id,
+      ma.body.move.id,
+      mc.body.move.id,
+    ]);
+    expect(r.body.data[0]).toMatchObject({ key: { number: b.number }, state: 'out', taker: { id: u.anil.id } });
+    expect(r.body.counts).toEqual({ out: 3, overdue: 0 });
+    expect(r.body.returned).toEqual([]);
+
+    await post('security', `/api/keymoves/${ma.body.move.id}/return`).expect(200);
+    const after = await get('anil', '/api/mykeys').expect(200);
+    expect(after.body.data).toHaveLength(2);
+    expect(after.body.returned).toEqual([expect.objectContaining({ id: ma.body.move.id, state: 'returned' })]);
+    // Read only: still no key board for employees.
+    await get('anil', '/api/keys').expect(403);
+    await request(server).get('/api/mykeys').expect(401);
+  });
+
   it('due time is validated', async () => {
     const key = await newKey();
     const past = await post('security', `/api/keys/${key.id}/issue`, {

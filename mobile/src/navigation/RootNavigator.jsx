@@ -54,6 +54,7 @@ import { MyVisitorsScreen } from '../screens/MyVisitorsScreen';
 import { PostRoomScreen } from '../screens/PostRoomScreen';
 import { TodayScreen } from '../screens/TodayScreen';
 import { MoreScreen } from '../screens/MoreScreen';
+import { MyKeysScreen } from '../screens/MyKeysScreen';
 import { VisitDetailsScreen } from '../screens/VisitDetailsScreen';
 import { useGetSettingsQuery } from '../store/api';
 import { selectSettings } from '../store/settingsSlice';
@@ -467,6 +468,15 @@ function EmployeeStack() {
         name="IncidentDetails"
         component={IncidentDetailsScreen}
         options={modal}
+      />
+      <Stack.Screen
+        name="MyKeys"
+        component={MyKeysScreen}
+        options={{
+          headerShown: true,
+          header: renderEmployeeStackHeader,
+          title: 'My keys',
+        }}
       />
       <Stack.Screen
         name="Notifications"

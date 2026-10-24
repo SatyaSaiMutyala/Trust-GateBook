@@ -34,7 +34,7 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>TruSentinel uses the camera to photograph visitors, their ID proof, incoming post and delivery staff.</string>
+	<string>TruSentinel uses the camera to photograph visitors, their ID proof, incoming post and delivery staff, and to scan the QR codes at patrol checkpoints.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>TruSentinel may read or save visitor and post photos in your library.</string>
 	<key>RCTNewArchEnabled</key>

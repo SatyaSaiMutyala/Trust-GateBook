@@ -85,6 +85,8 @@ export function PassIssued({ visit, onNext, onSeeInside }) {
   const { data: live } = useGetVisitQuery(visit.id);
   return (
     <ScrollView
+      showsVerticalScrollIndicator={false}
+      showsHorizontalScrollIndicator={false}
       style={{ flex: 1, backgroundColor: c.bg }}
       contentContainerStyle={styles.content}
     >

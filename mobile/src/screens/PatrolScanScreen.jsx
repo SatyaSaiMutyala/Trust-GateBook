@@ -1,17 +1,13 @@
-import React, { useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Text, View } from 'react-native';
 import { ScaledSheet } from 'react-native-size-matters/extend';
 import { Button } from '../components/Button';
 import { Field, FieldShell } from '../components/Field';
 import { FilterTabs } from '../components/FilterBar';
 import { Banner } from '../components/Layout';
 import { PhotoStrip } from '../components/material/PhotoStrip';
+import { QrScanner } from '../components/QrScanner';
+import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
 import {
   errorMessage,
   useLazyPatrolLookupQuery,
@@ -23,8 +19,8 @@ import { fmtTime } from '../utils/format';
 import { codeFrom, hhmm } from '../utils/ops';
 
 /**
- * Scan a checkpoint: type the 6-letter code under the QR (route param `code` skips this), confirm the condition,
- * note and photo, then see the round's progress.
+ * Scan a checkpoint: the camera opens to read its QR (or type the 6-letter code printed under it; route param `code`
+ * skips this), confirm the condition, note and photo, then see the round's progress.
  */
 export function PatrolScanScreen({ navigation, route }) {
   const { c } = useTheme();
@@ -38,10 +34,21 @@ export function PatrolScanScreen({ navigation, route }) {
   const [error, setError] = useState(null);
   const [lookup, { isFetching: looking }] = useLazyPatrolLookupQuery();
   const [scan, { isLoading: saving }] = usePatrolScanMutation();
-  const manual = !route?.params?.code;
+  const [scanning, setScanning] = useState(false);
+  const [viaQr, setViaQr] = useState(false);
+  // Typed by hand (not read from the QR, nor opened from a QR link).
+  const manual = !route?.params?.code && !viaQr;
 
-  const reset = () => {
+  // Straight to the camera, unless the code came with the link.
+  useEffect(() => {
+    if (!route?.params?.code) setScanning(true);
+  }, [route?.params?.code]);
+
+  /** Back to the start; `scanNext` opens the camera again. */
+  const reset = (scanNext = false) => {
     setTyped('');
+    setViaQr(false);
+    setScanning(scanNext === true);
     setLook(null);
     setStatus('ok');
     setNote('');
@@ -50,9 +57,9 @@ export function PatrolScanScreen({ navigation, route }) {
     setError(null);
   };
 
-  const find = async () => {
+  const find = async (scanned = null) => {
     setError(null);
-    const code = codeFrom(typed);
+    const code = scanned ?? codeFrom(typed);
     if (!code) {
       setError('Enter the 6-letter code printed under the QR');
       return;
@@ -137,7 +144,7 @@ export function PatrolScanScreen({ navigation, route }) {
             title="Scan next"
             size="lg"
             style={{ flex: 2 }}
-            onPress={reset}
+            onPress={() => reset(true)}
           />
         </View>
       </>
@@ -196,7 +203,7 @@ export function PatrolScanScreen({ navigation, route }) {
             variant="ghost"
             size="lg"
             style={{ flex: 1 }}
-            onPress={reset}
+            onPress={() => reset()}
           />
           <Button
             title="Save scan"
@@ -211,8 +218,14 @@ export function PatrolScanScreen({ navigation, route }) {
   } else {
     body = (
       <>
+        <Button
+          title="Scan QR code"
+          size="lg"
+          loading={looking && viaQr}
+          onPress={() => setScanning(true)}
+        />
         <Text style={[typo.body, { color: c.muted }]}>
-          Type the 6-letter code printed under the checkpoint’s QR.
+          Or type the 6-letter code printed under the checkpoint’s QR.
         </Text>
         <Field
           label="Checkpoint code"
@@ -229,26 +242,48 @@ export function PatrolScanScreen({ navigation, route }) {
           autoCorrect={false}
           mono
           large
-          onSubmitEditing={find}
+          onSubmitEditing={() => find()}
         />
         {errorLine}
-        <Button title="Continue" size="lg" loading={looking} onPress={find} />
+        <Button
+          title="Continue"
+          variant="ghost"
+          size="lg"
+          loading={looking && !viaQr}
+          onPress={() => find()}
+        />
       </>
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: c.bg }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
+      <KeyboardAwareScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.content}
       >
         {body}
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+      <QrScanner
+        visible={scanning}
+        title="Scan checkpoint"
+        hint="Point the camera at the QR code on the wall"
+        invalidText="Not a checkpoint QR. Try again or type the code."
+        parse={codeFrom}
+        onCode={code => {
+          setScanning(false);
+          setTyped(code);
+          setViaQr(true);
+          find(code);
+        }}
+        onClose={() => setScanning(false)}
+        onDenied={() =>
+          setError(
+            'Camera permission is off. Allow camera access for TruSentinel in Settings, or type the code.',
+          )
+        }
+      />
+    </View>
   );
 }
 

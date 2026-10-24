@@ -17,6 +17,9 @@ export function dur(ms) {
   return h ? `${h}h ${String(m % 60).padStart(2, '0')}m` : `${m}m`;
 }
 
+/** Decimal hours as "2h 30m". @param {number | null | undefined} h */
+export const hrs = h => dur((Number(h) || 0) * 3600000);
+
 /** "21:00" in local time. @param {string | number | Date} d */
 export const hhmm = d => {
   const x = new Date(d);

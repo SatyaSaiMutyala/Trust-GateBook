@@ -13,6 +13,7 @@ jest.mock('react-native-keychain', () => ({
 }));
 jest.mock('react-native-config', () => ({ API_URL: 'http://test.local:4000' }));
 jest.mock('react-native-image-picker', () => ({ launchCamera: jest.fn() }));
+jest.mock('react-native-camera-kit', () => ({ Camera: () => null }));
 jest.mock('@bam.tech/react-native-image-resizer', () => ({
   createResizedImage: jest.fn(),
 }));

@@ -267,3 +267,93 @@ describe('screens', () => {
     );
   });
 });
+
+describe('QR scan', () => {
+  test('the camera opens straight away; a scanned QR looks the checkpoint up and saves as not manual', async () => {
+    const { PatrolScanScreen } = require('../src/screens/PatrolScanScreen');
+    const { QrScanner } = require('../src/components/QrScanner');
+    const calls = [];
+    global.fetch = jest.fn(async req => {
+      calls.push([req.method, req.url]);
+      if (req.url.includes('/api/patrol/lookup'))
+        return json({
+          checkpoint: { id: 'b', name: 'Terrace door', location: '5th floor' },
+          slot,
+          round: { id: 'r1', name: 'Night round' },
+          done: 1,
+          total: 2,
+          missing: ['Terrace door'],
+        });
+      if (req.url.includes('/api/patrol/scan')) {
+        calls.at(-1).push(await req.formData());
+        return json(
+          {
+            scan: { id: 's9', status: 'ok', at: iso(now) },
+            checkpoint: { id: 'b', name: 'Terrace door', location: '' },
+            slot,
+            round: { id: 'r1', name: 'Night round' },
+            done: 2,
+            total: 2,
+            missing: [],
+          },
+          201,
+        );
+      }
+      return json({});
+    });
+    const nav = {
+      navigate: jest.fn(),
+      goBack: jest.fn(),
+      setOptions: jest.fn(),
+    };
+    let tree;
+    await ReactTestRenderer.act(async () => {
+      tree = ReactTestRenderer.create(
+        <Provider
+          store={storeAs({ id: 's1', name: 'Suresh', role: 'security' })}
+        >
+          <SafeAreaProvider>
+            <PatrolScanScreen navigation={nav} route={{ params: {} }} />
+          </SafeAreaProvider>
+        </Provider>,
+      );
+    });
+    const scanner = () => tree.root.findByType(QrScanner);
+    expect(scanner().props.visible).toBe(true);
+    // A QR that is not a checkpoint is refused; a checkpoint link is accepted.
+    expect(scanner().props.parse('https://example.com/hello')).toBeNull();
+    expect(scanner().props.parse('https://gate.example/?cp=ab12cd')).toBe(
+      'AB12CD',
+    );
+    await ReactTestRenderer.act(async () => {
+      scanner().props.onCode('AB12CD');
+      await new Promise(r => setTimeout(r, 30));
+    });
+    expect(scanner().props.visible).toBe(false);
+    expect(calls[0][1]).toContain('/api/patrol/lookup?code=AB12CD');
+    const text = JSON.stringify(tree.toJSON());
+    expect(text).toContain('Terrace door');
+    const save = tree.root.find(
+      n =>
+        n.props.accessibilityRole === 'button' &&
+        n.props.accessibilityLabel === 'Save scan',
+    );
+    await ReactTestRenderer.act(async () => {
+      save.props.onPress();
+      await new Promise(r => setTimeout(r, 30));
+    });
+    const scanCall = calls.find(c => c[1].includes('/api/patrol/scan'));
+    expect(scanCall).toBeTruthy();
+    expect(scanCall[2].get('manual')).toBe('false');
+    expect(scanCall[2].get('code')).toBe('AB12CD');
+    // Scan next opens the camera again.
+    const next = tree.root.find(
+      n =>
+        n.props.accessibilityRole === 'button' &&
+        n.props.accessibilityLabel === 'Scan next',
+    );
+    await ReactTestRenderer.act(async () => next.props.onPress());
+    expect(scanner().props.visible).toBe(true);
+    await ReactTestRenderer.act(async () => tree.unmount());
+  });
+});

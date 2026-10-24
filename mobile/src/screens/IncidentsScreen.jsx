@@ -77,6 +77,8 @@ export function IncidentsScreen({ navigation }) {
         />
       </FilterBar>
       <FlatList
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
         style={{ flex: 1 }}
         contentContainerStyle={styles.content}
         data={list.items}

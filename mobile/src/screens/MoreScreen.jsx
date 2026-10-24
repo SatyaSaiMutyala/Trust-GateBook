@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useLayoutEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { ScaledSheet } from 'react-native-size-matters/extend';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { BellIcon } from '../components/NotificationBell';
+import { HeaderButton } from '../components/TopBar';
+import { signOut } from '../push/push';
 import { LockIcon, PowerIcon, TickIcon } from '../components/Glyphs';
 import { TabIcon } from '../components/TabIcons';
 import { useUnreadCountQuery } from '../store/api';
@@ -102,110 +105,142 @@ export function MoreScreen({ navigation }) {
   const register = visitors || track;
   const go = (name, params) => () => navigation.navigate(name, params);
   const ink = c.ink;
+  const dispatch = useDispatch();
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
+
+  // Sign out on the right of the app bar.
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerActions: (
+        <HeaderButton
+          title="Sign out"
+          onPress={() => setConfirmSignOut(true)}
+        />
+      ),
+    });
+  }, [navigation]);
 
   return (
-    <ScrollView
-      style={{ backgroundColor: c.bg }}
-      contentContainerStyle={styles.content}
-    >
-      <Section
-        title="Register"
-        rows={[
-          register && {
-            label: 'Visitor log',
-            hint: 'Every entry, search and export',
-            tint: '#DDEFF8',
-            icon: <TabIcon name="log" color={ink} bg="#DDEFF8" size={20} />,
-            onPress: go('Log'),
-          },
-          register && {
-            label: 'Today at the gate',
-            hint: 'Counts and what needs attention',
-            tint: '#FFE7CC',
-            icon: <TabIcon name="today" color={ink} bg="#FFE7CC" size={20} />,
-            onPress: go('Today'),
-          },
-          expected && {
-            label: 'Expected visitors',
-            hint: 'Pre-registered visitors and deliveries',
-            tint: '#FFF3C4',
-            icon: (
-              <TabIcon name="calendar" color={ink} bg="#FFF3C4" size={20} />
-            ),
-            onPress: go('Expected'),
-          },
-          material && {
-            label: 'Material passes',
-            hint: 'Goods in and out of the gate',
-            tint: '#ECE5FF',
-            icon: <TabIcon name="box" color={ink} bg="#ECE5FF" size={20} />,
-            onPress: go('Material'),
-          },
-          recipient && {
-            label: 'My visitors',
-            hint: 'Visitors who came to see you',
-            tint: '#DDF3EA',
-            icon: <TabIcon name="inside" color={ink} bg="#DDF3EA" size={20} />,
-            onPress: go('MyVisitors'),
-          },
-        ]}
+    <>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
+        style={{ backgroundColor: c.bg }}
+        contentContainerStyle={styles.content}
+      >
+        <Section
+          title="Register"
+          rows={[
+            register && {
+              label: 'Visitor log',
+              hint: 'Every entry, search and export',
+              tint: '#DDEFF8',
+              icon: <TabIcon name="log" color={ink} bg="#DDEFF8" size={20} />,
+              onPress: go('Log'),
+            },
+            register && {
+              label: 'Today at the gate',
+              hint: 'Counts and what needs attention',
+              tint: '#FFE7CC',
+              icon: <TabIcon name="today" color={ink} bg="#FFE7CC" size={20} />,
+              onPress: go('Today'),
+            },
+            expected && {
+              label: 'Expected visitors',
+              hint: 'Pre-registered visitors and deliveries',
+              tint: '#FFF3C4',
+              icon: (
+                <TabIcon name="calendar" color={ink} bg="#FFF3C4" size={20} />
+              ),
+              onPress: go('Expected'),
+            },
+            material && {
+              label: 'Material passes',
+              hint: 'Goods in and out of the gate',
+              tint: '#ECE5FF',
+              icon: <TabIcon name="box" color={ink} bg="#ECE5FF" size={20} />,
+              onPress: go('Material'),
+            },
+            recipient && {
+              label: 'My visitors',
+              hint: 'Visitors who came to see you',
+              tint: '#DDF3EA',
+              icon: (
+                <TabIcon name="inside" color={ink} bg="#DDF3EA" size={20} />
+              ),
+              onPress: go('MyVisitors'),
+            },
+          ]}
+        />
+        <Section
+          title="Site safety"
+          rows={[
+            keys && {
+              label: 'Key register',
+              hint: 'Keys issued and returned',
+              tint: '#FFEFD1',
+              icon: <LockIcon color={ink} size={18} />,
+              onPress: go('Keys'),
+            },
+            incidents && {
+              label: 'Incidents',
+              hint: 'Report and follow up',
+              tint: '#FCE1E1',
+              icon: <Text style={[styles.bang, { color: c.bad }]}>!</Text>,
+              onPress: go('Incidents'),
+            },
+            patrol && {
+              label: 'Patrols',
+              hint: 'Rounds and checkpoint scans',
+              tint: '#DFF5E3',
+              icon: <TickIcon color={c.ok} size={18} />,
+              onPress: go('Patrol'),
+            },
+            gen && {
+              label: 'Generator & diesel',
+              hint: 'Running log and fuel',
+              tint: '#D9F2F2',
+              icon: <PowerIcon color={ink} bg="#D9F2F2" size={18} />,
+              onPress: go('Generator'),
+            },
+          ]}
+        />
+        <Section
+          title="You"
+          rows={[
+            {
+              label: 'Notifications',
+              hint: 'Alerts sent to you',
+              tint: '#FFE9D6',
+              icon: <BellIcon color={ink} size={18} />,
+              count: unread,
+              onPress: go('Notifications'),
+            },
+            {
+              label: 'Account & settings',
+              hint: user?.name,
+              tint: '#E8ECEF',
+              icon: (
+                <TabIcon name="settings" color={ink} bg="#E8ECEF" size={20} />
+              ),
+              onPress: go('Account'),
+            },
+          ]}
+        />
+      </ScrollView>
+      <ConfirmDialog
+        visible={confirmSignOut}
+        tone="danger"
+        title="Sign out?"
+        message="You will need your email and password to sign in again."
+        confirmLabel="Sign out"
+        onCancel={() => setConfirmSignOut(false)}
+        onConfirm={() => {
+          setConfirmSignOut(false);
+          dispatch(signOut());
+        }}
       />
-      <Section
-        title="Site safety"
-        rows={[
-          keys && {
-            label: 'Key register',
-            hint: 'Keys issued and returned',
-            tint: '#FFEFD1',
-            icon: <LockIcon color={ink} size={18} />,
-            onPress: go('Keys'),
-          },
-          incidents && {
-            label: 'Incidents',
-            hint: 'Report and follow up',
-            tint: '#FCE1E1',
-            icon: <Text style={[styles.bang, { color: c.bad }]}>!</Text>,
-            onPress: go('Incidents'),
-          },
-          patrol && {
-            label: 'Patrols',
-            hint: 'Rounds and checkpoint scans',
-            tint: '#DFF5E3',
-            icon: <TickIcon color={c.ok} size={18} />,
-            onPress: go('Patrol'),
-          },
-          gen && {
-            label: 'Generator & diesel',
-            hint: 'Running log and fuel',
-            tint: '#D9F2F2',
-            icon: <PowerIcon color={ink} bg="#D9F2F2" size={18} />,
-            onPress: go('Generator'),
-          },
-        ]}
-      />
-      <Section
-        title="You"
-        rows={[
-          {
-            label: 'Notifications',
-            hint: 'Alerts sent to you',
-            tint: '#FFE9D6',
-            icon: <BellIcon color={ink} size={18} />,
-            count: unread,
-            onPress: go('Notifications'),
-          },
-          {
-            label: 'Account & settings',
-            hint: user?.name,
-            tint: '#E8ECEF',
-            icon: (
-              <TabIcon name="settings" color={ink} bg="#E8ECEF" size={20} />
-            ),
-            onPress: go('Account'),
-          },
-        ]}
-      />
-    </ScrollView>
+    </>
   );
 }
 

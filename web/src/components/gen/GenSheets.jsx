@@ -63,7 +63,6 @@ function useRun(onDone) {
 
 function StartBody({ gen: g, onClose, onDone }) {
   const [reason, setReason] = useState('Power cut');
-  const [hm, setHm] = useState('');
   const { busy, error, run } = useRun(onDone);
   return (
     <Shell
@@ -74,7 +73,7 @@ function StartBody({ gen: g, onClose, onDone }) {
       onClose={onClose}
       action={{
         label: 'Start now',
-        run: () => run(() => genApi.start(g.id, { reason, hm: hm || null }), `${g.name} started`),
+        run: () => run(() => genApi.start(g.id, { reason }), `${g.name} started`),
       }}
     >
       <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap' }}>
@@ -82,20 +81,12 @@ function StartBody({ gen: g, onClose, onDone }) {
           <Chip key={r} label={r} clickable color={reason === r ? 'primary' : 'default'} onClick={() => setReason(r)} />
         ))}
       </Stack>
-      <TextField
-        label="Hour meter reading"
-        value={hm}
-        onChange={(e) => setHm(e.target.value.replace(/[^\d.]/g, ''))}
-        placeholder={g.lastHm !== null ? `Last: ${g.lastHm}` : 'e.g. 1250.4'}
-        slotProps={{ htmlInput: { inputMode: 'decimal' } }}
-      />
     </Shell>
   );
 }
 
 function StopBody({ gen: g, onClose, onDone }) {
   const r = g.running;
-  const [hm, setHm] = useState('');
   const [note, setNote] = useState('');
   const { busy, error, run } = useRun(onDone);
   const [openedAt] = useState(() => Date.now());
@@ -109,20 +100,12 @@ function StopBody({ gen: g, onClose, onDone }) {
       onClose={onClose}
       action={{
         label: 'Stop now',
-        run: () =>
-          run(() => genApi.stop(r.id, { hm: hm || null, note: note.trim() }), `${g.name} stopped after ${ran}`),
+        run: () => run(() => genApi.stop(r.id, { note: note.trim() }), `${g.name} stopped after ${ran}`),
       }}
     >
       <Typography sx={{ color: 'text.secondary' }}>
         Running since {fmtDateTime(r.startAt)} · {ran} · {r.reason}
       </Typography>
-      <TextField
-        label="Hour meter reading now"
-        value={hm}
-        onChange={(e) => setHm(e.target.value.replace(/[^\d.]/g, ''))}
-        placeholder={r.hmStart !== null ? `At start: ${r.hmStart}` : ''}
-        slotProps={{ htmlInput: { inputMode: 'decimal' } }}
-      />
       <TextField
         label="Note"
         placeholder="e.g. Grid power restored"
@@ -139,7 +122,6 @@ function FuelBody({ gen: g, kind, onClose, onDone }) {
     at: toLocalInput(new Date()),
     litres: '',
     levelL: '',
-    hm: '',
     vendor: '',
     billNo: '',
     amount: '',
@@ -153,13 +135,12 @@ function FuelBody({ gen: g, kind, onClose, onDone }) {
   const save = () => {
     if (check && !photos.length) return setError('Take a photo of the gauge or dipstick');
     const fields = check
-      ? { kind, levelL: f.levelL, hm: f.hm, note: f.note.trim() }
+      ? { kind, levelL: f.levelL, note: f.note.trim() }
       : {
           kind,
           at: f.at ? new Date(f.at).toISOString() : undefined,
           litres: f.litres,
           levelL: f.levelL,
-          hm: f.hm,
           vendor: f.vendor.trim(),
           billNo: f.billNo.trim(),
           amount: f.amount,
@@ -219,14 +200,6 @@ function FuelBody({ gen: g, kind, onClose, onDone }) {
             value={f.levelL}
             onChange={numeric('levelL')}
             helperText={pct !== null ? `${pct}% of the tank` : check ? '' : 'If you dip-checked after filling.'}
-            slotProps={{ htmlInput: { inputMode: 'decimal' } }}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField
-            label="Hour meter reading"
-            value={f.hm}
-            onChange={numeric('hm')}
             slotProps={{ htmlInput: { inputMode: 'decimal' } }}
           />
         </Grid>

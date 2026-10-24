@@ -128,6 +128,8 @@ export function DropdownMenu({
         ]}
       >
         <FlatList
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
           data={options}
           keyExtractor={o => String(o.value)}
           keyboardShouldPersistTaps="handled"

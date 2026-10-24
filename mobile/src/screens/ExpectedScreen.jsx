@@ -369,6 +369,8 @@ export function ExpectedScreen({ navigation, route }) {
         )}
       </FilterBar>
       <FlatList
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
         style={{ flex: 1, backgroundColor: c.bg }}
         contentContainerStyle={styles.content}
         data={list.items}

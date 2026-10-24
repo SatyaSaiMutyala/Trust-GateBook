@@ -388,6 +388,7 @@ function useRailItems() {
             color: C.myPost,
             badge: { count: mail.count, tone: 'warn' },
           },
+          { to: '/my-keys', icon: <KeyOutlinedIcon />, label: 'My keys', color: C.keys },
           notifications,
         ],
       ],
@@ -608,6 +609,7 @@ const CRUMBS = {
   '/overview': ['Register', 'Overview'],
   '/my-visitors': ['My desk', 'My visitors'],
   '/my-post': ['My desk', 'My post'],
+  '/my-keys': ['My desk', 'My keys'],
   '/notifications': ['Inbox', 'Notifications'],
   '/settings': ['Admin', 'Settings'],
 };

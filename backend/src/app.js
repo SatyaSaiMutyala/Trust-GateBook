@@ -15,7 +15,7 @@ import { escalationsRouter } from './routes/escalations.js';
 import { termsRouter } from './routes/terms.js';
 import { materialRouter } from './routes/material.js';
 import { incidentsRouter } from './routes/incidents.js';
-import { keyMovesRouter, keysRouter } from './routes/keys.js';
+import { keyMovesRouter, keysRouter, myKeysRouter } from './routes/keys.js';
 import { patrolRouter } from './routes/patrol.js';
 import { genRouter } from './routes/gen.js';
 import { pushRouter } from './routes/push.js';
@@ -64,6 +64,7 @@ export function createApp() {
   app.use('/api/material', materialRouter);
   app.use('/api/keys', keysRouter);
   app.use('/api/keymoves', keyMovesRouter);
+  app.use('/api/mykeys', myKeysRouter);
   app.use('/api/incidents', incidentsRouter);
   app.use('/api/patrol', patrolRouter);
   app.use('/api/gen', genRouter);

@@ -43,6 +43,7 @@ import {
 } from '../store/authSlice';
 import { useSettings, useSheets } from '../store/hooks';
 import { CrossIcon } from '../components/Glyphs';
+import { SurfaceStatusBar } from '../components/SurfaceStatusBar';
 
 function Detail({ label, value, mono }) {
   const { c } = useTheme();
@@ -186,6 +187,7 @@ export function VisitDetailsScreen({ navigation, route }) {
         },
       ]}
     >
+      <SurfaceStatusBar />
       <View style={{ flex: 1, gap: moderateScale(4) }}>
         {visit ? (
           <View style={styles.row}>
@@ -250,6 +252,8 @@ export function VisitDetailsScreen({ navigation, route }) {
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       {header}
       <ScrollView
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
         contentContainerStyle={[
           styles.content,
           { paddingBottom: insets.bottom + verticalScale(24) },

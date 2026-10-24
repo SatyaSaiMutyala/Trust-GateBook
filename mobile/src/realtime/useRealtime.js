@@ -7,6 +7,7 @@ import {
   expectedEvent,
   incidentEvent,
   keysEvent,
+  myKeysEvent,
   opsEvent,
   notificationNewEvent,
   notificationReadEvent,
@@ -48,6 +49,7 @@ export function useRealtime() {
     socket.on('me:updated', p => dispatch(meUpdatedEvent(p.user)));
     socket.on('material:changed', p => dispatch(materialEvent(p.pass)));
     socket.on('keys:changed', () => dispatch(keysEvent()));
+    socket.on('mykeys:changed', () => dispatch(myKeysEvent()));
     socket.on('patrol:changed', () => dispatch(opsEvent('Patrol')));
     socket.on('gen:changed', () => dispatch(opsEvent('Gen')));
     socket.on('incident:changed', p => dispatch(incidentEvent(p.incident)));

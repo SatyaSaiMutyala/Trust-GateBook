@@ -505,8 +505,9 @@ interface KeyMove { id: string; key: { id, number, name, location }; site: strin
 | GET | `/api/keymoves` | gate + module | `period` today · 7d (default) · 30d · 90d, `state` all · out · overdue · returned, `site`, `q`, page, limit, tzOffset | paginated diary, newest first, + `counts { out, overdue }`. Keys still out always show. |
 | GET | `/api/keymoves/export.csv` | gate + module | same filters | CSV `key-diary.csv` |
 | POST | `/api/keymoves/:id/return` | security, admin | `{ returnedByName, note }` (name defaults to the taker) | `{ move, key }`. 409 "This key has already been returned." |
+| GET | `/api/mykeys` | any signed-in user | | the keys issued to me (read only): `{ data: KeyMove[] }` still with me, overdue / due soonest first (no return time last), `returned: KeyMove[]` given back in the last 7 days (newest first, max 20), `counts { out, overdue }`. Only keys issued to my account (`taker.id`), not ones typed by name. |
 
-Realtime: `keys:changed { key }` to gate sockets. Setting `keyReturnHours` (default 4, 0–720; 0 = no return time).
+Realtime: `keys:changed { key }` to gate sockets; `mykeys:changed { move }` to the holder when a key is issued to or taken back from them. Setting `keyReturnHours` (default 4, 0–720; 0 = no return time).
 Escalation matrix `keys` (clock starts at `dueAt`; holder = the person concerned): at once guards "Key not returned"
 and the holder "Please return the key" · +30 min supervisors · +2 h l1 (holder's manager) · +4 h admins.
 
@@ -881,6 +882,7 @@ Server events (payloads carry fresh signed URLs):
 | `expected:changed` | `{ expected: Expected }` (created, edited, cancelled, arrived) |
 | `material:changed` | `{ pass: MaterialPass }` |
 | `keys:changed`     | `{ key: Key }` (gate sockets) |
+| `mykeys:changed`   | `{ move: KeyMove }` (the holder) |
 | `incident:changed` | `{ incident: Incident }` (gate, reporter, assignee) |
 | `patrol:changed` / `gen:changed` | `{}` (gate sockets; refetch) |
 

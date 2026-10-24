@@ -37,6 +37,7 @@ import {
   outstandingText,
 } from '../utils/material';
 import { CrossIcon } from '../components/Glyphs';
+import { SurfaceStatusBar } from '../components/SurfaceStatusBar';
 
 /** The next step in words: [title, sub, tone]. */
 function nextStep(p, user, gate) {
@@ -576,6 +577,7 @@ export function MaterialDetailsScreen({ navigation, route }) {
         },
       ]}
     >
+      <SurfaceStatusBar />
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Close"
@@ -708,7 +710,11 @@ export function MaterialDetailsScreen({ navigation, route }) {
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       {header}
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+      >
         {next ? (
           <Banner
             tone={
@@ -745,6 +751,8 @@ export function MaterialDetailsScreen({ navigation, route }) {
         ) : null}
         {images.length ? (
           <ScrollView
+            showsVerticalScrollIndicator={false}
+            showsHorizontalScrollIndicator={false}
             horizontal
             contentContainerStyle={{ gap: moderateScale(8) }}
           >

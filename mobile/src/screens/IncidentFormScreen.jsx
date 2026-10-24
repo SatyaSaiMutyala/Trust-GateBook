@@ -1,11 +1,5 @@
 import React, { useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { Text, View } from 'react-native';
 import { ScaledSheet } from 'react-native-size-matters/extend';
 import { Button } from '../components/Button';
 import { ChipSelect } from '../components/ChipSelect';
@@ -13,6 +7,7 @@ import { DateTimeField } from '../components/DateTimeField';
 import { Field, FieldShell } from '../components/Field';
 import { SelectField } from '../components/SelectField';
 import { PhotoStrip } from '../components/material/PhotoStrip';
+import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
 import { errorMessage, useReportIncidentMutation } from '../store/api';
 import { useSettings, useToast } from '../store/hooks';
 import { typo, useTheme } from '../theme';
@@ -80,11 +75,8 @@ export function IncidentFormScreen({ navigation, route }) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: c.bg }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
+      <KeyboardAwareScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.content}
       >
@@ -179,8 +171,8 @@ export function IncidentFormScreen({ navigation, route }) {
             onPress={submit}
           />
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </View>
   );
 }
 

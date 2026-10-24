@@ -30,7 +30,7 @@ import { useGenChanges } from '../realtime/context';
 import { useToast } from '../state/context';
 import { fonts } from '../theme/tokens';
 import { fmtDate, fmtDateTime } from '../utils/format';
-import { download, dur } from '../utils/ops';
+import { download, dur, hrs } from '../utils/ops';
 
 function Box3({ title, value, sub, tone, children }) {
   return (
@@ -68,8 +68,7 @@ function GenPanel({ g, now, operator, open }) {
           </Typography>
           {g.running ? (
             <Typography variant="body2" sx={{ mt: 0.5 }}>
-              Started {fmtDateTime(g.running.startAt)} · {g.running.reason}
-              {g.running.hmStart !== null ? ` · hour meter ${g.running.hmStart}` : ''} · by {g.running.startedBy?.name}
+              Started {fmtDateTime(g.running.startAt)} · {g.running.reason}· by {g.running.startedBy?.name}
             </Typography>
           ) : null}
         </Box>
@@ -115,7 +114,7 @@ function GenPanel({ g, now, operator, open }) {
               </Typography>
             </Stack>
             <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-              Estimate: last reading {e.baseL} L on {fmtDateTime(e.baseAt)} + {e.fills} L filled − {e.hours} h run ×{' '}
+              Estimate: last reading {e.baseL} L on {fmtDateTime(e.baseAt)} + {e.fills} L filled − {hrs(e.hours)} run ×{' '}
               {g.rateLph} L/h. The weekly dip reading corrects it.
             </Typography>
           </>
@@ -145,7 +144,7 @@ function GenPanel({ g, now, operator, open }) {
           </Box3>
         </Grid>
         <Grid size={{ xs: 6, md: 4 }}>
-          <Box3 title="Run this month" value={`${g.month.hours} h`} sub={`${g.month.starts} starts`} />
+          <Box3 title="Run this month" value={hrs(g.month.hours)} sub={`${g.month.starts} starts`} />
         </Grid>
         <Grid size={{ xs: 6, md: 4 }}>
           <Box3 title="Diesel filled this month" value={`${g.month.filledL} L`} />
@@ -182,7 +181,9 @@ function RunLog() {
   return (
     <>
       <Stack direction="row" sx={{ mb: 2, alignItems: 'center' }}>
-        <Typography sx={{ flex: 1 }}>{list.extra?.hours ?? '–'} hours run in the last 30 days</Typography>
+        <Typography sx={{ flex: 1 }}>
+          {list.extra?.hours != null ? hrs(list.extra.hours) : '–'} run in the last 30 days
+        </Typography>
         <Button
           variant="outlined"
           startIcon={<FileDownloadOutlinedIcon />}
@@ -207,17 +208,7 @@ function RunLog() {
           <Table size="small">
             <TableHead>
               <TableRow>
-                {[
-                  'Date',
-                  'Generator',
-                  'Start',
-                  'Stop',
-                  'Ran for',
-                  'Reason',
-                  'Hour meter',
-                  'Started by',
-                  'Stopped by',
-                ].map((h) => (
+                {['Date', 'Generator', 'Start', 'Stop', 'Ran for', 'Reason', 'Started by', 'Stopped by'].map((h) => (
                   <TableCell key={h}>{h}</TableCell>
                 ))}
               </TableRow>
@@ -231,7 +222,7 @@ function RunLog() {
                   <TableCell>
                     {r.stopAt ? fmtDateTime(r.stopAt) : <Chip size="small" variant="inside" label="Running" />}
                   </TableCell>
-                  <TableCell>{r.hours} h</TableCell>
+                  <TableCell>{hrs(r.hours)}</TableCell>
                   <TableCell>
                     {r.reason}
                     {r.note ? (
@@ -239,9 +230,6 @@ function RunLog() {
                         {r.note}
                       </Typography>
                     ) : null}
-                  </TableCell>
-                  <TableCell>
-                    {r.hmStart ?? '–'} → {r.hmEnd ?? '–'}
                   </TableCell>
                   <TableCell>{r.startedBy?.name}</TableCell>
                   <TableCell>{r.stoppedBy?.name ?? ''}</TableCell>
@@ -294,7 +282,7 @@ function DieselLog({ gen }) {
           {use.map((c) => (
             <Stack key={c.to} direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
               <Typography variant="body2" sx={{ flex: 1 }}>
-                {fmtDate(c.from)} → {fmtDate(c.to)}: used <b>{c.used} L</b> in {c.hours} h run ({c.fills} L filled)
+                {fmtDate(c.from)} → {fmtDate(c.to)}: used <b>{c.used} L</b> in {hrs(c.hours)} run ({c.fills} L filled)
               </Typography>
               {c.lph !== null ? (
                 <Typography variant="body2" sx={{ fontFamily: fonts.mono }}>
@@ -321,7 +309,6 @@ function DieselLog({ gen }) {
                   'Entry',
                   'Litres filled',
                   'Level reading',
-                  'Hour meter',
                   'Vendor / bill',
                   'Amount (₹)',
                   'Recorded by',
@@ -338,7 +325,6 @@ function DieselLog({ gen }) {
                   <TableCell>{f.kind === 'fill' ? 'Fill' : 'Level check'}</TableCell>
                   <TableCell>{f.litres ?? ''}</TableCell>
                   <TableCell>{f.levelL ?? ''}</TableCell>
-                  <TableCell>{f.hm ?? ''}</TableCell>
                   <TableCell>
                     {f.vendor}
                     {f.billNo ? ` · Bill ${f.billNo}` : ''}

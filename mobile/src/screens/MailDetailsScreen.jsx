@@ -44,6 +44,7 @@ import { disputeNoteSet, selectDisputeNote } from '../store/draftsSlice';
 import { useSheets, useToast } from '../store/hooks';
 import { useConfirmMail, useRemind } from '../store/mailActions';
 import { CrossIcon } from '../components/Glyphs';
+import { SurfaceStatusBar } from '../components/SurfaceStatusBar';
 
 function Detail({ label, value, mono }) {
   const { c } = useTheme();
@@ -205,6 +206,7 @@ export function MailDetailsScreen({ navigation, route }) {
         },
       ]}
     >
+      <SurfaceStatusBar />
       <View style={{ flex: 1, gap: moderateScale(4) }}>
         {item ? (
           <View style={styles.row}>
@@ -268,6 +270,8 @@ export function MailDetailsScreen({ navigation, route }) {
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       {header}
       <ScrollView
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[
           styles.content,

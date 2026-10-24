@@ -16,14 +16,16 @@ const PRESETS = {
   boxes: { camera: 'back', maxEdge: 1100 },
 };
 
-async function ensureCameraPermission() {
-  if (Platform.OS !== 'android') return true; // iOS prompts on first use (NSCameraUsageDescription)
+/** Asks for the camera on Android (iOS prompts on first use, from NSCameraUsageDescription). */
+export async function ensureCameraPermission(
+  message = 'TruSentinel needs the camera to photograph visitors, ID proof and incoming post.',
+) {
+  if (Platform.OS !== 'android') return true;
   const result = await PermissionsAndroid.request(
     PermissionsAndroid.PERMISSIONS.CAMERA,
     {
       title: 'Camera',
-      message:
-        'TruSentinel needs the camera to photograph visitors, ID proof and incoming post.',
+      message,
       buttonPositive: 'Allow',
       buttonNegative: 'Not now',
     },

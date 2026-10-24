@@ -28,7 +28,7 @@ import { useToast } from '../store/hooks';
 import { useInfiniteList } from '../store/useInfiniteList';
 import { radius, typo, useTheme } from '../theme';
 import { fmtDateTime, fmtShortDate } from '../utils/format';
-import { RUN_REASONS, dur } from '../utils/ops';
+import { RUN_REASONS, dur, hrs } from '../utils/ops';
 
 const decimal = t => t.replace(/[^\d.]/g, '');
 
@@ -37,7 +37,6 @@ function GenSheet({ kind, gen: g, onClose }) {
   const { c } = useTheme();
   const toast = useToast();
   const [reason, setReason] = useState('Power cut');
-  const [hm, setHm] = useState('');
   const [note, setNote] = useState('');
   const [litres, setLitres] = useState('');
   const [levelL, setLevelL] = useState('');
@@ -59,14 +58,14 @@ function GenSheet({ kind, gen: g, onClose }) {
         await run({
           id: g.id,
           action: 'start',
-          body: { reason, hm: hm || null },
+          body: { reason },
         }).unwrap();
         toast.show(`${g.name} started`);
       } else if (kind === 'stop') {
         await run({
           runId: r.id,
           action: 'stop',
-          body: { hm: hm || null, note: note.trim() },
+          body: { note: note.trim() },
         }).unwrap();
         toast.show(
           `${g.name} stopped after ${dur(
@@ -81,12 +80,11 @@ function GenSheet({ kind, gen: g, onClose }) {
         await fuel({
           id: g.id,
           fields: check
-            ? { kind, levelL, hm, note: note.trim() }
+            ? { kind, levelL, note: note.trim() }
             : {
                 kind,
                 litres,
                 levelL,
-                hm,
                 vendor: vendor.trim(),
                 billNo: billNo.trim(),
                 amount,
@@ -168,21 +166,6 @@ function GenSheet({ kind, gen: g, onClose }) {
             }
           />
         ) : null}
-        <Field
-          label={
-            kind === 'stop' ? 'Hour meter reading now' : 'Hour meter reading'
-          }
-          value={hm}
-          onChangeText={t => setHm(decimal(t))}
-          keyboardType="decimal-pad"
-          placeholder={
-            kind === 'stop' && r?.hmStart != null
-              ? `At start: ${r.hmStart}`
-              : g.lastHm != null
-              ? `Last: ${g.lastHm}`
-              : 'e.g. 1250.4'
-          }
-        />
         {kind === 'fill' ? (
           <>
             <Field
@@ -319,7 +302,7 @@ function GenCard({ g, now, operator, open }) {
           : ''}
       </Text>
       <Text style={[typo.small, { color: c.muted }]}>
-        This month: {g.month.hours} h run · {g.month.starts} starts ·{' '}
+        This month: {hrs(g.month.hours)} run · {g.month.starts} starts ·{' '}
         {g.month.filledL} L filled
       </Text>
       {operator ? (
@@ -361,6 +344,8 @@ function RunLog() {
   );
   return (
     <FlatList
+      showsVerticalScrollIndicator={false}
+      showsHorizontalScrollIndicator={false}
       style={{ flex: 1 }}
       contentContainerStyle={styles.content}
       data={list.items}
@@ -374,7 +359,7 @@ function RunLog() {
               { color: c.ink, marginBottom: verticalScale(10) },
             ]}
           >
-            {list.extra.hours} hours run in the last 30 days
+            {hrs(list.extra.hours)} run in the last 30 days
           </Text>
         ) : null
       }
@@ -386,7 +371,7 @@ function RunLog() {
           ]}
         >
           <Text style={[typo.bodySemi, { color: c.ink }]}>
-            {r.genName} · {r.reason} · {r.hours} h
+            {r.genName} · {r.reason} · {hrs(r.hours)}
           </Text>
           <Text style={[typo.small, { color: c.muted }]}>
             {fmtDateTime(r.startAt)} →{' '}
@@ -448,6 +433,8 @@ export function GeneratorScreen() {
         <RunLog />
       ) : (
         <ScrollView
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
           contentContainerStyle={[styles.content, { gap: moderateScale(14) }]}
           refreshControl={
             <RefreshControl

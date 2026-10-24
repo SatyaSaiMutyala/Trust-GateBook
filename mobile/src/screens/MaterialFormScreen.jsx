@@ -1,11 +1,5 @@
 import React, { useLayoutEffect, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { Text, View } from 'react-native';
 import { useSelector } from 'react-redux';
 import { ScaledSheet, moderateScale } from 'react-native-size-matters/extend';
 import { Banner } from '../components/Layout';
@@ -19,6 +13,7 @@ import { PhotoTile } from '../components/PhotoTile';
 import { RecipientPicker } from '../components/RecipientPicker';
 import { SelectField } from '../components/SelectField';
 import { PhotoStrip } from '../components/material/PhotoStrip';
+import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
 import {
   errorMessage,
   useCreateMaterialMutation,
@@ -224,11 +219,8 @@ export function MaterialFormScreen({ navigation, route }) {
     ...(!isIn ? [{ value: 'pickup', label: 'Leave for pickup' }] : []),
   ];
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: c.bg }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
+      <KeyboardAwareScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.content}
       >
@@ -589,8 +581,8 @@ export function MaterialFormScreen({ navigation, route }) {
             onPress={submit}
           />
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </View>
   );
 }
 

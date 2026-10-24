@@ -1,15 +1,10 @@
 import React, { useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  KeyboardAvoidingRoot,
+  KeyboardAwareScrollView,
+} from './KeyboardAwareScrollView';
 import {
   errorMessage,
   useExitVisitMutation,
@@ -127,10 +122,7 @@ export function ExitSheet({ visit, onClose }) {
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.root}
-      >
+      <KeyboardAvoidingRoot style={styles.root}>
         <Pressable
           style={[StyleSheet.absoluteFill, { backgroundColor: c.overlay }]}
           onPress={onClose}
@@ -146,7 +138,9 @@ export function ExitSheet({ visit, onClose }) {
           ]}
         >
           <View style={[styles.grabber, { backgroundColor: c.line }]} />
-          <ScrollView
+          <KeyboardAwareScrollView
+            addSpace={false}
+            containerStyle={styles.scroll}
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={{ gap: moderateScale(16) }}
           >
@@ -271,14 +265,15 @@ export function ExitSheet({ visit, onClose }) {
                 size="lg"
               />
             </View>
-          </ScrollView>
+          </KeyboardAwareScrollView>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingRoot>
     </Modal>
   );
 }
 const styles = ScaledSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
+  scroll: { flexShrink: 1 },
   sheet: {
     borderTopLeftRadius: '16@ms',
     borderTopRightRadius: '16@ms',

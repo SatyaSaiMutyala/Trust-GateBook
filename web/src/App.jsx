@@ -18,6 +18,7 @@ import { LoginPage } from './pages/LoginPage';
 import { OverviewPage } from './pages/OverviewPage';
 import { LogPostPage } from './pages/post/LogPostPage';
 import { MyPostPage } from './pages/post/MyPostPage';
+import { MyKeysPage } from './pages/MyKeysPage';
 import { MyVisitorsPage } from './pages/MyVisitorsPage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { PostRoomPage } from './pages/post/PostRoomPage';
@@ -179,6 +180,7 @@ export function App() {
         <Route path="expected" element={needs(['expected'], <ExpectedPage />)} />
         <Route path="material" element={needs(['material'], <MaterialPage />)} />
         <Route path="keys" element={staff(needs(['keys'], <KeysPage />))} />
+        <Route path="my-keys" element={<MyKeysPage />} />
         <Route path="incidents" element={needs(['incidents'], <IncidentsPage />)} />
         <Route path="patrol" element={staff(needs(['patrol'], <PatrolsPage />))} />
         <Route path="generator" element={staff(needs(['gen'], <GeneratorPage />))} />

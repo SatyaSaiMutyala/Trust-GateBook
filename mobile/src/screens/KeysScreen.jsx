@@ -212,6 +212,8 @@ function Board({ q, now, operator, navigation, onReturn }) {
   const counts = data?.counts;
   return (
     <FlatList
+      showsVerticalScrollIndicator={false}
+      showsHorizontalScrollIndicator={false}
       style={{ flex: 1 }}
       contentContainerStyle={styles.content}
       data={keys}
@@ -274,6 +276,8 @@ function Diary({ q, period, operator, onReturn }) {
   );
   return (
     <FlatList
+      showsVerticalScrollIndicator={false}
+      showsHorizontalScrollIndicator={false}
       style={{ flex: 1 }}
       contentContainerStyle={styles.content}
       data={list.items}

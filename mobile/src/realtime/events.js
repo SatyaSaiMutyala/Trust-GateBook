@@ -109,6 +109,11 @@ export const keysEvent = () => dispatch => {
   invalidateSoon(dispatch, ['Keys', 'Stats']);
 };
 
+/** mykeys:changed — a key was issued to me or taken back from me: refresh My keys. */
+export const myKeysEvent = () => dispatch => {
+  invalidateSoon(dispatch, ['MyKeys']);
+};
+
 /** patrol:changed / gen:changed — refetch the patrol board / generator status. @param {'Patrol' | 'Gen'} tag */
 export const opsEvent = tag => dispatch => {
   invalidateSoon(dispatch, [tag, 'Stats']);

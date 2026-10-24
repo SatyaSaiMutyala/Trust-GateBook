@@ -1,12 +1,5 @@
 import React, { useLayoutEffect, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { ScaledSheet, moderateScale } from 'react-native-size-matters/extend';
@@ -30,6 +23,8 @@ import { typo, useTheme } from '../theme';
 import { fmtDateTime } from '../utils/format';
 import { STATUS_LABEL, incidentRights } from '../utils/incidents';
 import { CrossIcon } from '../components/Glyphs';
+import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
+import { SurfaceStatusBar } from '../components/SurfaceStatusBar';
 
 function Fact({ label, value }) {
   const { c } = useTheme();
@@ -95,6 +90,7 @@ export function IncidentDetailsScreen({ navigation, route }) {
         },
       ]}
     >
+      <SurfaceStatusBar />
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Close"
@@ -143,12 +139,9 @@ export function IncidentDetailsScreen({ navigation, route }) {
   const canSend = !!(text.trim() || status || assignTo);
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: c.bg }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
       {header}
-      <ScrollView
+      <KeyboardAwareScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.content}
       >
@@ -356,7 +349,7 @@ export function IncidentDetailsScreen({ navigation, route }) {
             </>
           )}
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
       {preview !== null ? (
         <ImagePreview
           visible
@@ -365,7 +358,7 @@ export function IncidentDetailsScreen({ navigation, route }) {
           onClose={() => setPreview(null)}
         />
       ) : null}
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

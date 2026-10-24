@@ -207,13 +207,13 @@ export const routePendingOpen = navigation => (dispatch, getState) => {
     return true;
   }
   if (pending.type === 'incident' || pending.type === 'key') {
-    // ⚠️ incident: open it. 🔑 key: gate users see the key board; others just the inbox.
+    // ⚠️ incident: open it. 🔑 key: gate users see the key board; others their My keys.
     if (pending.type === 'incident') {
       navigation.navigate('IncidentDetails', { id: pending.id });
     } else if (selectIsGateUser(state)) {
       navigation.navigate('Keys');
     } else {
-      navigation.navigate('Notifications');
+      navigation.navigate('MyKeys');
     }
     if (pending.notificationId) {
       dispatch(

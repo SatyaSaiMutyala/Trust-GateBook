@@ -28,6 +28,7 @@ export function RealtimeProvider({ children }) {
     socket.on('me:updated', (p) => bus.emit('me:updated', p));
     socket.on('material:changed', (p) => bus.emit('material:changed', { pass: normalizeMaterial(p.pass) }));
     socket.on('keys:changed', (p) => bus.emit('keys:changed', p));
+    socket.on('mykeys:changed', (p) => bus.emit('mykeys:changed', p));
     socket.on('patrol:changed', (p) => bus.emit('patrol:changed', p));
     socket.on('gen:changed', (p) => bus.emit('gen:changed', p));
     socket.on('incident:changed', (p) => bus.emit('incident:changed', { incident: normalizeIncident(p.incident) }));

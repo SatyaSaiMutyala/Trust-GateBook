@@ -1,12 +1,5 @@
 import React, { useLayoutEffect, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useSelector } from 'react-redux';
 import { ScaledSheet, moderateScale } from 'react-native-size-matters/extend';
 import { Button } from '../components/Button';
@@ -28,6 +21,7 @@ import {
 import { selectUser } from '../store/authSlice';
 import { useSettings, useToast } from '../store/hooks';
 import { CrossIcon } from '../components/Glyphs';
+import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
 
 export const CHALLANS = [
   'Delivery challan',
@@ -264,13 +258,9 @@ function ExpectedForm({ entry, kind, navigation }) {
 
   const excludeIds = [f.host?.id, f.contact?.id, ...f.also.map(a => a.id)];
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: c.bg }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
+      <KeyboardAwareScrollView
         keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
         contentContainerStyle={styles.content}
       >
         {entry ? (
@@ -568,8 +558,8 @@ function ExpectedForm({ entry, kind, navigation }) {
             onPress={save}
           />
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </View>
   );
 }
 

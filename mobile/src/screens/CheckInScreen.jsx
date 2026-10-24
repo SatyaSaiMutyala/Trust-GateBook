@@ -6,15 +6,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Button } from '../components/Button';
 import { Checkbox } from '../components/Checkbox';
@@ -26,6 +18,7 @@ import {
   ExpectedTodayStrip,
 } from '../components/ExpectedHints';
 import { Field, FieldShell } from '../components/Field';
+import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
 import { Banner } from '../components/Layout';
 import { HeaderText } from '../components/TopBar';
 import { SelectField } from '../components/SelectField';
@@ -322,14 +315,10 @@ export function CheckInScreen() {
   const idOptions = ID_TYPES.map(t => ({ value: t, label: t }));
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.screen, { backgroundColor: c.bg }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
+    <View style={[styles.screen, { backgroundColor: c.bg }]}>
+      <KeyboardAwareScrollView
         ref={scrollRef}
         keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
         contentContainerStyle={styles.content}
       >
         {expected ? (
@@ -700,8 +689,8 @@ export function CheckInScreen() {
             size="lg"
           />
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </View>
   );
 }
 

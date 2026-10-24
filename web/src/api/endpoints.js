@@ -436,6 +436,8 @@ export const keysApi = {
       signal,
     }).then((r) => page(r)),
   giveBack: (moveId, body) => request('POST', `/api/keymoves/${encodeURIComponent(moveId)}/return`, { body }),
+  /** Keys issued to me: `{ data (still with me), returned (last 7 days), counts { out, overdue } }`. */
+  mine: (signal) => request('GET', '/api/mykeys', { signal }),
   exportCsv: (query) =>
     requestBlob('/api/keymoves/export.csv', { query: { tzOffset: new Date().getTimezoneOffset(), ...query } }),
 };

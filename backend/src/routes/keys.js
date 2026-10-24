@@ -5,7 +5,7 @@ import { currentUser, requireAuth, requireGate, requireModule, requireRole } fro
 import { badRequest, conflict, notFound } from '../middleware/error.js';
 import { Key, KeyMove } from '../models/Key.js';
 import { User } from '../models/User.js';
-import { emitKeysChanged } from '../realtime.js';
+import { emitKeysChanged, emitToUser } from '../realtime.js';
 import { csvRow } from '../services/csv.js';
 import { formatDateTime, formatDuration, formatTime } from '../services/format.js';
 import { notify } from '../services/notify.js';
@@ -22,6 +22,9 @@ import { localDayStart } from './stats.js';
 export const keysRouter = Router();
 export const keyMovesRouter = Router();
 for (const r of [keysRouter, keyMovesRouter]) r.use(requireAuth, requireGate, requireModule('keys'));
+/** `/api/mykeys`: the keys issued to the signed-in person (any role, read only). */
+export const myKeysRouter = Router();
+myKeysRouter.use(requireAuth);
 
 const canWork = requireRole('security', 'admin');
 const DAY_MS = 86_400_000;
@@ -66,6 +69,11 @@ async function changed(key) {
   const view = await keyView(key);
   emitKeysChanged(view);
   return view;
+}
+
+/** Tells the holder (when on Gatebook) that their keys changed. @param {any} move */
+function holderChanged(move) {
+  if (move.taker?.id) emitToUser(move.taker.id, 'mykeys:changed', { move: serializeMove(move) });
 }
 
 /** Duplicate key number at the site → 409. @param {unknown} e @param {string} number @param {string} site */
@@ -251,6 +259,7 @@ keysRouter.post('/:id/issue', canWork, async (req, res) => {
       data: { type: 'key', id: move._id.toString() },
     });
   }
+  holderChanged(move);
   res.status(201).json({ move: serializeMove(move), key: await changed(taken) });
 });
 
@@ -378,5 +387,29 @@ keyMovesRouter.post('/:id/return', canWork, async (req, res) => {
     { $inc: { outCount: -1 } },
     { returnDocument: 'after' },
   );
+  holderChanged(updated);
   res.json({ move: serializeMove(updated), key: key ? await changed(key) : null });
+});
+
+// ---------------------------------------------------------------- my keys
+
+// GET /api/mykeys — keys issued to me: `data` still with me (overdue / due soonest first), `returned` in the last 7 days
+myKeysRouter.get('/', async (req, res) => {
+  const me = currentUser(req)._id.toString();
+  const nowMs = Date.now();
+  const [open, returned] = await Promise.all([
+    KeyMove.find({ 'taker.id': me, returnedAt: null }).sort({ issuedAt: 1 }).lean(),
+    KeyMove.find({ 'taker.id': me, returnedAt: { $gte: new Date(nowMs - 7 * DAY_MS) } })
+      .sort({ returnedAt: -1 })
+      .limit(20)
+      .lean(),
+  ]);
+  // No return time goes last.
+  const due = (/** @type {any} */ m) => (m.dueAt ? m.dueAt.getTime() : Infinity);
+  open.sort((a, b) => due(a) - due(b));
+  res.json({
+    data: open.map((m) => serializeMove(m, nowMs)),
+    returned: returned.map((m) => serializeMove(m, nowMs)),
+    counts: { out: open.length, overdue: open.filter((m) => due(m) < nowMs).length },
+  });
 });

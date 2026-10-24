@@ -1,0 +1,4 @@
+{
+  // Run ESLint from each app's own folder, so it finds that app's config (mobile/babel.config.js, web/eslint.config.js, …).
+  "eslint.workingDirectories": [{ "mode": "auto" }]
+}

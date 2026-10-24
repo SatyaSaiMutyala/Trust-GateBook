@@ -23,6 +23,7 @@ export const TAGS = [
   'Expected',
   'Material',
   'Keys',
+  'MyKeys',
   'Incidents',
   'Patrol',
   'Gen',
@@ -750,6 +751,11 @@ export const api = createApi({
       }),
       invalidatesTags: ['Keys', 'Stats'],
     }),
+    /** Keys issued to me (any role): `{ data (still with me), returned (last 7 days), counts { out, overdue } }`. */
+    myKeys: build.query({
+      query: () => '/api/mykeys',
+      providesTags: ['MyKeys'],
+    }),
 
     // ---------------- incidents ----------------
     /** tab open | closed | all, severity, q. Adds `counts { open, closed, critical }`. */
@@ -1006,6 +1012,7 @@ export const {
   useKeyDiaryInfiniteQuery,
   useIssueKeyMutation,
   useReturnKeyMutation,
+  useMyKeysQuery,
   useListIncidentsInfiniteQuery,
   useGetIncidentQuery,
   useIncidentAssigneesQuery,

@@ -9,11 +9,8 @@ import React, {
 import { useNavigation } from '@react-navigation/native';
 import {
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -40,6 +37,7 @@ import {
   useGetSettingsQuery,
   useListUsersInfiniteQuery,
   useModuleDefsQuery,
+  useMyKeysQuery,
   useOrgUsersQuery,
   usePutSettingsMutation,
   useUpdateMeMutation,
@@ -69,6 +67,7 @@ import {
 } from '../utils/modules';
 import { APP_VERSION } from '../config/appVersion';
 import { CrossIcon } from '../components/Glyphs';
+import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
 
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Admin' },
@@ -1035,11 +1034,8 @@ function ProfileView() {
   ].filter(Boolean);
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: c.bg }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
+      <KeyboardAwareScrollView
         contentContainerStyle={styles.profile}
         keyboardShouldPersistTaps="handled"
       >
@@ -1094,6 +1090,7 @@ function ProfileView() {
           </Panel>
         )}
 
+        {gateUser ? null : <SiteSafetyLinks />}
         <PushHint />
         <DeleteAccount />
         <Button
@@ -1104,7 +1101,7 @@ function ProfileView() {
         <Text style={[typo.tiny, styles.version, { color: c.muted }]}>
           TruSentinel v{APP_VERSION}
         </Text>
-      </ScrollView>
+      </KeyboardAwareScrollView>
       <ConfirmDialog
         visible={confirmSignOut}
         tone="danger"
@@ -1117,7 +1114,7 @@ function ProfileView() {
           dispatch(signOut());
         }}
       />
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -1147,7 +1144,7 @@ function GatePanel() {
   );
 }
 
-/** Key register and Incidents, for whoever has the modules. */
+/** Key register and Incidents, for whoever has the modules; My keys for employees. */
 function SiteSafetyLinks() {
   const navigation = useNavigation();
   const keys = useSelector(selectHasModule('keys'));
@@ -1155,17 +1152,30 @@ function SiteSafetyLinks() {
   const patrol = useSelector(selectHasModule('patrol'));
   const gen = useSelector(selectHasModule('gen'));
   const gate = useSelector(selectIsGateUser);
-  if (!incidents && !(gate && (keys || patrol || gen))) return null;
+  const mine = useMyKeysQuery(undefined, { skip: gate }).data;
+  if (gate && !incidents && !keys && !patrol && !gen) return null;
+  const withMe = mine?.counts?.out ?? 0;
   return (
     <Panel
       title="Site safety"
-      subtitle="Report something unsafe, follow up incidents, keys at the gate."
+      subtitle={
+        gate
+          ? 'Report something unsafe, follow up incidents, keys at the gate.'
+          : 'Report something unsafe, follow up incidents, the keys you hold.'
+      }
     >
       {incidents ? (
         <Button
           title="Incidents"
           variant="ghost"
           onPress={() => navigation.navigate('Incidents')}
+        />
+      ) : null}
+      {!gate ? (
+        <Button
+          title={withMe ? `My keys · ${withMe} with you` : 'My keys'}
+          variant={mine?.counts?.overdue ? 'danger' : 'ghost'}
+          onPress={() => navigation.navigate('MyKeys')}
         />
       ) : null}
       {keys && gate ? (
@@ -1443,11 +1453,9 @@ export function AccountScreen({ route } = {}) {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: c.bg }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <FlatList
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
+      <KeyboardAwareScrollView
+        component={FlatList}
         ref={listRef}
         style={{ flex: 1 }}
         contentContainerStyle={styles.content}
@@ -1463,7 +1471,6 @@ export function AccountScreen({ route } = {}) {
         onEndReached={isAdmin ? users.loadMore : undefined}
         onEndReachedThreshold={0.4}
         keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -1473,7 +1480,7 @@ export function AccountScreen({ route } = {}) {
           />
         }
       />
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

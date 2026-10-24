@@ -1,31 +1,15 @@
-import {
-  API_URL,
-  PRODUCTION_API_URL,
-  fileUrl,
-  normalizeBaseUrl,
-} from '../src/api/config';
+import { API_URL, fileUrl } from '../src/api/config';
 
-test('the live server is the bare origin (the app adds /api/... itself)', () => {
-  expect(PRODUCTION_API_URL).toBe('https://trusentinel.mytrustlab.co.in');
+test('the server URL is a bare origin (the app adds /api/... itself)', () => {
+  expect(API_URL).toMatch(/^https?:\/\/[^/]+$/);
 });
 
-test('base URLs lose a trailing slash and a trailing /api, so requests never hit /api/api', () => {
-  expect(normalizeBaseUrl('https://trusentinel.mytrustlab.co.in/api')).toBe(
-    'https://trusentinel.mytrustlab.co.in',
-  );
-  expect(normalizeBaseUrl('https://trusentinel.mytrustlab.co.in/api/')).toBe(
-    'https://trusentinel.mytrustlab.co.in',
-  );
-  expect(normalizeBaseUrl(' http://10.0.2.2:4000/ ')).toBe(
-    'http://10.0.2.2:4000',
-  );
-  expect(normalizeBaseUrl('')).toBe('');
-  expect(normalizeBaseUrl(undefined)).toBe('');
-});
-
-test('API_URL comes from .env when set (jest sets API_URL) and photo paths are prefixed with it', () => {
-  expect(API_URL).toBe('http://test.local:4000');
+test('photo paths are prefixed with the server URL', () => {
   expect(fileUrl('/api/files/a.jpg?sig=1')).toBe(
-    'http://test.local:4000/api/files/a.jpg?sig=1',
+    `${API_URL}/api/files/a.jpg?sig=1`,
   );
+  expect(fileUrl('https://cdn.example.com/a.jpg')).toBe(
+    'https://cdn.example.com/a.jpg',
+  );
+  expect(fileUrl(null)).toBeNull();
 });

@@ -179,7 +179,7 @@ export function NotificationsPage() {
       return;
     }
     if (type === 'key') {
-      if (isGateUser(user)) navigate('/keys?tab=diary');
+      navigate(isGateUser(user) ? '/keys?tab=diary' : '/my-keys');
       return;
     }
     if ((type !== 'mail' && type !== 'visit') || !id) return;

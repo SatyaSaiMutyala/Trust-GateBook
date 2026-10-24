@@ -1,17 +1,11 @@
 import React, { useRef, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScaledSheet, verticalScale } from 'react-native-size-matters/extend';
 import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Field } from '../components/Field';
+import { KeyboardAwareScrollView } from '../components/KeyboardAwareScrollView';
 import { errorMessage, useSignupMutation } from '../store/api';
 import { fonts, MIN_TOUCH, radius, typo, useTheme } from '../theme';
 import { digitsOnly } from '../utils/format';
@@ -139,11 +133,8 @@ export function CreateAccountScreen({ navigation }) {
           </Text>
         </View>
       </View>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
+      <View style={{ flex: 1 }}>
+        <KeyboardAwareScrollView
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.body,
@@ -278,8 +269,8 @@ export function CreateAccountScreen({ navigation }) {
               size="lg"
             />
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
+      </View>
       <ConfirmDialog
         visible={!!done}
         tone="success"

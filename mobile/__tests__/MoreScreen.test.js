@@ -20,7 +20,7 @@ beforeEach(() => {
 async function render(user) {
   const store = makeStore();
   store.dispatch(loggedIn({ token: 't', user }));
-  const navigation = { navigate: jest.fn() };
+  const navigation = { navigate: jest.fn(), setOptions: jest.fn() };
   let tree;
   await ReactTestRenderer.act(async () => {
     tree = ReactTestRenderer.create(
@@ -79,5 +79,24 @@ test('rows open their screens', async () => {
     'Account',
     'Notifications',
   ]);
+  await ReactTestRenderer.act(async () => tree.unmount());
+});
+
+test('Sign out sits on the right of the app bar and asks first', async () => {
+  const { tree, navigation } = await render({
+    id: 'u',
+    name: 'Gate Guard',
+    role: 'security',
+    modules: ['visitors'],
+  });
+  const { headerActions } = navigation.setOptions.mock.calls.at(-1)[0];
+  expect(headerActions.props.title).toBe('Sign out');
+  const dialog = () =>
+    tree.root.findAll(
+      n => n.props.title === 'Sign out?' && 'visible' in n.props,
+    )[0];
+  expect(dialog().props.visible).toBe(false);
+  await ReactTestRenderer.act(async () => headerActions.props.onPress());
+  expect(dialog().props.visible).toBe(true);
   await ReactTestRenderer.act(async () => tree.unmount());
 });

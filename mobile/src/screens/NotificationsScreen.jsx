@@ -147,8 +147,8 @@ export function NotificationsScreen({ navigation }) {
         navigation.navigate('Patrol');
       } else if (n.data?.type === 'gen' && gate) {
         navigation.navigate('Generator');
-      } else if (n.data?.type === 'key' && gate) {
-        navigation.navigate('Keys');
+      } else if (n.data?.type === 'key') {
+        navigation.navigate(gate ? 'Keys' : 'MyKeys');
       } else if (n.data?.type === 'expected' && n.data.id) {
         openExpected(navigation, gate, n.data.id);
       } else if (n.data?.type === 'user') {
@@ -188,6 +188,8 @@ export function NotificationsScreen({ navigation }) {
         />
       </FilterBar>
       <FlatList
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
         style={{ flex: 1, backgroundColor: c.bg }}
         contentContainerStyle={styles.content}
         data={list.items}
