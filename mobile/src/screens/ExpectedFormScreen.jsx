@@ -44,8 +44,8 @@ const KINDS = [
 const BASE_WORDING = {
   picked: 'Gets a notification when they arrive',
   typed: 'Pick someone from the list.',
-  noMatch: name => `No employee named “${name}” is on Gatebook.`,
-  none: 'No employees are on Gatebook yet. An admin can add them in Users.',
+  noMatch: name => `No employee named “${name}” is on TruSentinel.`,
+  none: 'No employees are on TruSentinel yet. An admin can add them in Users.',
   useTyped: null,
   changeLabel: name => `Change, currently ${name}`,
 };

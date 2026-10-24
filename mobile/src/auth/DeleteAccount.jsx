@@ -10,7 +10,7 @@ import { toastShown } from '../store/uiSlice';
 import { typo, useTheme } from '../theme';
 
 export const DELETE_ACCOUNT_TEXT =
-  "This permanently removes your name, contact details and login from Gatebook. Gate-register records stay for the audit trail. This can't be undone.";
+  "This permanently removes your name, contact details and login from TruSentinel. Gate-register records stay for the audit trail. This can't be undone.";
 
 /**
  * "Delete account" (danger outline) + confirm dialog with a password field. Rendered only when the

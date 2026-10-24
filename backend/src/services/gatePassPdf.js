@@ -39,7 +39,7 @@ export async function gatePassPdf(m) {
     size: 'A4',
     bufferPages: true,
     margins: { top: 0, bottom: 48, left: 42, right: 42 },
-    info: { Title: `Gate pass ${m.code}`, Creator: 'Gatebook' },
+    info: { Title: `Gate pass ${m.code}`, Creator: 'TruSentinel' },
   });
   /** @type {Buffer[]} */
   const chunks = [];
@@ -215,12 +215,12 @@ export async function gatePassPdf(m) {
   let statement = '';
   if (isIn) {
     when = m.receivedAt
-      ? `Accepted ${dt(m.receivedAt)}${m.receiptVia === 'security' ? ' (on paper)' : ' in Gatebook'}`
+      ? `Accepted ${dt(m.receivedAt)}${m.receiptVia === 'security' ? ' (on paper)' : ' in TruSentinel'}`
       : 'Not yet accepted';
     statement = m.receivedAt && m.authorisedBy ? `${name} confirmed receiving ${boxes(m.boxes)}.` : '';
   } else if (m.requestedBy) {
     when = `Prepared ${dt(m.createdAt)}`;
-    statement = `${name} prepared this pass in Gatebook.`;
+    statement = `${name} prepared this pass in TruSentinel.`;
   } else if (m.approvedAt) {
     when = `Approved ${dt(m.approvedAt)}`;
     statement = `${name} authorised these boxes to go out.`;
@@ -315,7 +315,7 @@ export async function gatePassPdf(m) {
       .fillColor(MUTED)
       .font('Helvetica')
       .fontSize(7.5)
-      .text(`${m.code} · Gatebook material gate pass · page ${i + 1} of ${range.count}`, left, doc.page.height - 30, {
+      .text(`${m.code} · TruSentinel material gate pass · page ${i + 1} of ${range.count}`, left, doc.page.height - 30, {
         width,
         align: 'center',
         lineBreak: false,

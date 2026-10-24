@@ -1,6 +1,6 @@
 /**
  * Host approval helpers (docs/API.md "Host approval").
- * hostStatus: waiting (asked in the app) · accepted · declined · manual (host not on Gatebook: confirm by phone).
+ * hostStatus: waiting (asked in the app) · accepted · declined · manual (host not on TruSentinel: confirm by phone).
  */
 
 /**
@@ -33,7 +33,7 @@ export function hostReplyText(v) {
   if (v.hostStatus === 'declined') return 'Declined';
   if (v.hostStatus === 'waiting')
     return v.escalatedAt ? 'No reply' : 'No reply yet';
-  return 'Not on Gatebook';
+  return 'Not on TruSentinel';
 }
 
 /** Visits from before host approval: let in at check-in, no host steps to show. */

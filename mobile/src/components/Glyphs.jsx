@@ -128,3 +128,49 @@ export function CameraIcon({ color, size = 14 }) {
     </View>
   );
 }
+
+/** ⏻ — power symbol (generator): open ring with a bar through the gap. */
+export function PowerIcon({ color, bg, size = 14 }) {
+  const s = moderateScale(size);
+  const line = Math.max(1.8, s * 0.12);
+  return (
+    <View
+      style={{
+        width: s,
+        height: s,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <View
+        style={{
+          width: s * 0.86,
+          height: s * 0.86,
+          borderRadius: s,
+          borderWidth: line,
+          borderColor: color,
+          marginTop: s * 0.1,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          top: 0,
+          width: line * 3.2,
+          height: s * 0.42,
+          backgroundColor: bg,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          top: 0,
+          width: line,
+          height: s * 0.5,
+          borderRadius: line,
+          backgroundColor: color,
+        }}
+      />
+    </View>
+  );
+}

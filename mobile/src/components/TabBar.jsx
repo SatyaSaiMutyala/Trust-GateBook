@@ -17,8 +17,8 @@ import { TabIcon } from './TabIcons';
 import { ScaledSheet, verticalScale } from 'react-native-size-matters/extend';
 
 const META = {
-  Track: { label: 'TRACK', icon: 'today' },
-  Inside: { label: 'Inside now', icon: 'inside' },
+  Track: { label: 'Track', icon: 'today' },
+  Inside: { label: 'Inside', icon: 'inside' },
   Post: { label: 'Post', icon: 'mail' },
   CheckIn: { label: 'Check in', icon: 'plus' },
   Log: { label: 'Log', icon: 'log' },
@@ -27,10 +27,14 @@ const META = {
   GatePasses: { label: 'Gate passes', icon: 'box' },
   MyPost: { label: 'My post', icon: 'mail' },
   Account: { label: 'Account', icon: 'settings' },
+  More: { label: 'More', icon: 'more' },
 };
 
+/** With a More tab, these are opened from More and left off the bar (More stays highlighted while they're open). */
+const IN_MORE = ['Log', 'Account'];
+
 /**
- * Bottom tabs. Gate users: Inside now · Post · raised amber Check in · Log · Account.
+ * Bottom tabs. Gate users: Track · Inside · raised amber Check in · Post · More (Log + Account live in More).
  * Employees: Visitors · Expected · My post · Account. Badges: Inside (green count), Post (lodged count, amber when there are
  * disputes), Visitors (waiting for my answer, amber), My post (lodged + handed, amber).
  */
@@ -127,6 +131,11 @@ export function TabBar({ state, navigation }) {
     return null;
   };
 
+  const hasMore = state.routes.some(r => r.name === 'More');
+  const focusedName = state.routes[state.index]?.name;
+  const moreFocused =
+    hasMore && (focusedName === 'More' || IN_MORE.includes(focusedName));
+
   return (
     <View
       accessibilityRole="tablist"
@@ -135,12 +144,15 @@ export function TabBar({ state, navigation }) {
         {
           backgroundColor: c.surface,
           borderTopColor: c.line,
+          shadowColor: '#000',
           paddingBottom: Math.max(insets.bottom, verticalScale(6)),
         },
       ]}
     >
       {state.routes.map((route, index) => {
-        const focused = state.index === index;
+        if (hasMore && IN_MORE.includes(route.name)) return null;
+        const focused =
+          route.name === 'More' ? moreFocused : state.index === index;
         const meta = META[route.name] ?? { label: route.name, icon: 'log' };
         const onPress = () => {
           const event = navigation.emit({
@@ -148,7 +160,11 @@ export function TabBar({ state, navigation }) {
             target: route.key,
             canPreventDefault: true,
           });
-          if (!focused && !event.defaultPrevented)
+          // More: always (back) to the More list, also when Log / Account is open.
+          if (
+            (!focused || (route.name === 'More' && focusedName !== 'More')) &&
+            !event.defaultPrevented
+          )
             navigation.navigate(route.name, route.params);
         };
         const onLongPress = () =>
@@ -184,6 +200,7 @@ export function TabBar({ state, navigation }) {
                 />
               </View>
               <Text
+                numberOfLines={1}
                 style={[
                   styles.label,
                   {
@@ -242,6 +259,7 @@ export function TabBar({ state, navigation }) {
               ) : null}
             </View>
             <Text
+              numberOfLines={1}
               style={[
                 styles.label,
                 {
@@ -264,6 +282,12 @@ const styles = ScaledSheet.create({
     flexDirection: 'row',
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingTop: '6@vs',
+    paddingHorizontal: '4@s',
+    // Lift the bar off the page so content scrolling under it reads as "behind".
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: -3 },
+    elevation: 12,
   },
   item: {
     flex: 1,
@@ -276,7 +300,7 @@ const styles = ScaledSheet.create({
   iconSlot: { position: 'relative' },
   // Pill behind the icon; tinted only on the active tab.
   iconWrap: {
-    width: '52@ms',
+    width: '46@ms',
     height: '28@ms',
     borderRadius: '14@ms',
     // Android draws the tint as a square when it's toggled on after mount unless the view clips to its radius.
@@ -287,8 +311,9 @@ const styles = ScaledSheet.create({
   label: {
     includeFontPadding: false,
     textAlign: 'center',
-    fontSize: '10@ms',
-    lineHeight: '13@ms',
+    fontSize: '11@ms',
+    lineHeight: '14@ms',
+    maxWidth: '100%',
   },
   bubble: {
     width: '48@ms',
@@ -305,8 +330,8 @@ const styles = ScaledSheet.create({
   },
   badge: {
     position: 'absolute',
-    top: '-6@vs',
-    right: '2@s',
+    top: '-7@vs',
+    right: '-4@s',
     minWidth: '20@ms',
     height: '20@ms',
     borderRadius: '10@ms',

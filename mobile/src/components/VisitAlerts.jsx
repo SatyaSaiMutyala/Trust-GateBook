@@ -44,7 +44,7 @@ function describe(v) {
       return {
         tone: 'wait',
         what: `Call ${v.host} to confirm ${v.name}`,
-        why: 'Not on Gatebook. Let them in once the host confirms.',
+        why: 'Not on TruSentinel. Let them in once the host confirms.',
       };
     default:
       return null;
@@ -54,7 +54,7 @@ function describe(v) {
 /**
  * Rows above every gate screen for open visits that need the guard now (`/api/visits/inside?attention=true`):
  * host accepted → Allowed in; declined → Mark exit; no reply → Call host / Confirmed by phone; host not on
- * Gatebook → Confirmed by phone. Refreshed by visit events (tag `Inside`). The toast for a host's answer comes
+ * TruSentinel → Confirmed by phone. Refreshed by visit events (tag `Inside`). The toast for a host's answer comes
  * from the stored notification (`notification:new`).
  */
 export function VisitAlerts() {

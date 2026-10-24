@@ -17,7 +17,7 @@ export const NOTIFICATION_EVENTS = /** @type {const} */ ([
   'material_approval', // to the employee named on a security-made OUT pass: approve or reject
   'material_decision', // to security: the employee approved / rejected an OUT pass
   'material_disputed', // to security: the employee says the boxes did not reach them
-  'key_issued', // to a Gatebook user who took a key: return it by …
+  'key_issued', // to a TruSentinel user who took a key: return it by …
   'incident_assigned', // to the person an incident was given to
   'incident_update', // to the reporter / assignee: someone else updated the incident
   'incident_closed', // to the reporter: the incident was closed

@@ -31,11 +31,11 @@ import { captureImage } from '../utils/camera';
 import { boxesText } from '../utils/material';
 
 const EMPLOYEE_WORDING = {
-  picked: 'Gets a notification in Gatebook',
+  picked: 'Gets a notification in TruSentinel',
   typed: 'Pick someone from the list.',
   idle: 'Pick the employee from the list.',
-  noMatch: name => `No employee named “${name}” is on Gatebook.`,
-  none: 'No employees are on Gatebook yet. An admin can add them in Users.',
+  noMatch: name => `No employee named “${name}” is on TruSentinel.`,
+  none: 'No employees are on TruSentinel yet. An admin can add them in Users.',
   useTyped: null,
   changeLabel: name => `Change employee, currently ${name}`,
 };

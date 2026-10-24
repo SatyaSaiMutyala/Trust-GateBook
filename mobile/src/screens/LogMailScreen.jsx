@@ -130,8 +130,8 @@ function ItemLogged({ item, onNext, onPostRoom }) {
             <Text style={{ fontFamily: fonts.bodySemi }}>
               {item.recipientName}{' '}
               {item.recipient
-                ? "can't sign in to Gatebook."
-                : "isn't on Gatebook."}
+                ? "can't sign in to TruSentinel."
+                : "isn't on TruSentinel."}
             </Text>{' '}
             Call them to collect it.
           </Text>

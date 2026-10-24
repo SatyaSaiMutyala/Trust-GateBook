@@ -11,7 +11,7 @@ import {
 } from 'react-native-size-matters/extend';
 
 /**
- * App bar on the dark rail: the screen title on the left (after the Gatebook mark, or a back
+ * App bar on the dark rail: the screen title on the left (after the TruSentinel mark, or a back
  * button on pushed screens), then the notifications bell (`showBell`) and the screen's own actions
  * (`right`, e.g. Export). Screens provide title / subtitle / actions through navigation options —
  * see RootNavigator.
@@ -47,7 +47,7 @@ export function TopBar({
           <Text style={[styles.backText, { color: c.railInk }]}>‹</Text>
         </Pressable>
       ) : (
-        // Company logo (Settings → Company) or the Gatebook mark, on a small white tile.
+        // Company logo (Settings → Company) or the TruSentinel mark, on a small white tile.
         <BrandMark size={28} logoUrl={logoUrl} />
       )}
       <View style={styles.titles}>
@@ -56,7 +56,7 @@ export function TopBar({
           numberOfLines={1}
           style={[styles.title, { color: c.railInk }]}
         >
-          {title ?? 'Gatebook'}
+          {title ?? 'TruSentinel'}
         </Text>
         {subtitle ? (
           <Text

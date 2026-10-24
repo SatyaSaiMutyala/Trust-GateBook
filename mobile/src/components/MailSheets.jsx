@@ -126,8 +126,8 @@ export function HandoverSheet({ item, onClose }) {
         {item.notifiedAt
           ? `${item.recipientName} will be asked to confirm on their phone that they received it.`
           : item.recipient
-          ? `${item.recipientName} can't sign in to Gatebook, so there is no confirmation step.`
-          : `${item.recipientName} is not on Gatebook, so there is no confirmation step.`}
+          ? `${item.recipientName} can't sign in to TruSentinel, so there is no confirmation step.`
+          : `${item.recipientName} is not on TruSentinel, so there is no confirmation step.`}
       </Text>
       {error ? (
         <Text

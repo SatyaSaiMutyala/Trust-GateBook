@@ -107,7 +107,7 @@ function HostSteps({ visit: v, now }) {
         <Text style={{ fontFamily: fonts.bodySemi }}>
           Confirm with {v.host} by phone
         </Text>{' '}
-        · not on Gatebook
+        · not on TruSentinel
       </TimelineItem>
     );
   } else {

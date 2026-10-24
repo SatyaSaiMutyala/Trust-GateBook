@@ -69,12 +69,12 @@ import { RecipientPicker } from '../components/RecipientPicker';
 /** "Whom to meet": a picked employee is asked to accept in the app; a typed name is confirmed by phone. */
 const HOST_WORDING = {
   label: 'Whom to meet',
-  picked: 'Gets a notification and accepts or declines in Gatebook',
-  typed: 'Not on Gatebook — call them before letting the visitor in',
+  picked: 'Gets a notification and accepts or declines in TruSentinel',
+  typed: 'Not on TruSentinel — call them before letting the visitor in',
   idle: 'Pick the employee being visited. Not listed? Type their name.',
-  noMatch: name => `No employee named “${name}” is on Gatebook.`,
+  noMatch: name => `No employee named “${name}” is on TruSentinel.`,
   useTyped: name => `Use “${name}” — I'll confirm by phone`,
-  none: "No employees are on Gatebook yet. An admin can add them in Users. For now, type the name — you'll confirm by phone.",
+  none: "No employees are on TruSentinel yet. An admin can add them in Users. For now, type the name — you'll confirm by phone.",
   changeLabel: name => `Change whom to meet, currently ${name}`,
 };
 /** Server error fields → form fields. */

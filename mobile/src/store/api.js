@@ -465,7 +465,7 @@ export const api = createApi({
     }),
     /**
      * Gate alert rows: open visits security must act on now (host accepted / declined / no reply / not on
-     * Gatebook) — `/api/visits/inside?attention=true&limit=5` → `{ data, total }`.
+     * TruSentinel) — `/api/visits/inside?attention=true&limit=5` → `{ data, total }`.
      */
     attention: build.query({
       query: () => ({

@@ -47,7 +47,7 @@ function HostNote({ visit: v }) {
     } in.`;
   } else if (v.hostStatus === 'manual') {
     tone = 'wait';
-    text = `${v.host} isn't on Gatebook. Call them to confirm, then let ${v.name} in.`;
+    text = `${v.host} isn't on TruSentinel. Call them to confirm, then let ${v.name} in.`;
   } else {
     tone = 'wait';
     text = `${

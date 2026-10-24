@@ -13,7 +13,7 @@ export const brandLogoUri = logoUrl =>
 
 /**
  * Logo on a white rounded tile (colours would disappear on the dark rail): the company logo from Settings →
- * Company when there is one (up to 3× as wide as tall), otherwise the Gatebook mark. `size` in dp (scaled).
+ * Company when there is one (up to 3× as wide as tall), otherwise the TruSentinel mark. `size` in dp (scaled).
  */
 export function BrandMark({ size, logoUrl, large = false }) {
   const s = moderateScale(size);
@@ -47,7 +47,7 @@ export function BrandMark({ size, logoUrl, large = false }) {
     );
   }
   return (
-    <View accessibilityLabel="Gatebook" style={[tile, { width: s }]}>
+    <View accessibilityLabel="TruSentinel" style={[tile, { width: s }]}>
       <Image
         source={
           large

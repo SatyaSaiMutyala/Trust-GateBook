@@ -272,7 +272,7 @@ describe('Pace recipients on POST /api/mail', () => {
     const remind = await post('security', `/api/mail/${id}/remind`).expect(409);
     expect(remind.body.error).toMatchObject({
       code: 'conflict',
-      message: "This receiver can't sign in to Gatebook, so they can't get reminders. Call them instead.",
+      message: "This receiver can't sign in to TruSentinel, so they can't get reminders. Call them instead.",
     });
     const h = await post('security', `/api/mail/${id}/handover`, { collectedBy: 'Ravi' }).expect(200);
     expect(h.body.item.status).toBe('closed');

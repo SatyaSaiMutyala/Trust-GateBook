@@ -213,7 +213,7 @@ export async function upsertPaceRecipient(recipientId, field = 'recipientId') {
       // A concurrent request created/linked the same employee: look again once.
       if (/** @type {any} */ (e)?.code === 11000) {
         if (attempt === 0) continue;
-        throw conflict(`Another Gatebook account already uses ${email}. Ask an admin to fix it.`, field);
+        throw conflict(`Another TruSentinel account already uses ${email}. Ask an admin to fix it.`, field);
       }
       throw e;
     }

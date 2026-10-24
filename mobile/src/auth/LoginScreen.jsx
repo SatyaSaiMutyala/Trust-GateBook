@@ -77,7 +77,7 @@ export function LoginScreen({ navigation, route }) {
         <View style={styles.markWrap}>
           <BrandMark size={76} logoUrl={brand?.logoUrl} large />
         </View>
-        <Text style={[styles.brand, { color: c.railInk }]}>GATEBOOK</Text>
+        <Text style={[styles.brand, { color: c.railInk }]}>TruSentinel</Text>
         <Text style={[typo.body, { color: c.railMuted }]}>
           {brand?.name || 'Visitor register'}
         </Text>

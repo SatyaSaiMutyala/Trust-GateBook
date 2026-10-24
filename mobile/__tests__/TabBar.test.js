@@ -61,7 +61,7 @@ test('active tab: tinted pill + dark label; inactive tabs: lighter grey', async 
     return StyleSheet.flatten(node.props.style);
   };
   expect(label('Post').color).toBe(light.ink);
-  for (const t of ['Inside now', 'Log', 'Account', 'Check in'])
+  for (const t of ['Inside', 'Log', 'Account', 'Check in'])
     expect(label(t).color).toBe(light.faint);
 
   const tabs = tree.root.findAll(
@@ -75,5 +75,61 @@ test('active tab: tinted pill + dark label; inactive tabs: lighter grey', async 
       StyleSheet.flatten(n.props.style)?.backgroundColor === light.accentSoft,
   );
   expect(pills.length).toBeGreaterThanOrEqual(1);
+  await ReactTestRenderer.act(async () => tree.unmount());
+});
+
+/** Render the bar for these routes with route `focus` open. */
+async function renderBar(names, focus) {
+  const store = makeStore();
+  store.dispatch(
+    loggedIn({ token: 't', user: { id: 'u', name: 'G', role: 'security' } }),
+  );
+  const routes = names.map(name => ({ key: name, name }));
+  const navigation = {
+    emit: () => ({ defaultPrevented: false }),
+    navigate: jest.fn(),
+  };
+  let tree;
+  await ReactTestRenderer.act(async () => {
+    tree = ReactTestRenderer.create(
+      <Provider store={store}>
+        <SafeAreaProvider>
+          <TabBar
+            state={{ index: names.indexOf(focus), routes }}
+            navigation={navigation}
+          />
+        </SafeAreaProvider>
+      </Provider>,
+    );
+  });
+  const tabs = tree.root.findAll(
+    n => n.props.accessibilityRole === 'tab' && n.props.onPress,
+  );
+  return { tree, tabs, navigation };
+}
+
+const GATE = ['Track', 'Inside', 'CheckIn', 'Post', 'More', 'Log', 'Account'];
+
+test('with More: five tabs, Check in in the centre, Log and Account left off the bar', async () => {
+  const { tree, tabs } = await renderBar(GATE, 'CheckIn');
+  expect(tabs.map(t => t.props.accessibilityLabel)).toEqual([
+    'Track',
+    'Inside',
+    'Check in a visitor',
+    'Post',
+    'More',
+  ]);
+  await ReactTestRenderer.act(async () => tree.unmount());
+});
+
+test('More stays highlighted on Log / Account, and tapping it goes back to the More list', async () => {
+  const { tree, tabs, navigation } = await renderBar(GATE, 'Log');
+  const more = tabs.find(t => t.props.accessibilityLabel === 'More');
+  expect(more.props.accessibilityState.selected).toBe(true);
+  expect(tabs.filter(t => t.props.accessibilityState?.selected)).toHaveLength(
+    1,
+  );
+  await ReactTestRenderer.act(async () => more.props.onPress());
+  expect(navigation.navigate).toHaveBeenCalledWith('More', undefined);
   await ReactTestRenderer.act(async () => tree.unmount());
 });

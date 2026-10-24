@@ -341,8 +341,8 @@ export function MailDetailsScreen({ navigation, route }) {
           ) : (
             <Step dot="pending">
               {item.recipient
-                ? "Receiver can't sign in to Gatebook"
-                : 'Receiver not on Gatebook'}{' '}
+                ? "Receiver can't sign in to TruSentinel"
+                : 'Receiver not on TruSentinel'}{' '}
               · Inform by phone
             </Step>
           )}

@@ -51,17 +51,17 @@ function Note({ children, first }) {
 const POST_WORDING = {
   label: 'For (receiver)',
   picked: 'Gets a notification and must confirm collection',
-  typed: 'Not on Gatebook — call them to collect it',
+  typed: 'Not on TruSentinel — call them to collect it',
   idle: 'Pick the employee it is addressed to. Not listed? Type their name.',
-  noMatch: name => `No one named “${name}” can receive post on Gatebook.`,
+  noMatch: name => `No one named “${name}” can receive post on TruSentinel.`,
   useTyped: name => `Use “${name}” — I'll inform them by phone`,
-  none: "No one can receive post on Gatebook yet. An admin can add Employees or tick “Can also receive post” in Users. For now, type the receiver's name — you'll inform them by phone.",
+  none: "No one can receive post on TruSentinel yet. An admin can add Employees or tick “Can also receive post” in Users. For now, type the receiver's name — you'll inform them by phone.",
   changeLabel: name => `Change receiver, currently ${name}`,
 };
 
 /**
- * Pick an employee (they get notified), or type a name for someone not on Gatebook (security phones them).
- * The list is Gatebook's own users who can receive post / visitors (Employee role or "Can also receive post"),
+ * Pick an employee (they get notified), or type a name for someone not on TruSentinel (security phones them).
+ * The list is TruSentinel's own users who can receive post / visitors (Employee role or "Can also receive post"),
  * via `/api/hosts`. Focusing the field opens the employee list straight away (no typing needed); typing filters it.
  * Once someone is picked the field turns into a card with a Change button.
  * Post room wording by default ("For (receiver)"); `wording` overrides the texts.

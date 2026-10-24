@@ -8,7 +8,7 @@ import { Button } from './Button';
 
 /**
  * The gate's next step for an open visit that hasn't been let in yet:
- * host accepted → "Allowed in"; not on Gatebook / no reply → "Call host" + "Confirmed by phone".
+ * host accepted → "Allowed in"; not on TruSentinel / no reply → "Call host" + "Confirmed by phone".
  * Renders nothing for viewers, let-in or declined visits (declined → "Mark exit" does the rest).
  */
 export function HostActions({ visit, size = 'sm', style }) {

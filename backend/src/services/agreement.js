@@ -47,8 +47,8 @@ export function renderAgreementPdf(d) {
     margins: { top: 48, bottom: 56, left: 48, right: 48 },
     info: {
       Title: safe(`${terms.title} · ${v.pass}`),
-      Author: safe(company.legalName || company.name || 'Gatebook'),
-      Creator: 'Gatebook',
+      Author: safe(company.legalName || company.name || 'TruSentinel'),
+      Creator: 'TruSentinel',
     },
   });
   /** @type {Buffer[]} */
@@ -227,7 +227,7 @@ export function renderAgreementPdf(d) {
       .font('Helvetica')
       .fontSize(7.5)
       .fillColor(MUTED)
-      .text(safe(`${v.pass} · Gatebook visitor register · page ${i + 1} of ${range.count}`), left, fy, {
+      .text(safe(`${v.pass} · TruSentinel visitor register · page ${i + 1} of ${range.count}`), left, fy, {
         width,
         align: 'center',
         lineBreak: false,

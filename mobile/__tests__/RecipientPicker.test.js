@@ -68,7 +68,7 @@ test('explains when no one can receive post yet', async () => {
   const tree = await setup({ hosts: [] });
   await focus(tree);
   expect(texts(tree).join(' ')).toContain(
-    'No one can receive post on Gatebook yet',
+    'No one can receive post on TruSentinel yet',
   );
 });
 

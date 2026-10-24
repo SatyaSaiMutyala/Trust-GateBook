@@ -67,7 +67,7 @@ import {
   eligibleFor,
   moduleText,
 } from '../utils/modules';
-import { version as APP_VERSION } from '../../package.json';
+import { APP_VERSION } from '../config/appVersion';
 import { CrossIcon } from '../components/Glyphs';
 
 const ROLE_OPTIONS = [
@@ -1102,7 +1102,7 @@ function ProfileView() {
           onPress={() => setConfirmSignOut(true)}
         />
         <Text style={[typo.tiny, styles.version, { color: c.muted }]}>
-          Gatebook v{APP_VERSION}
+          TruSentinel v{APP_VERSION}
         </Text>
       </ScrollView>
       <ConfirmDialog

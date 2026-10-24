@@ -154,7 +154,7 @@ class Directory {
         : {
             users: admins(),
             targetName: ctx.personName || 'The person concerned',
-            note: `${ctx.personName || 'They'} cannot sign in to Gatebook: sent to admins`,
+            note: `${ctx.personName || 'They'} cannot sign in to TruSentinel: sent to admins`,
           };
     }
     const level = /^l([123])$/.exec(to);

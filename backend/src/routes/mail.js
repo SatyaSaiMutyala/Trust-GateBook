@@ -374,11 +374,11 @@ mailRouter.post('/:id/remind', canWrite, async (req, res) => {
     throw conflict(
       item.status !== 'lodged'
         ? 'Already handed over. Nothing to remind about.'
-        : `${item.recipientName} is not on Gatebook. Call them instead.`,
+        : `${item.recipientName} is not on TruSentinel. Call them instead.`,
     );
   }
   if (!(await recipientCanSignIn(item))) {
-    throw conflict("This receiver can't sign in to Gatebook, so they can't get reminders. Call them instead.");
+    throw conflict("This receiver can't sign in to TruSentinel, so they can't get reminders. Call them instead.");
   }
   const updated = await transition(item, 'lodged', { remindedAt: new Date() });
   if (!updated) throw conflict('Already handed over. Nothing to remind about.');

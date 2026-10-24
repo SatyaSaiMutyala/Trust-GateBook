@@ -238,6 +238,32 @@ export function TabIcon({ name, color, bg, size = 22 }) {
           </View>
         </View>
       );
+    case 'more':
+      // Three dots: the "More" tab.
+      return (
+        <View
+          style={{
+            width: s,
+            height: s,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: s * 0.06,
+          }}
+        >
+          {[0, 1, 2].map(i => (
+            <View
+              key={i}
+              style={{
+                width: s * 0.2,
+                height: s * 0.2,
+                borderRadius: s,
+                backgroundColor: color,
+              }}
+            />
+          ))}
+        </View>
+      );
     case 'settings':
       return (
         <View

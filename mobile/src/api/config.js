@@ -1,6 +1,6 @@
 import Config from 'react-native-config';
 
-/** Live Gatebook server (AWS). Request paths already start with `/api/…`, so this is the bare origin. */
+/** Live TruSentinel server (AWS). Request paths already start with `/api/…`, so this is the bare origin. */
 export const PRODUCTION_API_URL = 'https://trusentinel.mytrustlab.co.in';
 
 /**

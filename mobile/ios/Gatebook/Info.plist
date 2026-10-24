@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Trust Gatebook</string>
+	<string>TruSentinel</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -34,9 +34,9 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Gatebook uses the camera to photograph visitors, their ID proof, incoming post and delivery staff.</string>
+	<string>TruSentinel uses the camera to photograph visitors, their ID proof, incoming post and delivery staff.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Gatebook may read or save visitor and post photos in your library.</string>
+	<string>TruSentinel may read or save visitor and post photos in your library.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UIAppFonts</key>

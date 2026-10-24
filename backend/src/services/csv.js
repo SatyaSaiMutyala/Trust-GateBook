@@ -13,7 +13,7 @@ function hostReplyLabel(v) {
   if (v.hostStatus === 'accepted') return v.hostVia === 'phone' ? 'Accepted (confirmed by phone)' : 'Accepted';
   if (v.hostStatus === 'declined') return 'Declined';
   if (v.hostStatus === 'waiting') return 'No reply yet';
-  return 'Not on Gatebook';
+  return 'Not on TruSentinel';
 }
 /** @param {string | null} iso */
 const dateTimeOrBlank = (iso) => (iso ? formatDateTime(new Date(iso)) : '');

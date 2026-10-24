@@ -25,6 +25,8 @@ import {
 import { navigationReady } from '../store/pushSlice';
 import { navigationRef } from './navigationRef';
 import { useAppConfig } from '../store/useAppConfig';
+import { ForceUpdateDialog } from '../components/ForceUpdateDialog';
+import { useForceUpdate } from '../state/useForceUpdate';
 import { AccountScreen } from '../screens/AccountScreen';
 import { CheckInScreen } from '../screens/CheckInScreen';
 import { ExpectedFormScreen } from '../screens/ExpectedFormScreen';
@@ -51,6 +53,7 @@ import { MyPostScreen } from '../screens/MyPostScreen';
 import { MyVisitorsScreen } from '../screens/MyVisitorsScreen';
 import { PostRoomScreen } from '../screens/PostRoomScreen';
 import { TodayScreen } from '../screens/TodayScreen';
+import { MoreScreen } from '../screens/MoreScreen';
 import { VisitDetailsScreen } from '../screens/VisitDetailsScreen';
 import { useGetSettingsQuery } from '../store/api';
 import { selectSettings } from '../store/settingsSlice';
@@ -90,11 +93,18 @@ function BrandedTopBar(props) {
   return <TopBar {...props} logoUrl={logoUrl} />;
 }
 
+/** Gate tabs opened from More (left off the bottom bar): their app bar gets a back button to More. */
+const FROM_MORE = ['Log', 'Account'];
+
 /** Gate screens: app bar plus the visitor alert rows (host answered / no reply) and the disputed-post rows. */
-function renderGateHeader({ options }) {
+function renderGateHeader({ navigation, route, options }) {
+  const fromMore = FROM_MORE.includes(route.name);
   return (
     <>
-      <BrandedTopBar {...barProps(options)} />
+      <BrandedTopBar
+        {...barProps(options)}
+        onBack={fromMore ? () => navigation.navigate('More') : undefined}
+      />
       <VisitAlerts />
       <IssueAlerts />
     </>
@@ -125,8 +135,8 @@ function renderEmployeeStackHeader({ navigation, options }) {
 }
 
 /**
- * Security / admin / viewer: Inside now · Post · Check in (raised) · Log · Account. Opens on Check in. Tabs for
- * modules the person has not been given are left out.
+ * Security / admin / viewer: TRACK · Inside now · Check in (raised, centre) · Post · More. Visitor log and Account are
+ * reached from More (hidden tabs). Opens on Check in. Tabs for modules the person has not been given are left out.
  */
 function GateTabs() {
   const visitors = useSelector(selectHasModule('visitors'));
@@ -156,13 +166,6 @@ function GateTabs() {
           options={{ title: 'Inside now' }}
         />
       ) : null}
-      {post ? (
-        <Tab.Screen
-          name="Post"
-          component={PostRoomScreen}
-          options={{ title: 'Post room' }}
-        />
-      ) : null}
       {visitors ? (
         <Tab.Screen
           name="CheckIn"
@@ -170,6 +173,19 @@ function GateTabs() {
           options={{ title: 'Check in' }}
         />
       ) : null}
+      {post ? (
+        <Tab.Screen
+          name="Post"
+          component={PostRoomScreen}
+          options={{ title: 'Post room' }}
+        />
+      ) : null}
+      <Tab.Screen
+        name="More"
+        component={MoreScreen}
+        options={{ title: 'More' }}
+      />
+      {/* Opened from More; kept as (hidden) tabs so links like Main → Account keep working. */}
       {register ? (
         <Tab.Screen
           name="Log"
@@ -508,6 +524,7 @@ export function RootNavigator() {
   const dispatch = useDispatch();
   usePushOpenListeners();
   useAppConfig();
+  const { updateRequired, storeVersion, openStore } = useForceUpdate();
   const navTheme = useMemo(() => {
     const base = dark ? DarkTheme : DefaultTheme;
     return {
@@ -535,6 +552,11 @@ export function RootNavigator() {
       {signedIn ? <SignedIn key={`${user.id}:${user.role}`} /> : <AuthStack />}
       <SheetHost />
       <ToastHost />
+      <ForceUpdateDialog
+        visible={updateRequired}
+        storeVersion={storeVersion}
+        onUpdate={openStore}
+      />
     </NavigationContainer>
   );
 }

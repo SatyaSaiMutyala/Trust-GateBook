@@ -12,7 +12,7 @@ class MainActivity : ReactActivity() {
    * Returns the name of the main component registered from JavaScript. This is used to schedule
    * rendering of the component.
    */
-  override fun getMainComponentName(): String = "Gatebook"
+  override fun getMainComponentName(): String = "TruSentinel"
 
   /**
    * The activity starts on LaunchTheme (Gatebook splash). Switch to the normal theme before the UI is

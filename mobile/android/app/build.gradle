@@ -92,8 +92,8 @@ android {
         applicationId "com.app.gatebook"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "1.0.2"
         // react-native-config reads BuildConfig from the app package.
         resValue "string", "build_config_package", "com.app.gatebook"
     }
@@ -124,6 +124,39 @@ android {
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
+    }
+}
+
+/**
+ * Force update: the JS side reads this build's version from src/config/appVersion.js. That file is generated here
+ * from defaultConfig.versionName / applicationId before every build (debug, assemble, bundle), so it can never
+ * drift from the version shipped to Play. To release: bump versionCode + versionName above — nothing else.
+ */
+def appVersionJs = file("../../src/config/appVersion.js")
+def appVersionName = android.defaultConfig.versionName
+def appPackageId = android.defaultConfig.applicationId
+tasks.register("syncAppVersion") {
+    description = "Writes src/config/appVersion.js from versionName and applicationId."
+    inputs.property("versionName", appVersionName)
+    inputs.property("applicationId", appPackageId)
+    outputs.file(appVersionJs)
+    doLast {
+        def text = """// GENERATED from android/app/build.gradle (versionName / applicationId) by the syncAppVersion Gradle task,
+// which runs before every Android build. Do not edit by hand: change versionName in build.gradle instead.
+export const APP_VERSION = '${appVersionName}';
+export const ANDROID_PACKAGE_ID = '${appPackageId}';
+export const PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=\${ANDROID_PACKAGE_ID}`;
+"""
+        if (!appVersionJs.exists() || appVersionJs.text != text) {
+            appVersionJs.text = text
+        }
+    }
+}
+tasks.named("preBuild") { dependsOn("syncAppVersion") }
+// The JS bundle (createBundle…JsAndAssets) must be made after the file is written.
+afterEvaluate {
+    tasks.matching { it.name.startsWith("createBundle") && it.name.endsWith("JsAndAssets") }.configureEach {
+        dependsOn("syncAppVersion")
     }
 }
 

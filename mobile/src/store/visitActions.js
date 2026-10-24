@@ -16,7 +16,7 @@ function patchVisitCaches(dispatch, visit) {
 
 /**
  * Security lets a visitor in: `allow(visit, viaPhone)` → the updated visit, or null on failure (toast says why).
- * `viaPhone` = confirmed with the host by phone (host not on Gatebook, or no reply in the app).
+ * `viaPhone` = confirmed with the host by phone (host not on TruSentinel, or no reply in the app).
  */
 export function useAllowVisit() {
   const dispatch = useDispatch();

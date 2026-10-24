@@ -20,11 +20,11 @@ import { dueChips } from '../utils/keys';
 
 const TAKER_WORDING = {
   label: 'Taken by',
-  picked: 'Gets a reminder in Gatebook when the key is due back',
-  typed: 'Not on Gatebook — the guards are reminded instead.',
+  picked: 'Gets a reminder in TruSentinel when the key is due back',
+  typed: 'Not on TruSentinel — the guards are reminded instead.',
   idle: 'Pick the employee, or type the name of anyone else (electrician, vendor).',
-  noMatch: name => `No one named “${name}” on Gatebook. Keep the typed name.`,
-  none: 'No employees on Gatebook yet. Type the name.',
+  noMatch: name => `No one named “${name}” on TruSentinel. Keep the typed name.`,
+  none: 'No employees on TruSentinel yet. Type the name.',
   changeLabel: name => `Change who takes the key, currently ${name}`,
 };
 

@@ -119,7 +119,7 @@ async function visitorItems(site, settings, nowMs) {
         kind: 'visit_manual',
         tone: 'phone',
         title: `Call ${v.host} to confirm ${v.name}`,
-        body: `Host is not registered on Gatebook.${v.badge ? ` ${v.name} has pass ${v.badge}.` : ''}`,
+        body: `Host is not registered on TruSentinel.${v.badge ? ` ${v.name} has pass ${v.badge}.` : ''}`,
         at: iso(v.inAt),
       });
     }

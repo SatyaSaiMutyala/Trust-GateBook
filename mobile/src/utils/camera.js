@@ -23,7 +23,7 @@ async function ensureCameraPermission() {
     {
       title: 'Camera',
       message:
-        'Gatebook needs the camera to photograph visitors, ID proof and incoming post.',
+        'TruSentinel needs the camera to photograph visitors, ID proof and incoming post.',
       buttonPositive: 'Allow',
       buttonNegative: 'Not now',
     },
@@ -40,7 +40,7 @@ export async function captureImage(kind) {
   const preset = PRESETS[kind] ?? PRESETS.photo;
   if (!(await ensureCameraPermission())) {
     throw new Error(
-      'Camera permission is off. Allow camera access for Gatebook in Settings.',
+      'Camera permission is off. Allow camera access for TruSentinel in Settings.',
     );
   }
   const result = await launchCamera({
@@ -56,7 +56,7 @@ export async function captureImage(kind) {
       result.errorCode === 'camera_unavailable'
         ? 'No camera is available on this device.'
         : result.errorCode === 'permission'
-        ? 'Camera permission is off. Allow camera access for Gatebook in Settings.'
+        ? 'Camera permission is off. Allow camera access for TruSentinel in Settings.'
         : result.errorMessage || 'Could not open the camera.',
     );
   }
