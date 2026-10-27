@@ -12,6 +12,7 @@ import { hostsRouter } from './routes/hosts.js';
 import { mailRouter } from './routes/mail.js';
 import { notificationsRouter } from './routes/notifications.js';
 import { escalationsRouter } from './routes/escalations.js';
+import { provisioningRouter } from './routes/provisioning.js';
 import { termsRouter } from './routes/terms.js';
 import { materialRouter } from './routes/material.js';
 import { incidentsRouter } from './routes/incidents.js';
@@ -55,6 +56,8 @@ export function createApp() {
     res.json({ features: { signup: config.features.signup, accountDeletion: config.features.accountDeletion } });
   });
   app.use('/api/auth', authRouter);
+  // PACE identity hub (server-to-server, guarded by X-Provisioning-Token)
+  app.use('/api/provisioning', provisioningRouter);
   app.use('/api/users', usersRouter);
   app.use('/api/hosts', hostsRouter);
   app.use('/api/devices', devicesRouter);
