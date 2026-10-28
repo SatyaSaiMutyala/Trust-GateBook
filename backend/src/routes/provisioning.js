@@ -68,7 +68,7 @@ provisioningRouter.get('/ping', (_req, res) => {
 });
 
 provisioningRouter.post('/rotate-token', (req, res) => {
-  const token = req.body?.token;
+  const token = req.body?.new_token ?? req.body?.token; // PACE sends `new_token`
   if (!token || String(token).trim().length < 16) {
     res.status(400).json({ error: { code: 'validation', message: 'A new token of at least 16 characters is required.' } });
     return;
