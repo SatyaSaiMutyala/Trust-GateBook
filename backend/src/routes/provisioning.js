@@ -100,6 +100,11 @@ provisioningRouter.post('/users', async (req, res) => {
     if (b.password) {
       user.passwordHash = await bcrypt.hash(b.password, 10);
       passwordSet = true;
+    } else if (b.password_hash && !user.passwordHash) {
+      // PACE sent a ready bcrypt hash (no plaintext, e.g. provisioned from the
+      // edit page) and this account has no password yet → adopt it as-is.
+      user.passwordHash = String(b.password_hash);
+      passwordSet = true;
     }
     // Re-provisioning re-enables a previously disabled account.
     if (user.status !== 'deleted') {
@@ -111,9 +116,14 @@ provisioningRouter.post('/users', async (req, res) => {
     return;
   }
 
-  // New account. A password is required to be able to sign in.
-  if (!b.password) {
-    res.status(400).json({ error: { code: 'validation', message: 'password is required when creating a new user.', field: 'password' } });
+  // New account needs a password to sign in: the plaintext (hash it) or a ready
+  // bcrypt hash from PACE (used as-is — bcryptjs verifies $2y$ hashes too, so the
+  // person signs in with the same password as in PACE).
+  const passwordHash = b.password
+    ? await bcrypt.hash(b.password, 10)
+    : (b.password_hash ? String(b.password_hash) : null);
+  if (!passwordHash) {
+    res.status(400).json({ error: { code: 'validation', message: 'password or password_hash is required when creating a new user.', field: 'password' } });
     return;
   }
   try {
@@ -126,7 +136,7 @@ provisioningRouter.post('/users', async (req, res) => {
       active: true,
       status: 'active',
       matchUuid,
-      passwordHash: await bcrypt.hash(b.password, 10),
+      passwordHash,
     });
   } catch (e) {
     if (/** @type {any} */ (e)?.code === 11000) {
