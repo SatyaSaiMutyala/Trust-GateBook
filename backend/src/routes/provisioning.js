@@ -52,6 +52,7 @@ const storeSchema = z.object({
   email: z.string().trim().toLowerCase().pipe(z.email()).pipe(z.string().max(200)),
   name: z.string().trim().min(1).max(100),
   password: z.string().min(8).max(100).optional(),
+  password_hash: z.string().max(255).optional(), // ready bcrypt hash from PACE (edit-page provisioning)
   phone: z.string().trim().max(40).optional(),
 });
 
