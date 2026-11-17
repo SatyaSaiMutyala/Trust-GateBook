@@ -36,6 +36,8 @@ const userSchema = new Schema(
     site: { type: String, default: '' },
     /** Pace HR employee code (e.g. TLE0145) for users created/linked from the Pace directory. Never null: sparse. */
     paceEmpCode: { type: String, required: false },
+    /** PACE cross-app person key (identity-hub provisioning). Never null: sparse. */
+    matchUuid: { type: String, required: false },
     /** pending = self sign-up awaiting admin approval; deleted = anonymised by the user. Missing = active. */
     status: { type: String, enum: USER_STATUSES, default: 'active' },
     deletedAt: { type: Date, default: null },
@@ -49,6 +51,7 @@ userSchema.index({ active: 1, role: 1, isHost: 1, name: 1 });
 // Org chart: who reports to whom.
 userSchema.index({ reportsTo: 1 });
 userSchema.index({ paceEmpCode: 1 }, { unique: true, sparse: true });
+userSchema.index({ matchUuid: 1 }, { unique: true, sparse: true });
 
 export const User = model('User', userSchema);
 
