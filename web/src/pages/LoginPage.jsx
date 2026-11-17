@@ -15,7 +15,6 @@ import { Navigate, useLocation } from 'react-router';
 import { errorMessage } from '../api/client';
 import { brandApi } from '../api/endpoints';
 import { useAuth } from '../auth/context';
-import { LogoTile } from '../components/AppShell';
 import { fonts } from '../theme/tokens';
 
 const TEAL = '#0D9488';
@@ -171,9 +170,20 @@ export function LoginPage() {
             background: 'linear-gradient(160deg, #0f766e, #0d9488 40%, #115e59)',
           }}
         >
-          <Box sx={{ filter: 'drop-shadow(0 6px 18px rgba(0,0,0,.25))', mb: 2.5 }}>
-            <LogoTile size={96} src={brand?.logoUrl} />
-          </Box>
+          {/* Trustlab mark, same as the TruSpace / PACE login (public/trustlab-logo.png). */}
+          <Box
+            component="img"
+            src="/trustlab-logo.png"
+            alt=""
+            aria-hidden="true"
+            sx={{
+              maxWidth: 320,
+              width: '85%',
+              height: 'auto',
+              mb: '18px',
+              filter: 'drop-shadow(0 4px 15px rgba(0,0,0,.2))',
+            }}
+          />
           <Typography
             component="h1"
             sx={{
