@@ -10,10 +10,9 @@ import InputAdornment from '@mui/material/InputAdornment';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { errorMessage } from '../api/client';
-import { brandApi } from '../api/endpoints';
 import { useAuth } from '../auth/context';
 import { fonts } from '../theme/tokens';
 
@@ -58,14 +57,6 @@ export function LoginPage() {
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
-  // Company name + logo (public; blank until Settings → Company is filled in).
-  const [brand, setBrand] = useState(null);
-  useEffect(() => {
-    brandApi
-      .get()
-      .then(setBrand)
-      .catch(() => {});
-  }, []);
 
   if (status === 'signedIn') {
     const from = location.state?.from;
@@ -110,7 +101,6 @@ export function LoginPage() {
           '0%, 100%': { transform: 'translate(0, 0)' },
           '50%': { transform: 'translate(-20px, 24px)' },
         },
-        '@keyframes gbPulse': { '0%, 100%': { opacity: 0.35 }, '50%': { opacity: 1 } },
         // faint 60px grid
         '&::before': {
           content: '""',
@@ -197,22 +187,18 @@ export function LoginPage() {
           >
             TruSentinel
           </Typography>
-          <Stack direction="row" spacing={1} sx={{ my: 2 }} aria-hidden>
-            {[0, 1, 2, 3].map((i) => (
-              <Box
-                key={i}
-                sx={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: '50%',
-                  bgcolor: i === 0 ? '#F0C75E' : 'rgba(255,255,255,.7)',
-                  animation: `gbPulse 1.6s ease-in-out ${i * 0.2}s infinite`,
-                }}
-              />
-            ))}
-          </Stack>
-          <Typography sx={{ fontFamily: UI_FONT, fontSize: 12.5, opacity: 0.75, maxWidth: 270, lineHeight: 1.6 }}>
-            {brand?.name ? `${brand.name} · ` : ''}Visitor register, post room and gate desk in one place.
+          {/* Department line, as on the TruSpace login ("Facilities & Leases"). */}
+          <Typography
+            sx={{
+              fontFamily: UI_FONT,
+              fontSize: 11,
+              letterSpacing: '3px',
+              textTransform: 'uppercase',
+              color: '#F0C75E',
+              mt: 1.25,
+            }}
+          >
+            Security &amp; Administration
           </Typography>
         </Stack>
 
